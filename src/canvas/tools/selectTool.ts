@@ -1,0 +1,185 @@
+import { CanvasEngine } from "../canvasEngine.js";
+import { docStore } from "../../state/documentStore.js";
+import { sessionManager } from "../../network/sessionManager.js";
+import { CanvasEntity, ImageEntity, TokenEntity } from "../../types/vtt.js";
+
+export function bindSelectTool(engine: CanvasEngine): void {
+  let draggingEntity: CanvasEntity | null = null;
+  let dragOffset = { x: 0, y: 0 };
+
+  // Resizing state
+  let isResizing = false;
+  let resizingEntity: (ImageEntity | TokenEntity) | null = null;
+  let origAspectRatio = 1.0;
+  let centerPos = { x: 0, y: 0 };
+
+  engine.onMouseDown((_e, worldX, worldY) => {
+    if (engine.activeTool !== "select") return;
+
+    const doc = docStore.getDocument();
+    const entities = Object.values(doc.entities).sort((a, b) => b.zIndex - a.zIndex);
+
+    // 1. Check if user clicked a corner resize handle on the currently selected entity
+    if (engine.selectedEntityId) {
+      const current = doc.entities[engine.selectedEntityId];
+      if (current && !current.locked && (current.type === "image" || current.type === "token")) {
+        const imgEnt = current as ImageEntity | TokenEntity;
+        const halfW = imgEnt.size.width / 2;
+        const halfH = imgEnt.size.height / 2;
+        const handleThreshold = Math.max(12, 14 / engine.zoom);
+
+        const corners = [
+          { x: imgEnt.position.x - halfW, y: imgEnt.position.y - halfH },
+          { x: imgEnt.position.x + halfW, y: imgEnt.position.y - halfH },
+          { x: imgEnt.position.x + halfW, y: imgEnt.position.y + halfH },
+          { x: imgEnt.position.x - halfW, y: imgEnt.position.y + halfH }
+        ];
+
+        for (const c of corners) {
+          const dist = Math.hypot(worldX - c.x, worldY - c.y);
+          if (dist <= handleThreshold) {
+            isResizing = true;
+            resizingEntity = imgEnt;
+            if (imgEnt.type === "image") {
+              engine.aligningImageEntityId = imgEnt.id;
+            }
+            origAspectRatio = imgEnt.size.width / imgEnt.size.height;
+            centerPos = { ...imgEnt.position };
+            return;
+          }
+        }
+      }
+    }
+
+    // 2. Check if user clicked inside an entity
+    let found: CanvasEntity | null = null;
+    for (const ent of entities) {
+      if (ent.type === "image" || ent.type === "token") {
+        const img = ent as ImageEntity | TokenEntity;
+        const halfW = img.size.width / 2;
+        const halfH = img.size.height / 2;
+        if (
+          worldX >= img.position.x - halfW &&
+          worldX <= img.position.x + halfW &&
+          worldY >= img.position.y - halfH &&
+          worldY <= img.position.y + halfH
+        ) {
+          found = ent;
+          break;
+        }
+      }
+    }
+
+    if (found) {
+      engine.selectedEntityId = found.id;
+      if (!found.locked) {
+        draggingEntity = found;
+        if (found.type === "image") {
+          engine.aligningImageEntityId = found.id;
+        }
+        const pos = (found as ImageEntity).position;
+        dragOffset = { x: worldX - pos.x, y: worldY - pos.y };
+      } else {
+        draggingEntity = null;
+      }
+    } else {
+      engine.selectedEntityId = null;
+      draggingEntity = null;
+    }
+  });
+
+  engine.onMouseMove((_e, worldX, worldY) => {
+    if (engine.activeTool !== "select") return;
+
+    if (isResizing && resizingEntity) {
+      const dx = Math.abs(worldX - centerPos.x);
+      let newWidth = Math.max(30, Math.round(dx * 2));
+      let newHeight = Math.max(30, Math.round(newWidth / origAspectRatio));
+
+      if (resizingEntity.type === "token") {
+        const doc = docStore.getDocument();
+        const gridSizePx = doc.canvasSettings.gridSizePx || 50;
+        const cells = Math.max(1, Math.round(newWidth / gridSizePx));
+        newWidth = cells * gridSizePx;
+        newHeight = cells * gridSizePx;
+      }
+
+      resizingEntity.size = { width: newWidth, height: newHeight };
+      return;
+    }
+
+    if (draggingEntity && !draggingEntity.locked) {
+      const newX = worldX - dragOffset.x;
+      const newY = worldY - dragOffset.y;
+      if (draggingEntity.type === "image" || draggingEntity.type === "token") {
+        (draggingEntity as ImageEntity).position = { x: newX, y: newY };
+      }
+    }
+  });
+
+  engine.onMouseUp((_e, worldX, worldY) => {
+    engine.aligningImageEntityId = null;
+    if (engine.activeTool !== "select") return;
+
+    if (isResizing && resizingEntity) {
+      let finalPos = { ...resizingEntity.position };
+      if (resizingEntity.type === "token") {
+        const doc = docStore.getDocument();
+        const gridSizePx = doc.canvasSettings.gridSizePx || 50;
+        const tlX = Math.round((resizingEntity.position.x - resizingEntity.size.width / 2) / gridSizePx) * gridSizePx;
+        const tlY = Math.round((resizingEntity.position.y - resizingEntity.size.height / 2) / gridSizePx) * gridSizePx;
+        finalPos = {
+          x: tlX + resizingEntity.size.width / 2,
+          y: tlY + resizingEntity.size.height / 2
+        };
+        resizingEntity.position = finalPos;
+      }
+
+      sessionManager.dispatchOperation({
+        opType: "UPDATE_ENTITY",
+        id: resizingEntity.id,
+        patch: {
+          size: { ...resizingEntity.size },
+          position: finalPos
+        } as any
+      });
+      isResizing = false;
+      resizingEntity = null;
+      return;
+    }
+
+    if (!draggingEntity || draggingEntity.locked) return;
+
+    const doc = docStore.getDocument();
+    let targetX = worldX - dragOffset.x;
+    let targetY = worldY - dragOffset.y;
+
+    if (draggingEntity.type === "token") {
+      const gridSizePx = doc.canvasSettings.gridSizePx || 50;
+      const tlX = Math.round((targetX - draggingEntity.size.width / 2) / gridSizePx) * gridSizePx;
+      const tlY = Math.round((targetY - draggingEntity.size.height / 2) / gridSizePx) * gridSizePx;
+      targetX = tlX + draggingEntity.size.width / 2;
+      targetY = tlY + draggingEntity.size.height / 2;
+    } else if (draggingEntity.type === "image") {
+      targetX = draggingEntity.position.x;
+      targetY = draggingEntity.position.y;
+    } else {
+      const snap = doc.canvasSettings.gridSnap && doc.canvasSettings.gridEnabled;
+      if (snap) {
+        const snapped = engine.snapToGrid(targetX, targetY, doc.canvasSettings.gridSizePx);
+        targetX = snapped.x;
+        targetY = snapped.y;
+      }
+    }
+
+    sessionManager.dispatchOperation({
+      opType: "UPDATE_ENTITY",
+      id: draggingEntity.id,
+      patch: {
+        position: { x: targetX, y: targetY }
+      } as any
+    });
+
+    draggingEntity = null;
+  });
+}
