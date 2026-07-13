@@ -11,7 +11,7 @@ export function setupHeaderUI(): void {
       <div class="brand-title">MAURY VTT</div>
       <div class="room-badge" id="room-code-badge" style="display: none;">
         <span>Room: <strong id="room-id-txt">---</strong></span>
-        <button class="copy-btn" id="copy-room-btn">Copy</button>
+        <button class="copy-btn" id="copy-room-btn">Copy Link</button>
       </div>
     </div>
     <div class="header-actions">
@@ -33,11 +33,15 @@ export function setupHeaderUI(): void {
     }
   }, 1000);
 
+  copyBtn.title = "Copy invite link with room code";
   copyBtn.addEventListener("click", () => {
     if (sessionManager.hostRoomId) {
-      navigator.clipboard.writeText(sessionManager.hostRoomId);
-      copyBtn.textContent = "Copied!";
-      setTimeout(() => (copyBtn.textContent = "Copy"), 2000);
+      const origin = window.location.origin;
+      const pathname = window.location.pathname.replace(/\/$/, "");
+      const fullJoinUrl = `${origin}${pathname}/?room=${encodeURIComponent(sessionManager.hostRoomId)}`;
+      navigator.clipboard.writeText(fullJoinUrl);
+      copyBtn.textContent = "Copied Link!";
+      setTimeout(() => (copyBtn.textContent = "Copy Link"), 2000);
     }
   });
 

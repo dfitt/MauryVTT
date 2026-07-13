@@ -9,6 +9,22 @@ const SWATCH_COLORS = [
   "#f97316"  // Orange
 ];
 
+function getRoomCodeFromUrl(): string {
+  const params = new URLSearchParams(window.location.search);
+  const roomParam = params.get("room") || params.get("code");
+  if (roomParam) return roomParam.trim();
+
+  const searchRaw = window.location.search.substring(1).trim();
+  if (searchRaw && !searchRaw.includes("=")) {
+    return searchRaw;
+  }
+
+  const hashRaw = window.location.hash.substring(1).replace(/^room=/, "").trim();
+  if (hashRaw) return hashRaw;
+
+  return "";
+}
+
 export function renderJoinModal(onJoined: () => void): void {
   const overlay = document.createElement("div");
   overlay.className = "modal-overlay";
@@ -60,6 +76,11 @@ export function renderJoinModal(onJoined: () => void): void {
 
   const usernameInput = overlay.querySelector<HTMLInputElement>("#join-username")!;
   const roomInput = overlay.querySelector<HTMLInputElement>("#join-room-code")!;
+
+  const codeFromUrl = getRoomCodeFromUrl();
+  if (codeFromUrl) {
+    roomInput.value = codeFromUrl;
+  }
 
   overlay.querySelector("#btn-host-new")!.addEventListener("click", async () => {
     const username = usernameInput.value.trim() || "Host";

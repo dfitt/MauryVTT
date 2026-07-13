@@ -222,5 +222,20 @@ export function setupToolbarUI(engine: CanvasEngine): void {
   bar.appendChild(uploadTokenBtn);
   bar.appendChild(tokenInput);
 
+  const divider3 = document.createElement("div");
+  divider3.className = "tool-divider";
+  bar.appendChild(divider3);
+
+  const chatToggleBtn = document.createElement("button");
+  chatToggleBtn.className = "tool-btn";
+  chatToggleBtn.title = "Toggle Chat & Dice Roller Window";
+  chatToggleBtn.innerHTML = "💬";
+  chatToggleBtn.addEventListener("click", () => {
+    if (typeof (window as any).toggleVttChat === "function") {
+      (window as any).toggleVttChat();
+    }
+  });
+  bar.appendChild(chatToggleBtn);
+
   document.body.appendChild(bar);
 }

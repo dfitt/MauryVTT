@@ -5,10 +5,19 @@ import { ChatMessage } from "../types/vtt.js";
 export function setupChatPanel(): void {
   const panel = document.createElement("div");
   panel.className = "chat-window";
+  panel.id = "vtt-chat-panel";
+
+  if (window.innerWidth <= 768) {
+    panel.classList.add("minimized");
+  }
+
   panel.innerHTML = `
-    <div class="chat-header">
-      <span>Tabletop Chat & Dice Roller</span>
-      <span style="font-size: 11px; color: var(--text-dim)">/roll 2d6+3</span>
+    <div class="chat-header" id="chat-header-bar" title="Click to Minimize / Expand Chat">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span>💬 Chat & Dice</span>
+        <span class="chat-unread-badge" id="chat-unread-badge" style="display: none;">0</span>
+      </div>
+      <button class="chat-toggle-btn" id="btn-toggle-chat" title="Toggle Chat Window">${panel.classList.contains("minimized") ? "▲" : "▼"}</button>
     </div>
     <div class="chat-messages" id="chat-messages-container"></div>
     <div class="chat-input-bar">
@@ -20,6 +29,26 @@ export function setupChatPanel(): void {
 
   const container = panel.querySelector("#chat-messages-container")!;
   const inputEl = panel.querySelector<HTMLInputElement>("#chat-input-el")!;
+  const headerBar = panel.querySelector<HTMLElement>("#chat-header-bar")!;
+  const toggleBtn = panel.querySelector<HTMLButtonElement>("#btn-toggle-chat")!;
+  const badgeEl = panel.querySelector<HTMLElement>("#chat-unread-badge")!;
+
+  let unreadCount = 0;
+  let lastMessageCount = 0;
+
+  function toggleChat() {
+    panel.classList.toggle("minimized");
+    const isMin = panel.classList.contains("minimized");
+    toggleBtn.textContent = isMin ? "▲" : "▼";
+    if (!isMin) {
+      unreadCount = 0;
+      badgeEl.style.display = "none";
+      container.scrollTop = container.scrollHeight;
+    }
+  }
+
+  headerBar.addEventListener("click", () => toggleChat());
+  (window as any).toggleVttChat = toggleChat;
 
   function parseAndRollDice(cmd: string): string | null {
     const match = cmd.match(/^\/roll\s+(\d+)d(\d+)([\+\-]\d+)?/i);
@@ -74,6 +103,14 @@ export function setupChatPanel(): void {
 
   // Subscribe to reactive document updates
   docStore.subscribe((doc) => {
+    const newCount = doc.chatHistory.length;
+    if (newCount > lastMessageCount && panel.classList.contains("minimized") && lastMessageCount > 0) {
+      unreadCount += newCount - lastMessageCount;
+      badgeEl.style.display = "inline-block";
+      badgeEl.textContent = String(unreadCount);
+    }
+    lastMessageCount = newCount;
+
     container.innerHTML = doc.chatHistory
       .map((msg) => {
         if (msg.type === "system") {
@@ -81,7 +118,7 @@ export function setupChatPanel(): void {
         }
         return `
           <div class="chat-msg ${msg.type === "roll" ? "roll" : ""}">
-            <div class="msg-author" style="color: #38bdf8">${msg.senderUsername}</div>
+          <div class="msg-author" style="color: #38bdf8">${msg.senderUsername}</div>
             <div class="msg-text">${msg.content}</div>
           </div>
         `;
