@@ -112,6 +112,7 @@ export class P2PClient {
           }
 
           case "OP_COMMIT": {
+            console.log("[p2pClient] Received OP_COMMIT from host:", msg.op.opType, msg.op);
             docStore.applyOperation(msg.op);
             await this.syncMissingAssets();
             break;
@@ -225,7 +226,11 @@ export class P2PClient {
   }
 
   public dispatchOperation(op: DocumentOperation): void {
-    if (!this.conn || !this.conn.open) return;
+    if (!this.conn || !this.conn.open) {
+      console.warn("[p2pClient] Cannot dispatchOperation: connection not open", op);
+      return;
+    }
+    console.log("[p2pClient] Sending OP_REQUEST to host:", op.opType, op);
     const clientSeq = "seq-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6);
     this.conn.send({
       type: "OP_REQUEST",

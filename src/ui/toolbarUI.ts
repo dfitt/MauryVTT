@@ -106,6 +106,7 @@ export function setupToolbarUI(engine: CanvasEngine): void {
     const file = fileInput.files?.[0];
     if (!file) return;
 
+    console.log("[toolbarUI] Image upload selected:", file.name, file.size);
     const processed = await processImageFile(file, 1024);
     await assetStore.saveAsset(processed.assetHash, processed.blob);
     docStore.registerAssetManifest(
@@ -115,8 +116,6 @@ export function setupToolbarUI(engine: CanvasEngine): void {
       processed.widthPx,
       processed.heightPx
     );
-
-    await sessionManager.uploadAsset(processed.assetHash, processed.blob);
 
     const maxDisplaySide = 300;
     const origW = processed.widthPx;
@@ -146,10 +145,16 @@ export function setupToolbarUI(engine: CanvasEngine): void {
       opacity: 1.0
     };
 
+    console.log("[toolbarUI] Dispatching CREATE_ENTITY for Image:", newImage.id, "hash:", processed.assetHash);
     sessionManager.dispatchOperation({
       opType: "CREATE_ENTITY",
       entity: newImage
     });
+
+    console.log("[toolbarUI] Starting async network upload for image asset:", processed.assetHash);
+    sessionManager.uploadAsset(processed.assetHash, processed.blob)
+      .then(() => console.log("[toolbarUI] Network upload succeeded for asset:", processed.assetHash))
+      .catch((err) => console.error("[toolbarUI] Network upload failed for asset:", err));
 
     fileInput.value = "";
   });
@@ -174,6 +179,7 @@ export function setupToolbarUI(engine: CanvasEngine): void {
     const file = tokenInput.files?.[0];
     if (!file) return;
 
+    console.log("[toolbarUI] Token upload selected:", file.name, file.size);
     const processed = await processTokenImageFile(file);
     await assetStore.saveAsset(processed.assetHash, processed.blob);
     docStore.registerAssetManifest(
@@ -183,8 +189,6 @@ export function setupToolbarUI(engine: CanvasEngine): void {
       processed.widthPx,
       processed.heightPx
     );
-
-    await sessionManager.uploadAsset(processed.assetHash, processed.blob);
 
     const doc = docStore.getDocument();
     const gridSizePx = doc.canvasSettings.gridSizePx || 50;
@@ -222,10 +226,16 @@ export function setupToolbarUI(engine: CanvasEngine): void {
       statusEffects: []
     };
 
+    console.log("[toolbarUI] Dispatching CREATE_ENTITY for Token:", newToken.id, "hash:", processed.assetHash);
     sessionManager.dispatchOperation({
       opType: "CREATE_ENTITY",
       entity: newToken
     });
+
+    console.log("[toolbarUI] Starting async network upload for token asset:", processed.assetHash);
+    sessionManager.uploadAsset(processed.assetHash, processed.blob)
+      .then(() => console.log("[toolbarUI] Network upload succeeded for token asset:", processed.assetHash))
+      .catch((err) => console.error("[toolbarUI] Network upload failed for token asset:", err));
 
     tokenInput.value = "";
   });

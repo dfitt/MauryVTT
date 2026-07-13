@@ -688,10 +688,12 @@ export class CanvasEngine {
 
     const img = new Image();
     img.onload = () => {
+      console.log("[CanvasEngine] Image loaded successfully:", assetHash);
       this.imageElements.set(assetHash, img);
       this.loadingAssets.delete(assetHash);
     };
     img.onerror = () => {
+      console.error("[CanvasEngine] Failed to load image asset:", assetHash);
       this.loadingAssets.delete(assetHash);
     };
     img.src = url;

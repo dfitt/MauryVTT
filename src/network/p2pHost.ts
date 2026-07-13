@@ -93,6 +93,7 @@ export class P2PHost {
         }
 
         case "OP_REQUEST": {
+          console.log("[p2pHost] Received OP_REQUEST from client:", conn.peer, msg.op.opType, msg.op);
           docStore.applyOperation(msg.op, { incrementRevision: true });
           const currentDoc = docStore.getDocument();
 
@@ -103,6 +104,7 @@ export class P2PHost {
             op: msg.op
           };
 
+          console.log("[p2pHost] Broadcasting OP_COMMIT (rev " + currentDoc.revision + ") for:", msg.op.opType);
           this.broadcastMessage(commit);
           break;
         }
@@ -130,6 +132,7 @@ export class P2PHost {
         }
 
         case "ASSET_CHUNK_COMPLETE": {
+          console.log("[p2pHost] Received ASSET_CHUNK_COMPLETE from client:", conn.peer, msg.assetHash);
           const buf = this.pendingAssets.get(msg.assetHash);
           if (buf) {
             const fullBuffer = new Uint8Array(
@@ -145,6 +148,11 @@ export class P2PHost {
             const blob = new Blob([fullBuffer], { type: buf.mimeType });
             await assetStore.saveAsset(msg.assetHash, blob);
             this.pendingAssets.delete(msg.assetHash);
+
+            if (!docStore.getDocument().assetManifest[msg.assetHash]) {
+              docStore.registerAssetManifest(msg.assetHash, buf.mimeType, blob.size, 512, 512);
+            }
+
             docStore.loadSnapshot(docStore.getDocument());
 
             // Relay the newly received asset to all OTHER connected clients
