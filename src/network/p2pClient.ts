@@ -238,8 +238,8 @@ export class P2PClient {
         payload: chunkBytes
       } as SyncMessage);
 
-      if (idx % 8 === 0) {
-        await new Promise((r) => setTimeout(r, 4));
+      if (idx % 4 === 0) {
+        await new Promise((r) => setTimeout(r, 6));
       }
     }
 

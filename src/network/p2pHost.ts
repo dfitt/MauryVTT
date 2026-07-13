@@ -146,7 +146,17 @@ export class P2PHost {
         }
 
         case "ASSET_FETCH_REQ": {
-          await this.streamAssetToClient(conn, msg.assetHash);
+          const blob = await assetStore.getAsset(msg.assetHash);
+          if (blob) {
+            await this.streamAssetToClient(conn, msg.assetHash);
+          } else {
+            console.warn(`[p2pHost] Missing asset ${msg.assetHash} requested by peer ${conn.peer} - asking other peers`);
+            for (const [peerId, otherConn] of this.connections.entries()) {
+              if (peerId !== conn.peer && otherConn.open) {
+                otherConn.send({ type: "ASSET_FETCH_REQ", assetHash: msg.assetHash } as SyncMessage);
+              }
+            }
+          }
           break;
         }
 
@@ -183,7 +193,22 @@ export class P2PHost {
             if (buf.receivedChunks === buf.totalChunks) {
               await this.tryFinalizeAsset(msg.assetHash, conn.peer);
             } else {
-              console.log(`[p2pHost] ASSET_CHUNK_COMPLETE arrived early for ${msg.assetHash} (${buf.receivedChunks}/${buf.totalChunks} chunks received). Waiting for remaining chunks.`);
+              console.log(`[p2pHost] ASSET_CHUNK_COMPLETE arrived early for ${msg.assetHash} (${buf.receivedChunks}/${buf.totalChunks} chunks received). Waiting for remaining chunks...`);
+              setTimeout(() => {
+                const currentBuf = this.pendingAssets.get(msg.assetHash);
+                if (currentBuf && currentBuf.receivedChunks < currentBuf.totalChunks) {
+                  const missing: number[] = [];
+                  for (let i = 0; i < currentBuf.totalChunks; i++) {
+                    if (!currentBuf.chunks[i]) missing.push(i);
+                  }
+                  console.warn(`[p2pHost] Timeout waiting for chunks of ${msg.assetHash}. Missing ${missing.length} chunks: [${missing.slice(0, 10).join(", ")}...]. Requesting resend.`);
+                  for (const [peerId, otherConn] of this.connections.entries()) {
+                    if (otherConn.open) {
+                      otherConn.send({ type: "ASSET_FETCH_REQ", assetHash: msg.assetHash } as SyncMessage);
+                    }
+                  }
+                }
+              }, 2000);
             }
           }
           break;
@@ -207,6 +232,14 @@ export class P2PHost {
     for (const conn of this.connections.values()) {
       if (conn.open) {
         conn.send(payload);
+      }
+    }
+  }
+
+  public requestAssetFromPeers(assetHash: string): void {
+    for (const conn of this.connections.values()) {
+      if (conn.open) {
+        conn.send({ type: "ASSET_FETCH_REQ", assetHash } as SyncMessage);
       }
     }
   }
@@ -257,9 +290,9 @@ export class P2PHost {
         payload: chunkBytes
       } as SyncMessage);
 
-      // Yield every 8 chunks to prevent WebRTC DataChannel buffer congestion
-      if (idx % 8 === 0) {
-        await new Promise((r) => setTimeout(r, 4));
+      // Yield every 4 chunks to prevent WebRTC DataChannel buffer congestion
+      if (idx % 4 === 0) {
+        await new Promise((r) => setTimeout(r, 6));
       }
     }
 

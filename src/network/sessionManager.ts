@@ -2,6 +2,7 @@ import { hostEngine } from "./p2pHost.js";
 import { clientEngine } from "./p2pClient.js";
 import { DocumentOperation, EphemeralPayload } from "../types/vtt.js";
 import { docStore } from "../state/documentStore.js";
+import { assetStore } from "../state/idbAssetStore.js";
 
 class SessionManager {
   public role: "none" | "host" | "client" = "none";
@@ -64,6 +65,21 @@ class SessionManager {
       await clientEngine.uploadAssetToHost(assetHash, blob);
     } else if (this.role === "host") {
       await hostEngine.broadcastAssetToAllClients(assetHash);
+    }
+  }
+
+  public async syncMissingAssets(): Promise<void> {
+    if (this.role === "client") {
+      await clientEngine.syncMissingAssets();
+    } else if (this.role === "host") {
+      const doc = docStore.getDocument();
+      for (const hash of Object.keys(doc.assetManifest)) {
+        const exists = await assetStore.hasAsset(hash);
+        if (!exists) {
+          console.log("[sessionManager] Host requesting missing asset from all peers:", hash);
+          hostEngine.requestAssetFromPeers(hash);
+        }
+      }
     }
   }
 

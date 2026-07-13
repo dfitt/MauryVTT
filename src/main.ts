@@ -13,8 +13,11 @@ import { setupSelectionBarUI } from "./ui/selectionBarUI.js";
 import { setupChatPanel } from "./ui/chatPanel.js";
 import { renderJoinModal } from "./ui/joinModal.js";
 import { sessionManager } from "./network/sessionManager.js";
+import { registerTroubleshootingUtilities } from "./utils/troubleshooting.js";
 
 function bootstrap(): void {
+  registerTroubleshootingUtilities();
+
   const canvas = document.getElementById("vtt-canvas") as HTMLCanvasElement;
   if (!canvas) throw new Error("Canvas element not found");
 
