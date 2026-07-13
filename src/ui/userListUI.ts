@@ -13,6 +13,7 @@ export function setupHeaderUI(): void {
         <span>Room: <strong id="room-id-txt">---</strong></span>
         <button class="copy-btn" id="copy-room-btn">Copy Link</button>
       </div>
+      <div class="connected-users-list" id="connected-users-list"></div>
     </div>
     <div class="header-actions">
       <button id="btn-open-archive" class="btn-glass">📂 Open .vttdoc</button>
@@ -25,12 +26,38 @@ export function setupHeaderUI(): void {
   const badgeEl = header.querySelector<HTMLElement>("#room-code-badge")!;
   const roomTxtEl = header.querySelector<HTMLElement>("#room-id-txt")!;
   const copyBtn = header.querySelector<HTMLButtonElement>("#copy-room-btn")!;
+  const usersListEl = header.querySelector<HTMLElement>("#connected-users-list")!;
 
   setInterval(() => {
     if (sessionManager.hostRoomId) {
       badgeEl.style.display = "flex";
       roomTxtEl.textContent = sessionManager.hostRoomId;
     }
+
+    const doc = docStore.getDocument();
+    const usersMap = { ...doc.users };
+
+    if (sessionManager.myUsername && (!sessionManager.myPeerId || !usersMap[sessionManager.myPeerId])) {
+      const myId = sessionManager.myPeerId || "local-me";
+      usersMap[myId] = {
+        peerId: myId,
+        username: sessionManager.myUsername,
+        color: sessionManager.myColor || "#eab308",
+        joinedAt: Date.now(),
+        role: sessionManager.role === "host" ? "host" : "client"
+      };
+    }
+
+    const pills = Object.values(usersMap).map((u) => {
+      const color = u.color || "#38bdf8";
+      const hostTag = u.role === "host" ? " (Host)" : "";
+      return `<span class="user-pill" title="${u.username}${hostTag}">
+        <span class="user-pill-dot" style="background-color: ${color};"></span>
+        <span>${u.username}${hostTag}</span>
+      </span>`;
+    });
+
+    usersListEl.innerHTML = pills.join("");
   }, 1000);
 
   copyBtn.title = "Copy invite link with room code";
