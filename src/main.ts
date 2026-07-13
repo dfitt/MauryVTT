@@ -33,14 +33,14 @@ function bootstrap(): void {
   bindMeasureTool(engine);
   bindPingTool(engine);
 
-  // Setup UI components
-  setupHeaderUI();
-  setupToolbarUI(engine);
-  setupSelectionBarUI(engine);
-  setupChatPanel();
-
-  // Show Welcome / Join Modal
+  // Show Welcome / Join Modal first (before displaying gameplay UI)
   renderJoinModal(() => {
+    // Setup UI components after joining or hosting
+    setupHeaderUI();
+    setupToolbarUI(engine);
+    setupSelectionBarUI(engine);
+    setupChatPanel();
+
     if (sessionManager.myColor) {
       engine.drawColor = sessionManager.myColor;
       document.querySelectorAll<HTMLElement>(".toolbar-color-swatch").forEach((swatch) => {

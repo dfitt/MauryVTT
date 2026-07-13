@@ -216,6 +216,7 @@ export class CanvasEngine {
     let initialPinchDist = 0;
 
     this.canvas.addEventListener("touchstart", (e) => {
+      e.preventDefault();
       if (e.touches.length === 2) {
         touchPan = true;
         lastTouchX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
@@ -246,9 +247,12 @@ export class CanvasEngine {
         });
         for (const l of this.onMouseDownListeners) l(simDown, world.x, world.y);
       }
-    }, { passive: true });
+    }, { passive: false });
 
     window.addEventListener("touchmove", (e) => {
+      if (e.target === this.canvas) {
+        e.preventDefault();
+      }
       if (e.touches.length === 2) {
         const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
         const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
@@ -291,7 +295,7 @@ export class CanvasEngine {
         });
         for (const l of this.onMouseMoveListeners) l(simMove, world.x, world.y);
       }
-    }, { passive: true });
+    }, { passive: false });
 
     window.addEventListener("touchend", (e) => {
       touchPan = false;
