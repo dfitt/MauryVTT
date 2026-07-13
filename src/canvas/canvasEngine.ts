@@ -98,6 +98,12 @@ export class CanvasEngine {
       resizeObserver.observe(parent);
     }
 
+    window.addEventListener("resize", () => this.resizeCanvas());
+    window.addEventListener("orientationchange", () => {
+      setTimeout(() => this.resizeCanvas(), 50);
+      setTimeout(() => this.resizeCanvas(), 300);
+    });
+
     this.startRenderLoop();
 
     sessionManager.onEphemeral((payload) => this.handleEphemeralPayload(payload));
@@ -274,8 +280,8 @@ export class CanvasEngine {
 
   public resizeCanvas(): void {
     const parent = this.canvas.parentElement;
-    const width = parent?.clientWidth || window.innerWidth;
-    const height = parent?.clientHeight || window.innerHeight;
+    const width = Math.max(parent?.clientWidth || 0, window.innerWidth);
+    const height = Math.max(parent?.clientHeight || 0, window.innerHeight);
     if (width > 0 && height > 0 && (this.canvas.width !== width || this.canvas.height !== height)) {
       this.canvas.width = width;
       this.canvas.height = height;
@@ -291,6 +297,13 @@ export class CanvasEngine {
   }
 
   private renderFrame(): void {
+    const curW = Math.max(this.canvas.parentElement?.clientWidth || 0, window.innerWidth);
+    const curH = Math.max(this.canvas.parentElement?.clientHeight || 0, window.innerHeight);
+    if (curW > 0 && curH > 0 && (this.canvas.width !== curW || this.canvas.height !== curH)) {
+      this.canvas.width = curW;
+      this.canvas.height = curH;
+    }
+
     const doc = docStore.getDocument();
     const ctx = this.ctx;
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);

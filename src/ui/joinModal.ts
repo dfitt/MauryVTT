@@ -30,7 +30,11 @@ export function renderJoinModal(onJoined: () => void): void {
   overlay.className = "modal-overlay";
   overlay.id = "vtt-join-modal";
 
-  let selectedColor = SWATCH_COLORS[0];
+  const savedUsername = localStorage.getItem("maury_vtt_username");
+  const savedColor = localStorage.getItem("maury_vtt_color");
+  let selectedColor = savedColor && SWATCH_COLORS.includes(savedColor) ? savedColor : SWATCH_COLORS[0];
+
+  const defaultUser = savedUsername || `Traveler_${Math.floor(Math.random() * 90 + 10)}`;
 
   overlay.innerHTML = `
     <div class="modal-box">
@@ -38,7 +42,7 @@ export function renderJoinModal(onJoined: () => void): void {
       
       <div class="form-group">
         <label class="form-label">Your Username</label>
-        <input type="text" id="join-username" class="form-input" placeholder="e.g. DungeonMaster / Alice" value="Traveler_${Math.floor(Math.random() * 90 + 10)}" />
+        <input type="text" id="join-username" class="form-input" placeholder="e.g. DungeonMaster / Alice" value="${defaultUser}" />
       </div>
 
       <div class="form-group">
@@ -62,9 +66,9 @@ export function renderJoinModal(onJoined: () => void): void {
 
   // Render swatches
   const container = overlay.querySelector("#swatch-container")!;
-  SWATCH_COLORS.forEach((color, idx) => {
+  SWATCH_COLORS.forEach((color) => {
     const swatch = document.createElement("div");
-    swatch.className = `color-swatch ${idx === 0 ? "active" : ""}`;
+    swatch.className = `color-swatch ${color === selectedColor ? "active" : ""}`;
     swatch.style.backgroundColor = color;
     swatch.addEventListener("click", () => {
       selectedColor = color;
@@ -84,6 +88,8 @@ export function renderJoinModal(onJoined: () => void): void {
 
   overlay.querySelector("#btn-host-new")!.addEventListener("click", async () => {
     const username = usernameInput.value.trim() || "Host";
+    localStorage.setItem("maury_vtt_username", username);
+    localStorage.setItem("maury_vtt_color", selectedColor);
     await sessionManager.startAsHost(username, selectedColor);
     overlay.remove();
     window.dispatchEvent(new Event("resize"));
@@ -98,6 +104,8 @@ export function renderJoinModal(onJoined: () => void): void {
       return;
     }
     try {
+      localStorage.setItem("maury_vtt_username", username);
+      localStorage.setItem("maury_vtt_color", selectedColor);
       await sessionManager.joinAsClient(code, username, selectedColor);
       overlay.remove();
       window.dispatchEvent(new Event("resize"));
