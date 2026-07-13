@@ -51,8 +51,8 @@ export function renderJoinModal(onJoined: () => void): void {
       </div>
 
       <div class="form-group">
-        <label class="form-label">Join Room Code (Optional)</label>
-        <input type="text" id="join-room-code" class="form-input" placeholder="Leave blank to Host New Room" />
+        <label class="form-label">Room Code (Custom ID to Host or Code to Join)</label>
+        <input type="text" id="join-room-code" class="form-input" placeholder="e.g. MY-DND-ROOM (Leave blank for random)" />
       </div>
 
       <div class="modal-buttons">
@@ -82,18 +82,29 @@ export function renderJoinModal(onJoined: () => void): void {
   const roomInput = overlay.querySelector<HTMLInputElement>("#join-room-code")!;
 
   const codeFromUrl = getRoomCodeFromUrl();
+  const lastCode = localStorage.getItem("maury_vtt_last_room_code") || "";
   if (codeFromUrl) {
     roomInput.value = codeFromUrl;
+  } else if (lastCode) {
+    roomInput.value = lastCode;
   }
 
   overlay.querySelector("#btn-host-new")!.addEventListener("click", async () => {
     const username = usernameInput.value.trim() || "Host";
-    localStorage.setItem("maury_vtt_username", username);
-    localStorage.setItem("maury_vtt_color", selectedColor);
-    await sessionManager.startAsHost(username, selectedColor);
-    overlay.remove();
-    window.dispatchEvent(new Event("resize"));
-    onJoined();
+    const customCode = roomInput.value.trim() || undefined;
+    try {
+      localStorage.setItem("maury_vtt_username", username);
+      localStorage.setItem("maury_vtt_color", selectedColor);
+      if (customCode) {
+        localStorage.setItem("maury_vtt_last_room_code", customCode);
+      }
+      await sessionManager.startAsHost(username, selectedColor, customCode);
+      overlay.remove();
+      window.dispatchEvent(new Event("resize"));
+      onJoined();
+    } catch (err) {
+      alert(`Could not host room '${customCode}': That Room Code is already active or taken! Please enter a different code or click 'Join Room' to join it.`);
+    }
   });
 
   overlay.querySelector("#btn-join-room")!.addEventListener("click", async () => {
@@ -106,6 +117,7 @@ export function renderJoinModal(onJoined: () => void): void {
     try {
       localStorage.setItem("maury_vtt_username", username);
       localStorage.setItem("maury_vtt_color", selectedColor);
+      localStorage.setItem("maury_vtt_last_room_code", code);
       await sessionManager.joinAsClient(code, username, selectedColor);
       overlay.remove();
       window.dispatchEvent(new Event("resize"));

@@ -16,8 +16,11 @@ const PALETTE_COLORS = [
 ];
 
 export function setupToolbarUI(engine: CanvasEngine): void {
+  (window as any).vttActiveTool = engine.activeTool;
+
   const tools: { id: ToolType; icon: string; title: string }[] = [
-    { id: "select", icon: "✋", title: "Select & Move / Resize Entities" },
+    { id: "select", icon: "↖️", title: "Select & Move / Resize Entities" },
+    { id: "pan", icon: "✋", title: "Pan Map (Touch or Drag with 1 finger)" },
     { id: "draw", icon: "✏️", title: "Freehand Sketch" },
     { id: "line", icon: "📏", title: "Straight Line" },
     { id: "fill", icon: "🔲", title: "Grid Square Fill Tool" },
@@ -39,6 +42,7 @@ export function setupToolbarUI(engine: CanvasEngine): void {
 
     btn.addEventListener("click", () => {
       engine.activeTool = tool.id;
+      (window as any).vttActiveTool = tool.id;
       bar.querySelectorAll(".tool-btn").forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
     });

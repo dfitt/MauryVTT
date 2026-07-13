@@ -177,7 +177,7 @@ html, body {
    FLOATING BOTTOM TOOLBAR
    ========================================= */
 .bottom-toolbar {
-  position: absolute;
+  position: fixed;
   bottom: 24px;
   left: 50%;
   transform: translateX(-50%);
@@ -190,7 +190,7 @@ html, body {
   border: 1px solid var(--glass-border);
   border-radius: 20px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
-  z-index: 10;
+  z-index: 1000;
 }
 
 .tool-btn {
@@ -598,24 +598,28 @@ html, body {
     height: 44px !important;
   }
 
-  .floating-toolbar {
-    bottom: 8px;
-    width: calc(100vw - 16px);
-    max-width: calc(100vw - 16px);
-    overflow-x: auto;
-    justify-content: flex-start;
-    padding: 6px 10px;
+  .bottom-toolbar {
+    position: fixed !important;
+    bottom: 8px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: calc(100vw - 12px);
+    max-width: calc(100vw - 12px);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    padding: 6px 6px;
     gap: 4px;
+    border-radius: 14px;
+    z-index: 1000;
   }
 
-  .floating-toolbar::-webkit-scrollbar {
-    display: none;
-  }
-
-  .tool-btn {
-    width: 36px;
-    height: 36px;
-    font-size: 16px;
+  .bottom-toolbar .tool-btn {
+    width: 34px;
+    height: 34px;
+    font-size: 15px;
+    border-radius: 10px;
     flex-shrink: 0;
   }
 

@@ -10,7 +10,7 @@ import {
 } from "../types/vtt.js";
 import { sessionManager } from "../network/sessionManager.js";
 
-export type ToolType = "select" | "draw" | "line" | "fill" | "erase" | "hide" | "unhide" | "measure" | "ping" | "token";
+export type ToolType = "select" | "pan" | "draw" | "line" | "fill" | "erase" | "hide" | "unhide" | "measure" | "ping" | "token";
 
 export interface ActiveMeasurement {
   measureId: string;
@@ -145,7 +145,8 @@ export class CanvasEngine {
 
     this.canvas.addEventListener("mousedown", (e) => {
       const world = this.screenToWorld(e.offsetX, e.offsetY);
-      if (e.button === 1 || (e.button === 0 && isSpacePressed)) {
+      const activeTool = (window as any).vttActiveTool;
+      if (e.button === 1 || (e.button === 0 && (isSpacePressed || activeTool === "pan"))) {
         isPanning = true;
         lastMouseX = e.clientX;
         lastMouseY = e.clientY;
@@ -206,6 +207,105 @@ export class CanvasEngine {
 
       this.panX += (worldAfter.x - worldBefore.x) * this.zoom;
       this.panY += (worldAfter.y - worldBefore.y) * this.zoom;
+    });
+
+    // Mobile touch support: Two-finger pan & pinch zoom + 1-finger Pan Tool
+    let touchPan = false;
+    let lastTouchX = 0;
+    let lastTouchY = 0;
+    let initialPinchDist = 0;
+
+    this.canvas.addEventListener("touchstart", (e) => {
+      if (e.touches.length === 2) {
+        touchPan = true;
+        lastTouchX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        lastTouchY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        initialPinchDist = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+        return;
+      }
+      if (e.touches.length === 1) {
+        const touch = e.touches[0];
+        const rect = this.canvas.getBoundingClientRect();
+        const world = this.screenToWorld(touch.clientX - rect.left, touch.clientY - rect.top);
+
+        const activeTool = (window as any).vttActiveTool || "select";
+        if (activeTool === "pan") {
+          touchPan = true;
+          lastTouchX = touch.clientX;
+          lastTouchY = touch.clientY;
+          return;
+        }
+
+        const simDown = new MouseEvent("mousedown", {
+          clientX: touch.clientX,
+          clientY: touch.clientY,
+          button: 0
+        });
+        for (const l of this.onMouseDownListeners) l(simDown, world.x, world.y);
+      }
+    }, { passive: true });
+
+    window.addEventListener("touchmove", (e) => {
+      if (e.touches.length === 2) {
+        const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        const dist = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+
+        if (initialPinchDist > 0 && Math.abs(dist - initialPinchDist) > 5) {
+          const zoomFactor = dist / initialPinchDist;
+          this.zoom = Math.min(Math.max(0.1, this.zoom * zoomFactor), 8.0);
+          initialPinchDist = dist;
+        }
+
+        this.panX += midX - lastTouchX;
+        this.panY += midY - lastTouchY;
+        lastTouchX = midX;
+        lastTouchY = midY;
+        return;
+      }
+
+      if (e.touches.length === 1) {
+        const touch = e.touches[0];
+        const rect = this.canvas.getBoundingClientRect();
+        const world = this.screenToWorld(touch.clientX - rect.left, touch.clientY - rect.top);
+        this.hoverWorldPos = world;
+
+        if (touchPan) {
+          this.panX += touch.clientX - lastTouchX;
+          this.panY += touch.clientY - lastTouchY;
+          lastTouchX = touch.clientX;
+          lastTouchY = touch.clientY;
+          return;
+        }
+
+        const simMove = new MouseEvent("mousemove", {
+          clientX: touch.clientX,
+          clientY: touch.clientY,
+          button: 0
+        });
+        for (const l of this.onMouseMoveListeners) l(simMove, world.x, world.y);
+      }
+    }, { passive: true });
+
+    window.addEventListener("touchend", (e) => {
+      touchPan = false;
+      if (e.changedTouches.length === 1) {
+        const touch = e.changedTouches[0];
+        const rect = this.canvas.getBoundingClientRect();
+        const world = this.screenToWorld(touch.clientX - rect.left, touch.clientY - rect.top);
+        const simUp = new MouseEvent("mouseup", {
+          clientX: touch.clientX,
+          clientY: touch.clientY,
+          button: 0
+        });
+        for (const l of this.onMouseUpListeners) l(simUp, world.x, world.y);
+      }
     });
   }
 
