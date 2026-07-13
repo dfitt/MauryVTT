@@ -18,6 +18,14 @@ interface PendingAssetBuffer {
   chunks: Uint8Array[];
 }
 
+async function waitForBuffer(conn: DataConnection): Promise<void> {
+  const dc = (conn as any).dataChannel as RTCDataChannel | undefined;
+  if (!dc) return;
+  while (dc.bufferedAmount > 65536) {
+    await new Promise((r) => setTimeout(r, 10));
+  }
+}
+
 export class P2PHost {
   private peer: Peer | null = null;
   private connections: Map<string, DataConnection> = new Map();
@@ -264,11 +272,13 @@ export class P2PHost {
     const blob = await assetStore.getAsset(assetHash);
     if (!blob || !conn.open) return;
 
+    console.log(`[p2pHost] Streaming asset ${assetHash} (${blob.size} bytes) to client ${conn.peer}...`);
     const arrayBuffer = await blob.arrayBuffer();
     const totalBytes = arrayBuffer.byteLength;
     const totalChunks = Math.ceil(totalBytes / CHUNK_SIZE);
     const bytes = new Uint8Array(arrayBuffer);
 
+    await waitForBuffer(conn);
     conn.send({
       type: "ASSET_CHUNK_HEADER",
       assetHash,
@@ -279,6 +289,7 @@ export class P2PHost {
     } as SyncMessage);
 
     for (let idx = 0; idx < totalChunks; idx++) {
+      await waitForBuffer(conn);
       const start = idx * CHUNK_SIZE;
       const end = Math.min(start + CHUNK_SIZE, totalBytes);
       const chunkBytes = Array.from(bytes.slice(start, end));
@@ -296,10 +307,12 @@ export class P2PHost {
       }
     }
 
+    await waitForBuffer(conn);
     conn.send({
       type: "ASSET_CHUNK_COMPLETE",
       assetHash
     } as SyncMessage);
+    console.log(`[p2pHost] Finished streaming asset ${assetHash} to client ${conn.peer}.`);
   }
 
   public disconnect(): void {
