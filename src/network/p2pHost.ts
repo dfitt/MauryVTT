@@ -26,6 +26,30 @@ async function waitForBuffer(conn: DataConnection): Promise<void> {
   }
 }
 
+function uint8ArrayToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return window.btoa(binary);
+}
+
+function payloadToUint8Array(payload: any): Uint8Array {
+  if (payload instanceof Uint8Array) return payload;
+  if (Array.isArray(payload)) return new Uint8Array(payload);
+  if (typeof payload === "string") {
+    const binary = window.atob(payload);
+    const len = binary.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+  }
+  return new Uint8Array(0);
+}
+
 export class P2PHost {
   private peer: Peer | null = null;
   private connections: Map<string, DataConnection> = new Map();
@@ -183,7 +207,7 @@ export class P2PHost {
           const buf = this.pendingAssets.get(msg.assetHash);
           if (buf && msg.chunkIndex < buf.totalChunks) {
             if (!buf.chunks[msg.chunkIndex]) {
-              buf.chunks[msg.chunkIndex] = new Uint8Array(msg.payload);
+              buf.chunks[msg.chunkIndex] = payloadToUint8Array(msg.payload);
               buf.receivedChunks++;
             }
             if (buf.receivedChunks === buf.totalChunks) {
@@ -292,13 +316,13 @@ export class P2PHost {
       await waitForBuffer(conn);
       const start = idx * CHUNK_SIZE;
       const end = Math.min(start + CHUNK_SIZE, totalBytes);
-      const chunkBytes = Array.from(bytes.slice(start, end));
+      const chunkPayload = uint8ArrayToBase64(bytes.slice(start, end));
 
       conn.send({
         type: "ASSET_CHUNK_DATA",
         assetHash,
         chunkIndex: idx,
-        payload: chunkBytes
+        payload: chunkPayload
       } as SyncMessage);
 
       // Yield every 4 chunks to prevent WebRTC DataChannel buffer congestion

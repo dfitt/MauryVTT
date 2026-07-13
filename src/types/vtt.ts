@@ -151,7 +151,7 @@ export type AssetProtocolMessage =
       type: "ASSET_CHUNK_DATA";
       assetHash: string;
       chunkIndex: number;
-      payload: number[]; // Transmitted over JSON/DataChannel as Uint8Array/Array
+      payload: string | number[] | Uint8Array; // Transmitted over JSON/DataChannel as Base64 string or Uint8Array/Array
     }
   | { type: "ASSET_CHUNK_COMPLETE"; assetHash: string };
 
