@@ -604,7 +604,7 @@ export class CanvasEngine {
       const halfW = imgEnt.size.width / 2;
       const halfH = imgEnt.size.height / 2;
 
-      if (img && img.complete) {
+      if (img && img.complete && img.naturalWidth > 0) {
         ctx.drawImage(img, -halfW, -halfH, imgEnt.size.width, imgEnt.size.height);
       } else {
         ctx.fillStyle = "rgba(100, 116, 139, 0.35)";

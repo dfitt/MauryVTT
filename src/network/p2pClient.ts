@@ -16,6 +16,8 @@ const CHUNK_SIZE = 16384; // 16 KB
 interface PendingAssetBuffer {
   mimeType: string;
   totalChunks: number;
+  receivedChunks: number;
+  completeSignalReceived: boolean;
   chunks: Uint8Array[];
 }
 
@@ -25,6 +27,28 @@ export class P2PClient {
   private ephemeralListeners: Set<(payload: EphemeralPayload) => void> = new Set();
   private pendingAssets = new Map<string, PendingAssetBuffer>();
   public clientPeerId: string = "";
+
+  private async tryFinalizeAsset(assetHash: string): Promise<void> {
+    const buf = this.pendingAssets.get(assetHash);
+    if (!buf) return;
+    if (buf.receivedChunks < buf.totalChunks) return;
+
+    console.log(`[p2pClient] Finalizing asset ${assetHash} (${buf.receivedChunks}/${buf.totalChunks} chunks received)`);
+    const fullBuffer = new Uint8Array(
+      buf.chunks.reduce((acc, curr) => acc + (curr ? curr.length : 0), 0)
+    );
+    let offset = 0;
+    for (const chunk of buf.chunks) {
+      if (chunk) {
+        fullBuffer.set(chunk, offset);
+        offset += chunk.length;
+      }
+    }
+    const blob = new Blob([fullBuffer], { type: buf.mimeType });
+    await assetStore.saveAsset(assetHash, blob);
+    this.pendingAssets.delete(assetHash);
+    docStore.loadSnapshot(docStore.getDocument());
+  }
 
   public async connectToHost(
     hostRoomId: string,
@@ -122,6 +146,8 @@ export class P2PClient {
             this.pendingAssets.set(msg.assetHash, {
               mimeType: msg.mimeType,
               totalChunks: msg.totalChunks,
+              receivedChunks: 0,
+              completeSignalReceived: false,
               chunks: new Array(msg.totalChunks)
             });
             break;
@@ -130,7 +156,13 @@ export class P2PClient {
           case "ASSET_CHUNK_DATA": {
             const buf = this.pendingAssets.get(msg.assetHash);
             if (buf && msg.chunkIndex < buf.totalChunks) {
-              buf.chunks[msg.chunkIndex] = new Uint8Array(msg.payload);
+              if (!buf.chunks[msg.chunkIndex]) {
+                buf.chunks[msg.chunkIndex] = new Uint8Array(msg.payload);
+                buf.receivedChunks++;
+              }
+              if (buf.receivedChunks === buf.totalChunks) {
+                await this.tryFinalizeAsset(msg.assetHash);
+              }
             }
             break;
           }
@@ -138,20 +170,12 @@ export class P2PClient {
           case "ASSET_CHUNK_COMPLETE": {
             const buf = this.pendingAssets.get(msg.assetHash);
             if (buf) {
-              const fullBuffer = new Uint8Array(
-                buf.chunks.reduce((acc, curr) => acc + (curr ? curr.length : 0), 0)
-              );
-              let offset = 0;
-              for (const chunk of buf.chunks) {
-                if (chunk) {
-                  fullBuffer.set(chunk, offset);
-                  offset += chunk.length;
-                }
+              buf.completeSignalReceived = true;
+              if (buf.receivedChunks === buf.totalChunks) {
+                await this.tryFinalizeAsset(msg.assetHash);
+              } else {
+                console.log(`[p2pClient] ASSET_CHUNK_COMPLETE arrived early for ${msg.assetHash} (${buf.receivedChunks}/${buf.totalChunks} chunks). Waiting for remaining chunks.`);
               }
-              const blob = new Blob([fullBuffer], { type: buf.mimeType });
-              await assetStore.saveAsset(msg.assetHash, blob);
-              this.pendingAssets.delete(msg.assetHash);
-              docStore.loadSnapshot(docStore.getDocument());
             }
             break;
           }

@@ -27,6 +27,8 @@ class IDBAssetStore {
   }
 
   public async saveAsset(hash: string, blob: Blob): Promise<void> {
+    const url = URL.createObjectURL(blob);
+    this.urlCache.set(hash, url);
     const db = await this.getDB();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, "readwrite");
