@@ -11,7 +11,8 @@ export function bindSelectTool(engine: CanvasEngine): void {
   let isResizing = false;
   let resizingEntity: (ImageEntity | TokenEntity) | null = null;
   let origAspectRatio = 1.0;
-  let centerPos = { x: 0, y: 0 };
+  let anchorCorner = { x: 0, y: 0 };
+  let resizeDir = { x: 1, y: 1 };
 
   engine.onMouseDown((_e, worldX, worldY) => {
     if (engine.activeTool !== "select") return;
@@ -35,7 +36,8 @@ export function bindSelectTool(engine: CanvasEngine): void {
           { x: imgEnt.position.x - halfW, y: imgEnt.position.y + halfH }
         ];
 
-        for (const c of corners) {
+        for (let i = 0; i < corners.length; i++) {
+          const c = corners[i];
           const dist = Math.hypot(worldX - c.x, worldY - c.y);
           if (dist <= handleThreshold) {
             isResizing = true;
@@ -44,7 +46,18 @@ export function bindSelectTool(engine: CanvasEngine): void {
               engine.aligningImageEntityId = imgEnt.id;
             }
             origAspectRatio = imgEnt.size.width / imgEnt.size.height;
-            centerPos = { ...imgEnt.position };
+
+            const oppCorners = [
+              { x: imgEnt.position.x + halfW, y: imgEnt.position.y + halfH },
+              { x: imgEnt.position.x - halfW, y: imgEnt.position.y + halfH },
+              { x: imgEnt.position.x - halfW, y: imgEnt.position.y - halfH },
+              { x: imgEnt.position.x + halfW, y: imgEnt.position.y - halfH }
+            ];
+            anchorCorner = oppCorners[i];
+            resizeDir = {
+              x: (i === 1 || i === 2) ? 1 : -1,
+              y: (i === 2 || i === 3) ? 1 : -1
+            };
             return;
           }
         }
@@ -54,6 +67,9 @@ export function bindSelectTool(engine: CanvasEngine): void {
     // 2. Check if user clicked inside an entity
     let found: CanvasEntity | null = null;
     for (const ent of entities) {
+      if ((window as any).vttSimpleMode && ent.type !== "token") {
+        continue;
+      }
       if (ent.type === "image" || ent.type === "token") {
         const img = ent as ImageEntity | TokenEntity;
         const halfW = img.size.width / 2;
@@ -92,8 +108,8 @@ export function bindSelectTool(engine: CanvasEngine): void {
     if (engine.activeTool !== "select") return;
 
     if (isResizing && resizingEntity) {
-      const dx = Math.abs(worldX - centerPos.x);
-      let newWidth = Math.max(30, Math.round(dx * 2));
+      const rawW = Math.abs(worldX - anchorCorner.x);
+      let newWidth = Math.max(30, Math.round(rawW));
       let newHeight = Math.max(30, Math.round(newWidth / origAspectRatio));
 
       if (resizingEntity.type === "token") {
@@ -105,6 +121,10 @@ export function bindSelectTool(engine: CanvasEngine): void {
       }
 
       resizingEntity.size = { width: newWidth, height: newHeight };
+      resizingEntity.position = {
+        x: anchorCorner.x + resizeDir.x * (newWidth / 2),
+        y: anchorCorner.y + resizeDir.y * (newHeight / 2)
+      };
       return;
     }
 

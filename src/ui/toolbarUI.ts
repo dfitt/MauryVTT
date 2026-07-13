@@ -269,6 +269,9 @@ export function setupToolbarUI(engine: CanvasEngine): void {
   document.body.appendChild(simpleBar);
 
   const applySimpleMode = (enabled: boolean) => {
+    (window as any).vttSimpleMode = enabled;
+    document.body.classList.toggle("simple-mode-active", enabled);
+
     const topHeader = document.querySelector<HTMLElement>(".top-header");
     const chatWindow = document.querySelector<HTMLElement>(".chat-window");
     const selectionToolbar = document.querySelector<HTMLElement>("#selection-toolbar");

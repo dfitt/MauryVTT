@@ -231,6 +231,14 @@ html, body {
   color: #fff;
 }
 
+body.simple-mode-active .top-header,
+body.simple-mode-active .chat-window,
+body.simple-mode-active #vtt-chat-panel,
+body.simple-mode-active .bottom-toolbar,
+body.simple-mode-active #selection-toolbar {
+  display: none !important;
+}
+
 /* =========================================
    FLOATING BOTTOM TOOLBAR
    ========================================= */

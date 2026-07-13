@@ -52,6 +52,7 @@ class SessionManager {
     if (this.role === "host") {
       hostEngine.broadcastOperation(op);
     } else if (this.role === "client") {
+      docStore.applyOperation(op, { incrementRevision: false });
       clientEngine.dispatchOperation(op);
     } else {
       docStore.applyOperation(op, { incrementRevision: true });
