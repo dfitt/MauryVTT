@@ -15,6 +15,13 @@ const PALETTE_COLORS = [
   "#f8fafc"  // White
 ];
 
+function isMobilePhone(): boolean {
+  const ua = navigator.userAgent || "";
+  const isIPad = /iPad/i.test(ua) || (navigator.maxTouchPoints && navigator.maxTouchPoints > 2 && /Macintosh/i.test(ua));
+  if (isIPad) return false;
+  return /iPhone|iPod|Android.*Mobile/i.test(ua) || (window.innerWidth <= 600 && !isIPad);
+}
+
 export function setupToolbarUI(engine: CanvasEngine): void {
   (window as any).vttActiveTool = engine.activeTool;
 
@@ -241,5 +248,55 @@ export function setupToolbarUI(engine: CanvasEngine): void {
   });
   bar.appendChild(chatToggleBtn);
 
+  // Simple Mode Toggle Button in Advanced Mode
+  const simpleModeBtn = document.createElement("button");
+  simpleModeBtn.className = "tool-btn";
+  simpleModeBtn.title = "Switch to Simple Mode (Pan, Zoom & Move Tokens Only)";
+  simpleModeBtn.innerHTML = "📱";
+  bar.appendChild(simpleModeBtn);
+
   document.body.appendChild(bar);
+
+  // Sleek Simple Mode Bar (visible only when Simple Mode is active)
+  const simpleBar = document.createElement("div");
+  simpleBar.id = "simple-mode-bar";
+  simpleBar.className = "simple-mode-bar";
+  simpleBar.style.display = "none";
+  simpleBar.innerHTML = `
+    <span class="simple-mode-label">⚡ Simple Mode: Pan, Zoom & Move Tokens</span>
+    <button class="btn-glass btn-sm btn-primary" id="btn-toggle-advanced" style="cursor: pointer; padding: 6px 14px;">⚙️ Advanced Mode</button>
+  `;
+  document.body.appendChild(simpleBar);
+
+  const applySimpleMode = (enabled: boolean) => {
+    const topHeader = document.querySelector<HTMLElement>(".top-header");
+    const chatWindow = document.querySelector<HTMLElement>(".chat-window");
+    const selectionToolbar = document.querySelector<HTMLElement>("#selection-toolbar");
+
+    if (enabled) {
+      if (topHeader) topHeader.style.display = "none";
+      if (chatWindow) chatWindow.style.display = "none";
+      if (selectionToolbar) selectionToolbar.style.display = "none";
+      bar.style.display = "none";
+      simpleBar.style.display = "flex";
+
+      engine.activeTool = "select";
+      (window as any).vttActiveTool = "select";
+      engine.selectedEntityId = null;
+    } else {
+      if (topHeader) topHeader.style.display = "flex";
+      if (chatWindow) chatWindow.style.display = "flex";
+      bar.style.display = "flex";
+      simpleBar.style.display = "none";
+    }
+  };
+
+  (window as any).setVTTSimpleMode = applySimpleMode;
+
+  simpleModeBtn.addEventListener("click", () => applySimpleMode(true));
+  simpleBar.querySelector<HTMLButtonElement>("#btn-toggle-advanced")!.addEventListener("click", () => applySimpleMode(false));
+
+  if (isMobilePhone()) {
+    applySimpleMode(true);
+  }
 }

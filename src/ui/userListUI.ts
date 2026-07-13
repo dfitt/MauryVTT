@@ -34,21 +34,8 @@ export function setupHeaderUI(): void {
       roomTxtEl.textContent = sessionManager.hostRoomId;
     }
 
-    const doc = docStore.getDocument();
-    const usersMap = { ...doc.users };
-
-    if (sessionManager.myUsername && (!sessionManager.myPeerId || !usersMap[sessionManager.myPeerId])) {
-      const myId = sessionManager.myPeerId || "local-me";
-      usersMap[myId] = {
-        peerId: myId,
-        username: sessionManager.myUsername,
-        color: sessionManager.myColor || "#eab308",
-        joinedAt: Date.now(),
-        role: sessionManager.role === "host" ? "host" : "client"
-      };
-    }
-
-    const pills = Object.values(usersMap).map((u) => {
+    const activeUsers = sessionManager.getActiveUsers();
+    const pills = activeUsers.map((u) => {
       const color = u.color || "#38bdf8";
       const hostTag = u.role === "host" ? " (Host)" : "";
       return `<span class="user-pill" title="${u.username}${hostTag}">

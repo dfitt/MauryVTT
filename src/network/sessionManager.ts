@@ -74,6 +74,32 @@ class SessionManager {
     }
   }
 
+  public getActiveUsers(): Array<{ username: string; color: string; role: string }> {
+    const map = new Map<string, { username: string; color: string; role: string }>();
+
+    if (this.myUsername) {
+      map.set(this.myUsername.toLowerCase().trim(), {
+        username: this.myUsername,
+        color: this.myColor || "#eab308",
+        role: this.role === "host" ? "host" : "client"
+      });
+    }
+
+    const docUsers = docStore.getDocument().users;
+    for (const u of Object.values(docUsers)) {
+      const nameKey = (u.username || "Anonymous").toLowerCase().trim();
+      if (!map.has(nameKey)) {
+        map.set(nameKey, {
+          username: u.username || "Anonymous",
+          color: u.color || "#38bdf8",
+          role: u.role
+        });
+      }
+    }
+
+    return Array.from(map.values());
+  }
+
   public disconnect(): void {
     if (this.role === "host") {
       hostEngine.disconnect();

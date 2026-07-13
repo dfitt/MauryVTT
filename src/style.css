@@ -206,6 +206,32 @@ html, body {
 }
 
 /* =========================================
+   SIMPLE MODE BAR (MOBILE DEFAULT / OPT-IN)
+   ========================================= */
+.simple-mode-bar {
+  position: fixed;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(18px);
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
+  z-index: 3000;
+}
+
+.simple-mode-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+}
+
+/* =========================================
    FLOATING BOTTOM TOOLBAR
    ========================================= */
 .bottom-toolbar {

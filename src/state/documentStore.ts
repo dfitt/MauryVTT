@@ -87,7 +87,9 @@ export class DocumentStore {
   }
 
   public loadSnapshot(snapshot: VTTDocument): void {
+    const currentUsers = this.doc ? { ...this.doc.users } : {};
     this.doc = JSON.parse(JSON.stringify(snapshot));
+    this.doc.users = currentUsers;
     this.notify();
   }
 
