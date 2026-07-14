@@ -111,6 +111,8 @@ export interface ChatMessage {
   senderUsername: string;
   content: string;
   type: "text" | "system" | "action" | "roll";
+  thumbsUp?: number;
+  thumbsDown?: number;
 }
 
 // ==========================================
@@ -132,6 +134,7 @@ export type DocumentOperation =
   | { opType: "REGISTER_USER"; profile: UserProfile }
   | { opType: "UPDATE_USER"; peerId: string; patch: Partial<UserProfile> }
   | { opType: "APPEND_CHAT_MESSAGE"; message: ChatMessage }
+  | { opType: "UPDATE_CHAT_MESSAGE"; id: string; patch: Partial<ChatMessage> }
   | { opType: "BATCH"; ops: DocumentOperation[] };
 
 // ==========================================

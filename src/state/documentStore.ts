@@ -141,7 +141,16 @@ export class DocumentStore {
         break;
       }
       case "APPEND_CHAT_MESSAGE": {
-        this.doc.chatHistory.push(op.message);
+        if (!this.doc.chatHistory.some((m) => m.id === op.message.id)) {
+          this.doc.chatHistory.push(op.message);
+        }
+        break;
+      }
+      case "UPDATE_CHAT_MESSAGE": {
+        const msg = this.doc.chatHistory.find((m) => m.id === op.id);
+        if (msg) {
+          Object.assign(msg, op.patch);
+        }
         break;
       }
       case "BATCH": {

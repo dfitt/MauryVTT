@@ -118,12 +118,42 @@ export function setupChatPanel(): void {
         }
         return `
           <div class="chat-msg ${msg.type === "roll" ? "roll" : ""}">
-          <div class="msg-author" style="color: #38bdf8">${msg.senderUsername}</div>
+            <div class="msg-author" style="color: #38bdf8">${msg.senderUsername}</div>
             <div class="msg-text">${msg.content}</div>
+            <div class="chat-reactions">
+              <button class="chat-reaction-btn" data-reaction="up" data-id="${msg.id}" title="Thumbs Up">
+                👍 <span>${msg.thumbsUp || 0}</span>
+              </button>
+              <button class="chat-reaction-btn" data-reaction="down" data-id="${msg.id}" title="Thumbs Down">
+                👎 <span>${msg.thumbsDown || 0}</span>
+              </button>
+            </div>
           </div>
         `;
       })
       .join("");
     container.scrollTop = container.scrollHeight;
+  });
+
+  container.addEventListener("click", (e) => {
+    const btn = (e.target as HTMLElement).closest(".chat-reaction-btn");
+    if (!btn) return;
+    const msgId = btn.getAttribute("data-id");
+    const reaction = btn.getAttribute("data-reaction");
+    if (!msgId || !reaction) return;
+
+    const doc = docStore.getDocument();
+    const msg = doc.chatHistory.find((m) => m.id === msgId);
+    if (!msg) return;
+
+    const currentUp = msg.thumbsUp || 0;
+    const currentDown = msg.thumbsDown || 0;
+    const patch = reaction === "up" ? { thumbsUp: currentUp + 1 } : { thumbsDown: currentDown + 1 };
+
+    sessionManager.dispatchOperation({
+      opType: "UPDATE_CHAT_MESSAGE",
+      id: msgId,
+      patch
+    });
   });
 }
