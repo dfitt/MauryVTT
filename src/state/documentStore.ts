@@ -38,9 +38,11 @@ export class DocumentStore {
         { id: "tokens-layer", name: "Player & NPC Tokens", zIndex: 2, visible: true, locked: false }
       ],
       entities: {},
+      gridCells: {},
       assetManifest: {},
       users: {},
-      chatHistory: []
+      chatHistory: [],
+      quickRolls: {}
     };
   }
 
@@ -105,6 +107,12 @@ export class DocumentStore {
     const currentUsers = this.doc ? { ...this.doc.users } : {};
     this.doc = JSON.parse(JSON.stringify(snapshot));
     this.doc.users = currentUsers;
+    if (!this.doc.gridCells) {
+      this.doc.gridCells = {};
+    }
+    if (!this.doc.quickRolls) {
+      this.doc.quickRolls = {};
+    }
     this.notify();
   }
 
@@ -166,6 +174,26 @@ export class DocumentStore {
         if (msg) {
           Object.assign(msg, op.patch);
         }
+        break;
+      }
+      case "UPDATE_GRID_CELL": {
+        if (!this.doc.gridCells) {
+          this.doc.gridCells = {};
+        }
+        const existing = this.doc.gridCells[op.cellKey] || {};
+        const updated = { ...existing, ...op.patch };
+        if (!updated.fillColor && !updated.fogHidden) {
+          delete this.doc.gridCells[op.cellKey];
+        } else {
+          this.doc.gridCells[op.cellKey] = updated;
+        }
+        break;
+      }
+      case "UPDATE_QUICK_ROLLS": {
+        if (!this.doc.quickRolls) {
+          this.doc.quickRolls = {};
+        }
+        this.doc.quickRolls[op.username] = op.quickRolls;
         break;
       }
       case "BATCH": {

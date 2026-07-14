@@ -520,6 +520,7 @@ export class CanvasEngine {
     if (doc.canvasSettings.gridEnabled) {
       this.drawGrid(ctx, doc.canvasSettings);
     }
+    this.drawGridCells(ctx, doc);
 
     // 3. Draw regular entities (images, tokens, etc.) over the Grid
     for (const ent of regularEntities) {
@@ -626,6 +627,38 @@ export class CanvasEngine {
         ctx.lineTo(endX, y + 0.5);
       }
       ctx.stroke();
+    }
+  }
+
+  private drawGridCells(ctx: CanvasRenderingContext2D, doc: VTTDocument): void {
+    if (!doc.gridCells) return;
+    const size = doc.canvasSettings.gridSizePx || 50;
+    const startX = Math.floor(-this.panX / (this.zoom * size)) * size - size;
+    const startY = Math.floor(-this.panY / (this.zoom * size)) * size - size;
+    const endX = startX + (this.canvas.width / this.zoom) + size * 2;
+    const endY = startY + (this.canvas.height / this.zoom) + size * 2;
+
+    for (const [key, cell] of Object.entries(doc.gridCells)) {
+      if (!cell || (!cell.fillColor && !cell.fogHidden)) continue;
+      const commaIdx = key.indexOf(",");
+      if (commaIdx === -1) continue;
+      const gx = Number(key.substring(0, commaIdx));
+      const gy = Number(key.substring(commaIdx + 1));
+
+      if (gx + size < startX || gx > endX || gy + size < startY || gy > endY) {
+        continue;
+      }
+
+      if (cell.fillColor) {
+        ctx.fillStyle = cell.fillColor;
+        ctx.fillRect(gx, gy, size, size);
+      }
+
+      if (cell.fogHidden) {
+        const isMine = cell.fogCreator && (cell.fogCreator === sessionManager.myPeerId || cell.fogCreator === "local");
+        ctx.fillStyle = isMine ? "rgba(0, 0, 0, 0.45)" : "#000000";
+        ctx.fillRect(gx, gy, size, size);
+      }
     }
   }
 
@@ -747,19 +780,6 @@ export class CanvasEngine {
       } else {
         ctx.fillStyle = "rgba(100, 116, 139, 0.35)";
         ctx.fillRect(-halfW, -halfH, displayW, displayH);
-      }
-
-      // Render Fog Overlay
-      if (imgEnt.hiddenCells && imgEnt.hiddenCells.length > 0) {
-        const cellSize = 50; // Grid square size for fog
-        for (const rawKey of imgEnt.hiddenCells) {
-          const [coord, creatorPeerId] = rawKey.split("@");
-          const [cx, cy] = coord.split(",").map(Number);
-
-          const isMine = creatorPeerId && (creatorPeerId === sessionManager.myPeerId || creatorPeerId === "local");
-          ctx.fillStyle = isMine ? "rgba(0, 0, 0, 0.45)" : "#000000";
-          ctx.fillRect(cx, cy, cellSize, cellSize);
-        }
       }
 
       if (ent.type === "token") {

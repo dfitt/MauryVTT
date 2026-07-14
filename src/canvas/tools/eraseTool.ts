@@ -28,6 +28,19 @@ export function bindEraseTool(engine: CanvasEngine): void {
     const gy = Math.floor(worldY / size) * size;
     const endX = gx + size;
     const endY = gy + size;
+    const cellKey = `${gx},${gy}`;
+
+    const cell = doc.gridCells?.[cellKey];
+    if (cell && cell.fillColor) {
+      if (!deletedInStroke.has(`grid-${cellKey}`)) {
+        deletedInStroke.add(`grid-${cellKey}`);
+        sessionManager.dispatchOperation({
+          opType: "UPDATE_GRID_CELL",
+          cellKey,
+          patch: { fillColor: undefined }
+        });
+      }
+    }
 
     for (const ent of Object.values(doc.entities)) {
       if (deletedInStroke.has(ent.id)) continue;
@@ -36,43 +49,24 @@ export function bindEraseTool(engine: CanvasEngine): void {
         const l = ent as LineEntity;
         if (!l.points || l.points.length === 0) continue;
 
-        const isFilledCell = (l.isClosed && Boolean(l.fillColor)) || l.id.startsWith("fill-");
         let hits = false;
+        const threshold = size * 0.7;
+        const pad = size * 0.3;
 
-        if (isFilledCell) {
-          // STRICT filled cell hit test: center of cell must fall inside the erased grid square
-          let sumX = 0;
-          let sumY = 0;
-          for (const [px, py] of l.points) {
-            sumX += px;
-            sumY += py;
-          }
-          const centerX = sumX / l.points.length;
-          const centerY = sumY / l.points.length;
-
-          if (centerX >= gx && centerX < endX && centerY >= gy && centerY < endY) {
+        for (const [px, py] of l.points) {
+          if (px >= gx - pad && px <= endX + pad && py >= gy - pad && py <= endY + pad) {
             hits = true;
+            break;
           }
-        } else {
-          // GENEROUS line & doodle hit test: check segment distance to cursor or vertex in expanded square
-          const threshold = size * 0.7;
-          const pad = size * 0.3;
+        }
 
-          for (const [px, py] of l.points) {
-            if (px >= gx - pad && px <= endX + pad && py >= gy - pad && py <= endY + pad) {
+        if (!hits && l.points.length >= 2) {
+          for (let i = 0; i < l.points.length - 1; i++) {
+            const [x1, y1] = l.points[i];
+            const [x2, y2] = l.points[i + 1];
+            if (distanceToSegment(worldX, worldY, x1, y1, x2, y2) <= threshold) {
               hits = true;
               break;
-            }
-          }
-
-          if (!hits && l.points.length >= 2) {
-            for (let i = 0; i < l.points.length - 1; i++) {
-              const [x1, y1] = l.points[i];
-              const [x2, y2] = l.points[i + 1];
-              if (distanceToSegment(worldX, worldY, x1, y1, x2, y2) <= threshold) {
-                hits = true;
-                break;
-              }
             }
           }
         }

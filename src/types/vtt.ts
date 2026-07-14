@@ -1,3 +1,14 @@
+export interface GridCellData {
+  fillColor?: string;     // Hex color if filled via fillTool
+  fogHidden?: boolean;    // True if covered by Fog of War
+  fogCreator?: string;    // Peer ID who created the fog cell
+}
+
+export interface QuickRoll {
+  label: string;
+  expr: string;
+}
+
 export interface VTTDocument {
   version: "1.0.0";
   documentId: string;
@@ -6,9 +17,11 @@ export interface VTTDocument {
   assetSettings: AssetSettings;
   layers: LayerDefinition[];
   entities: Record<string, CanvasEntity>;
+  gridCells: Record<string, GridCellData>;
   assetManifest: Record<string, AssetMetadata>;
   users: Record<string, UserProfile>;
   chatHistory: ChatMessage[];
+  quickRolls: Record<string, QuickRoll[]>; // Keyed by username
 }
 
 export interface CanvasSettings {
@@ -136,6 +149,8 @@ export type DocumentOperation =
   | { opType: "UPDATE_USER"; peerId: string; patch: Partial<UserProfile> }
   | { opType: "APPEND_CHAT_MESSAGE"; message: ChatMessage }
   | { opType: "UPDATE_CHAT_MESSAGE"; id: string; patch: Partial<ChatMessage> }
+  | { opType: "UPDATE_GRID_CELL"; cellKey: string; patch: Partial<GridCellData> }
+  | { opType: "UPDATE_QUICK_ROLLS"; username: string; quickRolls: QuickRoll[] }
   | { opType: "BATCH"; ops: DocumentOperation[] };
 
 // ==========================================

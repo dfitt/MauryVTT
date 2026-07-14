@@ -30,6 +30,7 @@ export function setupChatPanel(): void {
         <button class="dice-icon-btn mod-btn" data-dice="+1" title="Add +1">+1</button>
         <button class="dice-icon-btn mod-btn" data-dice="-1" title="Subtract 1">-1</button>
       </div>
+      <div class="quickrolls-container" id="quickrolls-container" style="display: none; flex-wrap: wrap; gap: 6px; margin-top: 6px; padding: 4px 0;"></div>
       <div class="dice-builder-details" id="dice-builder-details" style="display: none;">
         <div class="dice-builder-expression">
           <span>Expression:</span>
@@ -55,6 +56,7 @@ export function setupChatPanel(): void {
   const headerBar = panel.querySelector<HTMLElement>("#chat-header-bar")!;
   const toggleBtn = panel.querySelector<HTMLButtonElement>("#btn-toggle-chat")!;
   const badgeEl = panel.querySelector<HTMLElement>("#chat-unread-badge")!;
+  const quickRollsContainerEl = panel.querySelector<HTMLElement>("#quickrolls-container")!;
 
   let unreadCount = 0;
   let lastMessageCount = 0;
@@ -107,6 +109,82 @@ export function setupChatPanel(): void {
     return expr;
   }
 
+  function saveQuickRoll(label: string, expr: string): void {
+    const cleanLabel = label.trim();
+    const cleanExpr = expr.trim();
+    const username = sessionManager.myUsername || "Me";
+    if (!cleanLabel || !cleanExpr || !username) return;
+
+    const doc = docStore.getDocument();
+    const list = doc.quickRolls?.[username] ? [...doc.quickRolls[username]] : [];
+
+    const filtered = list.filter((q) => q.label.toLowerCase() !== cleanLabel.toLowerCase());
+    filtered.unshift({ label: cleanLabel, expr: cleanExpr });
+    const trimmed = filtered.slice(0, 20);
+
+    sessionManager.dispatchOperation({
+      opType: "UPDATE_QUICK_ROLLS",
+      username,
+      quickRolls: trimmed
+    });
+
+    renderQuickRolls();
+  }
+
+  function renderQuickRolls(): void {
+    if (!quickRollsContainerEl) return;
+    const doc = docStore.getDocument();
+    const username = sessionManager.myUsername || "Me";
+    const list = (doc.quickRolls?.[username] || []).slice(0, 4);
+
+    if (list.length === 0 || formatBuilderExpression() !== "") {
+      quickRollsContainerEl.style.display = "none";
+      return;
+    }
+
+    quickRollsContainerEl.style.display = "flex";
+    quickRollsContainerEl.innerHTML = list
+      .map(
+        (qr, idx) => `
+          <button class="btn-glass quickroll-btn" data-idx="${idx}" title="Quick roll: ${qr.label} (${qr.expr})" style="padding: 4px 8px; font-size: 0.85em; display: flex; align-items: center; gap: 4px; border: 1px solid rgba(56, 189, 248, 0.4); background: rgba(15, 23, 42, 0.75); border-radius: 4px; color: #f8fafc; cursor: pointer;">
+            <span style="color: #38bdf8;">🎲</span>
+            <strong style="font-weight: 600;">${qr.label}</strong>
+            <span style="color: #94a3b8; font-size: 0.8em;">(${qr.expr})</span>
+          </button>
+        `
+      )
+      .join("");
+
+    quickRollsContainerEl.querySelectorAll<HTMLButtonElement>(".quickroll-btn").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const idx = parseInt(btn.getAttribute("data-idx") || "-1", 10);
+        const qr = list[idx];
+        if (!qr) return;
+
+        const rollRes = parseAndRollDice(qr.expr);
+        if (!rollRes) return;
+
+        const newMsg: ChatMessage = {
+          id: "msg-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6),
+          timestamp: Date.now(),
+          senderPeerId: sessionManager.myPeerId || "local",
+          senderUsername: sessionManager.myUsername || "Me",
+          content: rollRes,
+          type: "roll",
+          rollLabel: qr.label
+        };
+
+        sessionManager.dispatchOperation({
+          opType: "APPEND_CHAT_MESSAGE",
+          message: newMsg
+        });
+
+        saveQuickRoll(qr.label, qr.expr);
+      });
+    });
+  }
+
   function updateBuilderUI(): void {
     const expr = formatBuilderExpression();
     if (!expr) {
@@ -115,6 +193,7 @@ export function setupChatPanel(): void {
       detailsEl.style.display = "flex";
       exprTxtEl.textContent = expr;
     }
+    renderQuickRolls();
   }
 
   function resetBuilderState(): void {
@@ -168,6 +247,10 @@ export function setupChatPanel(): void {
       opType: "APPEND_CHAT_MESSAGE",
       message: newMsg
     });
+
+    if (label) {
+      saveQuickRoll(label, expr);
+    }
 
     resetBuilderState();
   });
@@ -245,15 +328,30 @@ export function setupChatPanel(): void {
       let content = val;
       let msgType: ChatMessage["type"] = "text";
       let rollLabel: string | undefined = undefined;
+      let rollExpr: string | undefined = undefined;
 
       const rollMatch = val.match(/^(.*?)(?:\/(?:roll|r)\s+)(.+)$/i);
       if (rollMatch) {
-        const labelText = rollMatch[1].trim();
-        const expr = rollMatch[2].trim();
+        let labelText = rollMatch[1].trim();
+        let expr = rollMatch[2].trim();
+        if (!labelText) {
+          const commentMatch = expr.match(/^([0-9dD+\-\s]+?)\s*(?:[#:\-]|--)\s*(.+)$/);
+          if (commentMatch) {
+            expr = commentMatch[1].trim();
+            labelText = commentMatch[2].trim();
+          } else {
+            const spaceMatch = expr.match(/^([0-9dD+\-\s]+?)\s+([a-zA-Z].*)$/);
+            if (spaceMatch) {
+              expr = spaceMatch[1].trim();
+              labelText = spaceMatch[2].trim();
+            }
+          }
+        }
         const rollRes = parseAndRollDice(expr);
         if (rollRes) {
           content = rollRes;
           msgType = "roll";
+          rollExpr = expr;
           if (labelText) {
             rollLabel = labelText;
           }
@@ -284,6 +382,10 @@ export function setupChatPanel(): void {
         opType: "APPEND_CHAT_MESSAGE",
         message: newMsg
       });
+
+      if (rollLabel && rollExpr) {
+        saveQuickRoll(rollLabel, rollExpr);
+      }
     }
   });
 
@@ -308,6 +410,7 @@ export function setupChatPanel(): void {
       badgeEl.textContent = String(unreadCount);
     }
     lastMessageCount = newCount;
+    renderQuickRolls();
 
     // Smart DOM reconciliation so active roll animations are never destroyed midway by document updates
     doc.chatHistory.forEach((msg) => {
