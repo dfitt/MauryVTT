@@ -355,8 +355,7 @@ export function setupToolbarUI(engine: CanvasEngine): void {
   simpleBar.className = "simple-mode-bar";
   simpleBar.style.display = "none";
   simpleBar.innerHTML = `
-    <span class="simple-mode-label">⚡ Simple Mode: Pan, Zoom & Move Tokens</span>
-    <button class="btn-glass btn-sm btn-primary" id="btn-toggle-advanced" style="cursor: pointer; padding: 6px 14px;">⚙️ Advanced Mode</button>
+    <button class="btn-glass btn-sm btn-primary" id="btn-toggle-advanced" style="cursor: pointer; padding: 8px 18px; font-size: 14px; font-weight: 600; border-radius: 999px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);">⚙️ Advanced Mode</button>
   `;
   document.body.appendChild(simpleBar);
 
