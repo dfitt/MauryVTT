@@ -12,7 +12,9 @@ const PALETTE_COLORS = [
   "#10b981", // Emerald
   "#a855f7", // Violet
   "#f97316", // Orange
-  "#f8fafc"  // White
+  "#f8fafc", // White
+  "#000000", // Black
+  "fog"      // Fog of War (special color)
 ];
 
 function isMobilePhone(): boolean {
@@ -31,8 +33,6 @@ export function setupToolbarUI(engine: CanvasEngine): void {
     { id: "line", icon: "🖊️", title: "Straight Line" },
     { id: "fill", icon: "🪣", title: "Grid Square Fill Tool" },
     { id: "erase", icon: "🧹", title: "Eraser (Clear lines & fills under cursor)" },
-    { id: "hide", icon: "⬛", title: "Fog" },
-    { id: "unhide", icon: "⬜", title: "Fog Away" },
     {
       id: "measure",
       icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle;"><rect x="2" y="7" width="11" height="11" rx="3" fill="#eab308" stroke="currentColor" stroke-width="1.6"/><circle cx="7.5" cy="12.5" r="2" fill="#fef08a" stroke="currentColor" stroke-width="1.2"/><path d="M13 15H22V10H13" fill="#fef9c3" stroke="currentColor" stroke-width="1.4"/><line x1="16" y1="10" x2="16" y2="12.5" stroke="currentColor" stroke-width="1.4"/><line x1="19" y1="10" x2="19" y2="12.5" stroke="currentColor" stroke-width="1.4"/></svg>`,
@@ -49,14 +49,20 @@ export function setupToolbarUI(engine: CanvasEngine): void {
     btn.className = `tool-btn ${engine.activeTool === tool.id ? "active" : ""}`;
     btn.title = tool.title;
     btn.innerHTML = tool.icon;
+    btn.setAttribute("data-tool-id", tool.id);
 
     btn.addEventListener("click", () => {
-      engine.activeTool = tool.id;
-      (window as any).vttActiveTool = tool.id;
-      bar.querySelectorAll(".tool-btn").forEach((b) => b.classList.remove("active"));
+      engine.setTool(tool.id);
+      bar.querySelectorAll(".tool-btn[data-tool-id]").forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
     });
     bar.appendChild(btn);
+  });
+
+  engine.onToolChanged((toolId) => {
+    bar.querySelectorAll(".tool-btn[data-tool-id]").forEach((b) => {
+      b.classList.toggle("active", b.getAttribute("data-tool-id") === toolId);
+    });
   });
 
   const divider1 = document.createElement("div");
@@ -72,7 +78,12 @@ export function setupToolbarUI(engine: CanvasEngine): void {
 
   const activeColorBtn = document.createElement("div");
   activeColorBtn.className = "toolbar-color-active-btn";
-  activeColorBtn.style.backgroundColor = defaultColor;
+  if (defaultColor === "fog") {
+    activeColorBtn.style.background = "radial-gradient(circle, #cbd5e1 10%, #475569 50%, #0f172a 90%)";
+    activeColorBtn.innerHTML = `<span style="font-size: 14px; display: flex; align-items: center; justify-content: center; text-shadow: 0 0 3px #000;">🌫️</span>`;
+  } else {
+    activeColorBtn.style.backgroundColor = defaultColor;
+  }
   activeColorBtn.title = "Current Drawing Color (Click to change)";
 
   const colorPopover = document.createElement("div");
@@ -84,18 +95,39 @@ export function setupToolbarUI(engine: CanvasEngine): void {
 
   const updateColor = (color: string) => {
     engine.drawColor = color;
-    activeColorBtn.style.backgroundColor = color;
+    if (color === "fog") {
+      activeColorBtn.style.background = "radial-gradient(circle, #cbd5e1 10%, #475569 50%, #0f172a 90%)";
+      activeColorBtn.style.backgroundColor = "";
+      activeColorBtn.innerHTML = `<span style="font-size: 14px; display: flex; align-items: center; justify-content: center; text-shadow: 0 0 3px #000;">🌫️</span>`;
+      activeColorBtn.title = "Current Drawing Color: Fog of War";
+    } else {
+      activeColorBtn.style.background = color;
+      activeColorBtn.style.backgroundColor = color;
+      activeColorBtn.innerHTML = "";
+      activeColorBtn.title = `Current Drawing Color: ${color} (Click to change)`;
+    }
     colorPopover.style.display = "none";
     popoverSwatches.querySelectorAll(".toolbar-color-swatch").forEach((s) => {
-      s.classList.toggle("active", (s as HTMLElement).style.backgroundColor === color);
+      const swatchColor = s.getAttribute("data-color");
+      s.classList.toggle("active", swatchColor === color);
     });
   };
 
   PALETTE_COLORS.forEach((color) => {
     const swatch = document.createElement("div");
     swatch.className = `toolbar-color-swatch ${color === defaultColor ? "active" : ""}`;
-    swatch.style.backgroundColor = color;
-    swatch.title = `Drawing Color: ${color}`;
+    swatch.setAttribute("data-color", color);
+    if (color === "fog") {
+      swatch.style.background = "radial-gradient(circle, #cbd5e1 10%, #475569 50%, #0f172a 90%)";
+      swatch.style.boxShadow = "inset 0 0 4px rgba(255, 255, 255, 0.6)";
+      swatch.style.position = "relative";
+      swatch.style.overflow = "hidden";
+      swatch.innerHTML = `<span style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 14px; text-shadow: 0 0 3px #000;">🌫️</span>`;
+      swatch.title = "Drawing Color: Fog of War (Pure black to others, semi-transparent to you)";
+    } else {
+      swatch.style.backgroundColor = color;
+      swatch.title = `Drawing Color: ${color}`;
+    }
     swatch.addEventListener("click", (e) => {
       e.stopPropagation();
       updateColor(color);
@@ -209,6 +241,8 @@ export function setupToolbarUI(engine: CanvasEngine): void {
       opType: "CREATE_ENTITY",
       entity: newImage
     });
+    engine.setTool("select");
+    engine.selectedEntityId = newImage.id;
 
     console.log("[toolbarUI] Starting async network upload for image asset:", processed.assetHash);
     sessionManager.uploadAsset(processed.assetHash, processed.blob)
@@ -282,6 +316,8 @@ export function setupToolbarUI(engine: CanvasEngine): void {
       opType: "CREATE_ENTITY",
       entity: newToken
     });
+    engine.setTool("select");
+    engine.selectedEntityId = newToken.id;
 
     sessionManager.uploadAsset(processed.assetHash, processed.blob)
       .catch((err) => console.error("[toolbarUI] Network upload failed for token asset:", err));

@@ -85,8 +85,10 @@ export class CanvasEngine {
   private onMouseMoveListeners: ((e: MouseEvent, worldX: number, worldY: number) => void)[] = [];
   private onMouseUpListeners: ((e: MouseEvent, worldX: number, worldY: number) => void)[] = [];
 
+  private toolChangeListeners: Set<(tool: ToolType) => void> = new Set();
   private lastCursorSendTime: number = 0;
   private pendingCursorTimeout: any = null;
+  private lastSentCursorPos: { x: number; y: number } | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -133,6 +135,21 @@ export class CanvasEngine {
     this.selectionListeners.add(listener);
     listener(this._selectedEntityId);
     return () => this.selectionListeners.delete(listener);
+  }
+
+  public setTool(tool: ToolType): void {
+    if (this.activeTool !== tool || (window as any).vttActiveTool !== tool) {
+      this.activeTool = tool;
+      (window as any).vttActiveTool = tool;
+      for (const l of this.toolChangeListeners) {
+        l(tool);
+      }
+    }
+  }
+
+  public onToolChanged(listener: (tool: ToolType) => void): () => void {
+    this.toolChangeListeners.add(listener);
+    return () => this.toolChangeListeners.delete(listener);
   }
 
   private setupEvents(): void {
@@ -208,6 +225,14 @@ export class CanvasEngine {
       if (sessionManager.myPeerId) {
         const now = Date.now();
         const sendCursor = (wx: number, wy: number) => {
+          if (
+            this.lastSentCursorPos &&
+            Math.abs(this.lastSentCursorPos.x - wx) < 0.1 &&
+            Math.abs(this.lastSentCursorPos.y - wy) < 0.1
+          ) {
+            return;
+          }
+          this.lastSentCursorPos = { x: wx, y: wy };
           this.lastCursorSendTime = Date.now();
           sessionManager.sendEphemeral({
             type: "CURSOR",
@@ -219,7 +244,8 @@ export class CanvasEngine {
           });
         };
 
-        if (now - this.lastCursorSendTime >= 33) {
+        const interval = 17; // ~60Hz
+        if (now - this.lastCursorSendTime >= interval) {
           if (this.pendingCursorTimeout) {
             clearTimeout(this.pendingCursorTimeout);
             this.pendingCursorTimeout = null;
@@ -231,7 +257,7 @@ export class CanvasEngine {
             if (this.hoverWorldPos && sessionManager.myPeerId) {
               sendCursor(this.hoverWorldPos.x, this.hoverWorldPos.y);
             }
-          }, 33 - (now - this.lastCursorSendTime));
+          }, interval - (now - this.lastCursorSendTime));
         }
       }
 
@@ -541,7 +567,11 @@ export class CanvasEngine {
       const gy = Math.floor(this.hoverWorldPos.y / size) * size;
 
       if (this.activeTool === "fill") {
-        ctx.fillStyle = this.drawColor;
+        if (this.drawColor === "fog") {
+          ctx.fillStyle = "rgba(0, 0, 0, 0.45)";
+        } else {
+          ctx.fillStyle = this.drawColor;
+        }
         ctx.globalAlpha = 0.35;
         ctx.fillRect(gx, gy, size, size);
         ctx.globalAlpha = 1.0;
@@ -649,14 +679,13 @@ export class CanvasEngine {
         continue;
       }
 
-      if (cell.fillColor) {
-        ctx.fillStyle = cell.fillColor;
-        ctx.fillRect(gx, gy, size, size);
-      }
-
-      if (cell.fogHidden) {
-        const isMine = cell.fogCreator && (cell.fogCreator === sessionManager.myPeerId || cell.fogCreator === "local");
+      if (cell.fillColor === "fog" || cell.fogHidden) {
+        const creator = cell.fillColor === "fog" ? cell.fillCreator : cell.fogCreator;
+        const isMine = creator && (creator === sessionManager.myPeerId || creator === "local");
         ctx.fillStyle = isMine ? "rgba(0, 0, 0, 0.45)" : "#000000";
+        ctx.fillRect(gx, gy, size, size);
+      } else if (cell.fillColor) {
+        ctx.fillStyle = cell.fillColor;
         ctx.fillRect(gx, gy, size, size);
       }
     }
@@ -751,14 +780,25 @@ export class CanvasEngine {
       }
       if (l.isClosed && l.fillColor) {
         ctx.closePath();
-        ctx.fillStyle = l.fillColor;
+        if (l.fillColor === "fog") {
+          const isMine = l.lastModifiedBy === sessionManager.myPeerId || l.lastModifiedBy === "local";
+          ctx.fillStyle = isMine ? "rgba(0, 0, 0, 0.45)" : "#000000";
+        } else {
+          ctx.fillStyle = l.fillColor;
+        }
         ctx.fill();
       }
-      ctx.strokeStyle = l.strokeColor;
+      if (l.strokeColor === "fog") {
+        const isMine = l.lastModifiedBy === sessionManager.myPeerId || l.lastModifiedBy === "local";
+        ctx.strokeStyle = isMine ? "rgba(0, 0, 0, 0.45)" : "#000000";
+        ctx.globalAlpha = isMine ? 0.45 : 1.0;
+      } else {
+        ctx.strokeStyle = l.strokeColor;
+        ctx.globalAlpha = l.strokeOpacity;
+      }
       ctx.lineWidth = l.strokeWidth;
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
-      ctx.globalAlpha = l.strokeOpacity;
       ctx.stroke();
     } else if (ent.type === "image" || ent.type === "token") {
       const imgEnt = ent as ImageEntity | TokenEntity;

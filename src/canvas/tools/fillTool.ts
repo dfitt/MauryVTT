@@ -19,7 +19,10 @@ export function bindFillTool(engine: CanvasEngine): void {
     sessionManager.dispatchOperation({
       opType: "UPDATE_GRID_CELL",
       cellKey,
-      patch: { fillColor: engine.drawColor }
+      patch: {
+        fillColor: engine.drawColor,
+        fillCreator: sessionManager.myPeerId || "local"
+      }
     });
   }
 

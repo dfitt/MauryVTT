@@ -83,6 +83,7 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
           opType: "CREATE_ENTITY",
           entity: clone
         });
+        engine.setTool("select");
         engine.selectedEntityId = cloneId;
       });
       bar.appendChild(dupBtn);

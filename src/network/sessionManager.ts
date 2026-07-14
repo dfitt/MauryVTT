@@ -91,6 +91,14 @@ class SessionManager {
     }
   }
 
+  public async resyncState(): Promise<void> {
+    if (this.role === "host") {
+      hostEngine.broadcastFullState();
+    } else if (this.role === "client") {
+      clientEngine.requestResync();
+    }
+  }
+
   public lastSeenMap: Map<string, number> = new Map();
 
   public recordActivity(peerId: string): void {

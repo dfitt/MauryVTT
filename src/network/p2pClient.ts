@@ -171,6 +171,13 @@ export class P2PClient {
             break;
           }
 
+          case "RESYNC_ACK": {
+            console.log("[p2pClient] Received full state RESYNC_ACK from host. Rebuilding state...");
+            docStore.loadSnapshot(msg.snapshot);
+            await this.syncMissingAssets();
+            break;
+          }
+
           case "OP_COMMIT": {
             console.log("[p2pClient] Received OP_COMMIT from host:", msg.op.opType, msg.op);
             if ("entity" in msg.op && msg.op.entity?.lastModifiedBy) {
@@ -326,6 +333,13 @@ export class P2PClient {
   public sendEphemeral(payload: EphemeralPayload): void {
     if (this.conn && this.conn.open) {
       this.conn.send(payload);
+    }
+  }
+
+  public requestResync(): void {
+    if (this.conn && this.conn.open) {
+      console.log("[p2pClient] Requesting full state resync from host...");
+      this.conn.send({ type: "RESYNC_REQ", peerId: this.clientPeerId } as SyncMessage);
     }
   }
 

@@ -31,13 +31,13 @@ export function bindEraseTool(engine: CanvasEngine): void {
     const cellKey = `${gx},${gy}`;
 
     const cell = doc.gridCells?.[cellKey];
-    if (cell && cell.fillColor) {
+    if (cell && (cell.fillColor || cell.fogHidden)) {
       if (!deletedInStroke.has(`grid-${cellKey}`)) {
         deletedInStroke.add(`grid-${cellKey}`);
         sessionManager.dispatchOperation({
           opType: "UPDATE_GRID_CELL",
           cellKey,
-          patch: { fillColor: undefined }
+          patch: { fillColor: undefined, fogHidden: undefined }
         });
       }
     }

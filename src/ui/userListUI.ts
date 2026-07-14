@@ -13,6 +13,7 @@ export function setupHeaderUI(): void {
         <span>Room: <strong id="room-id-txt">---</strong></span>
         <button class="copy-btn" id="copy-room-btn">Copy Link</button>
       </div>
+      <button class="btn-glass" id="btn-resync" title="Resync full state with peers" style="padding: 4px 10px; font-size: 0.85em; display: flex; align-items: center; gap: 4px; border: 1px solid rgba(56, 189, 248, 0.4); background: rgba(15, 23, 42, 0.75); border-radius: 4px; color: #f8fafc; cursor: pointer;">🔄 Resync</button>
       <div class="connected-users-list" id="connected-users-list"></div>
     </div>
     <div class="header-actions">
@@ -82,5 +83,19 @@ export function setupHeaderUI(): void {
       }
     };
     input.click();
+  });
+
+  const resyncBtn = header.querySelector<HTMLButtonElement>("#btn-resync")!;
+  resyncBtn.addEventListener("click", async () => {
+    resyncBtn.textContent = "🔄 Syncing...";
+    try {
+      await sessionManager.resyncState();
+    } catch (err) {
+      console.error("[Resync] Error:", err);
+    }
+    setTimeout(() => {
+      resyncBtn.textContent = "✅ Synced!";
+      setTimeout(() => (resyncBtn.textContent = "🔄 Resync"), 1500);
+    }, 600);
   });
 }

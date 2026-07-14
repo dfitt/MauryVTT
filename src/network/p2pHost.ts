@@ -162,6 +162,17 @@ export class P2PHost {
           break;
         }
 
+        case "RESYNC_REQ": {
+          console.log("[p2pHost] Received RESYNC_REQ from peer:", conn.peer);
+          const snapshot = docStore.getDocument();
+          const ack: SyncMessage = {
+            type: "RESYNC_ACK",
+            snapshot
+          };
+          conn.send(ack);
+          break;
+        }
+
         case "OP_REQUEST": {
           console.log("[p2pHost] Received OP_REQUEST from client:", conn.peer, msg.op.opType, msg.op);
           docStore.applyOperation(msg.op, { incrementRevision: true });
@@ -260,6 +271,20 @@ export class P2PHost {
       op
     };
     this.broadcastMessage(commit);
+  }
+
+  public broadcastFullState(): void {
+    console.log("[p2pHost] Broadcasting full state RESYNC_ACK to all clients");
+    const snapshot = docStore.getDocument();
+    const msg: SyncMessage = {
+      type: "RESYNC_ACK",
+      snapshot
+    };
+    for (const conn of this.connections.values()) {
+      if (conn.open) {
+        conn.send(msg);
+      }
+    }
   }
 
   public broadcastEphemeral(payload: EphemeralPayload): void {

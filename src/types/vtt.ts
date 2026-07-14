@@ -1,5 +1,6 @@
 export interface GridCellData {
   fillColor?: string;     // Hex color if filled via fillTool
+  fillCreator?: string;   // Peer ID who created the fill (for "fog" check)
   fogHidden?: boolean;    // True if covered by Fog of War
   fogCreator?: string;    // Peer ID who created the fog cell
 }
@@ -136,6 +137,8 @@ export interface ChatMessage {
 export type SyncMessage =
   | { type: "HANDSHAKE_REQ"; peerId: string }
   | { type: "HANDSHAKE_ACK"; snapshot: VTTDocument }
+  | { type: "RESYNC_REQ"; peerId: string }
+  | { type: "RESYNC_ACK"; snapshot: VTTDocument }
   | { type: "OP_REQUEST"; clientSeq: string; op: DocumentOperation }
   | { type: "OP_COMMIT"; clientSeq?: string; revision: number; op: DocumentOperation }
   | AssetProtocolMessage;
