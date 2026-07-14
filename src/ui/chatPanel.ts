@@ -51,22 +51,50 @@ export function setupChatPanel(): void {
   (window as any).toggleVttChat = toggleChat;
 
   function parseAndRollDice(cmd: string): string | null {
-    const match = cmd.match(/^\/roll\s+(\d+)d(\d+)([\+\-]\d+)?/i);
-    if (!match) return null;
+    const rawExpr = cmd.replace(/^\/(roll|r)\s+/i, "").replace(/\s+/g, "");
+    if (!rawExpr) return null;
 
-    const count = Math.min(parseInt(match[1], 10), 50);
-    const sides = parseInt(match[2], 10);
-    const mod = match[3] ? parseInt(match[3], 10) : 0;
+    const tokenRegex = /([+-]?)([^+-]+)/g;
+    let match;
+    let total = 0;
+    const breakdowns: string[] = [];
+    let valid = false;
 
-    const rolls: number[] = [];
-    let sum = 0;
-    for (let i = 0; i < count; i++) {
-      const r = Math.floor(Math.random() * sides) + 1;
-      rolls.push(r);
-      sum += r;
+    while ((match = tokenRegex.exec(rawExpr)) !== null) {
+      const signStr = match[1];
+      const sign = signStr === "-" ? -1 : 1;
+      const term = match[2];
+
+      const diceMatch = term.match(/^(\d*)d(\d+)$/i);
+      if (diceMatch) {
+        valid = true;
+        const count = diceMatch[1] === "" ? 1 : Math.min(parseInt(diceMatch[1], 10), 50);
+        const sides = parseInt(diceMatch[2], 10);
+        if (sides <= 0 || count <= 0) continue;
+
+        const rolls: number[] = [];
+        let sum = 0;
+        for (let i = 0; i < count; i++) {
+          const r = Math.floor(Math.random() * sides) + 1;
+          rolls.push(r);
+          sum += r;
+        }
+        total += sign * sum;
+        const prefix = breakdowns.length === 0 ? (sign === -1 ? "-" : "") : (sign === -1 ? " - " : " + ");
+        breakdowns.push(`${prefix}${count}d${sides}[${rolls.join(", ")}]`);
+      } else if (/^\d+$/.test(term)) {
+        valid = true;
+        const val = parseInt(term, 10);
+        total += sign * val;
+        const prefix = breakdowns.length === 0 ? (sign === -1 ? "-" : "") : (sign === -1 ? " - " : " + ");
+        breakdowns.push(`${prefix}${val}`);
+      } else {
+        return null;
+      }
     }
-    const total = sum + mod;
-    return `🎲 Rolled ${count}d${sides}${match[3] || ""}: [${rolls.join(", ")}]${mod ? ` (${mod >= 0 ? "+" : ""}${mod})` : ""} = Total: **${total}**`;
+
+    if (!valid) return null;
+    return `🎲 Rolled **${rawExpr}**: ${breakdowns.join("")} = Total: **${total}**`;
   }
 
   inputEl.addEventListener("keydown", (e) => {
@@ -74,15 +102,43 @@ export function setupChatPanel(): void {
       const val = inputEl.value.trim();
       inputEl.value = "";
 
+      if (/^\/clear$/i.test(val)) {
+        container.innerHTML = "";
+        return;
+      }
+
+      if (/^\/(help|\?)$/i.test(val)) {
+        const helpMsg: ChatMessage = {
+          id: "sys-" + Date.now(),
+          timestamp: Date.now(),
+          senderPeerId: "system",
+          senderUsername: "System",
+          content: `**Commands:**<br/>• <code>/roll &lt;expr&gt;</code> (or <code>/r</code>): Roll dice (e.g. <code>/r 1d6+3d4+12</code> or <code>/r d20+5</code>)<br/>• <code>/flip</code>: Flip a coin (Heads/Tails)<br/>• <code>/me &lt;action&gt;</code>: Roleplay emote action<br/>• <code>/room</code>: Show room code link<br/>• <code>/clear</code>: Clear local chat view`,
+          type: "system"
+        };
+        sessionManager.dispatchOperation({ opType: "APPEND_CHAT_MESSAGE", message: helpMsg });
+        return;
+      }
+
       let content = val;
       let msgType: ChatMessage["type"] = "text";
 
-      if (val.startsWith("/roll")) {
+      if (/^\/(roll|r)\s+/i.test(val)) {
         const rollRes = parseAndRollDice(val);
         if (rollRes) {
           content = rollRes;
           msgType = "roll";
         }
+      } else if (/^\/flip$/i.test(val)) {
+        const result = Math.random() < 0.5 ? "Heads" : "Tails";
+        content = `🪙 Coin Flip: **${result}**`;
+        msgType = "roll";
+      } else if (/^\/me\s+/i.test(val)) {
+        content = `*${val.replace(/^\/me\s+/i, "")}*`;
+        msgType = "action";
+      } else if (/^\/room$/i.test(val)) {
+        content = `Room Code: **${sessionManager.hostRoomId || "Local / Host Not Started"}**`;
+        msgType = "system";
       }
 
       const newMsg: ChatMessage = {

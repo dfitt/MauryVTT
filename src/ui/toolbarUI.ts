@@ -64,29 +64,85 @@ export function setupToolbarUI(engine: CanvasEngine): void {
   divider1.className = "tool-divider";
   bar.appendChild(divider1);
 
-  // Color Swatch Picker
+  // Compact Single-Button Color Picker
   const colorGroup = document.createElement("div");
   colorGroup.className = "toolbar-colors";
 
-  // Ensure user's color is set as default drawing color
   const defaultColor = sessionManager.myColor || PALETTE_COLORS[0];
   engine.drawColor = defaultColor;
+
+  const activeColorBtn = document.createElement("div");
+  activeColorBtn.className = "toolbar-color-active-btn";
+  activeColorBtn.style.backgroundColor = defaultColor;
+  activeColorBtn.title = "Current Drawing Color (Click to change)";
+
+  const colorPopover = document.createElement("div");
+  colorPopover.className = "toolbar-color-popover";
+  colorPopover.style.display = "none";
+
+  const popoverSwatches = document.createElement("div");
+  popoverSwatches.className = "popover-swatches";
+
+  const updateColor = (color: string) => {
+    engine.drawColor = color;
+    activeColorBtn.style.backgroundColor = color;
+    colorPopover.style.display = "none";
+    popoverSwatches.querySelectorAll(".toolbar-color-swatch").forEach((s) => {
+      s.classList.toggle("active", (s as HTMLElement).style.backgroundColor === color);
+    });
+  };
 
   PALETTE_COLORS.forEach((color) => {
     const swatch = document.createElement("div");
     swatch.className = `toolbar-color-swatch ${color === defaultColor ? "active" : ""}`;
     swatch.style.backgroundColor = color;
     swatch.title = `Drawing Color: ${color}`;
-
-    swatch.addEventListener("click", () => {
-      engine.drawColor = color;
-      colorGroup.querySelectorAll(".toolbar-color-swatch").forEach((el) => el.classList.remove("active"));
-      swatch.classList.add("active");
+    swatch.addEventListener("click", (e) => {
+      e.stopPropagation();
+      updateColor(color);
     });
-
-    colorGroup.appendChild(swatch);
+    popoverSwatches.appendChild(swatch);
   });
 
+  const customRow = document.createElement("div");
+  customRow.style.display = "flex";
+  customRow.style.alignItems = "center";
+  customRow.style.justifyContent = "space-between";
+  customRow.style.fontSize = "12px";
+  customRow.style.color = "#cbd5e1";
+
+  const customLabel = document.createElement("span");
+  customLabel.textContent = "Custom Color:";
+  const customInput = document.createElement("input");
+  customInput.type = "color";
+  customInput.value = defaultColor;
+  customInput.style.cursor = "pointer";
+  customInput.style.border = "none";
+  customInput.style.background = "transparent";
+
+  customInput.addEventListener("change", () => {
+    updateColor(customInput.value);
+  });
+
+  customRow.appendChild(customLabel);
+  customRow.appendChild(customInput);
+
+  colorPopover.appendChild(popoverSwatches);
+  colorPopover.appendChild(customRow);
+
+  activeColorBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    colorPopover.style.display = colorPopover.style.display === "none" ? "flex" : "none";
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!colorGroup.contains(e.target as Node)) {
+      colorPopover.style.display = "none";
+    }
+  });
+
+  colorGroup.appendChild(activeColorBtn);
+  colorGroup.appendChild(colorPopover);
   bar.appendChild(colorGroup);
 
   const divider2 = document.createElement("div");

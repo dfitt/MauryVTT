@@ -570,11 +570,50 @@ body.simple-mode-active #selection-toolbar {
   align-items: center;
   gap: 6px;
   padding: 0 4px;
+  position: relative;
+}
+
+.toolbar-color-active-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.toolbar-color-active-btn:hover {
+  transform: scale(1.15);
+}
+
+.toolbar-color-popover {
+  position: absolute;
+  bottom: 54px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--glass-bg);
+  backdrop-filter: blur(18px);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 12px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.65);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 2000;
+  animation: fadeInUp 0.15s ease;
+}
+
+.popover-swatches {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .toolbar-color-swatch {
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   cursor: pointer;
   border: 2px solid transparent;
