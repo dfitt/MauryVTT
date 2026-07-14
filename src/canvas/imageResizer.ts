@@ -88,7 +88,7 @@ export async function processTokenImageFile(
     image.src = imgUrl;
   });
 
-  const size = 128;
+  const size = 256;
   const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
@@ -102,7 +102,7 @@ export async function processTokenImageFile(
   ctx.clearRect(0, 0, size, size);
   ctx.save();
   ctx.beginPath();
-  ctx.arc(64, 64, 58, 0, Math.PI * 2);
+  ctx.arc(128, 128, 116, 0, Math.PI * 2);
   ctx.closePath();
   ctx.clip();
 
@@ -113,9 +113,9 @@ export async function processTokenImageFile(
 
   // Draw circular exterior token ring with increased thickness and importing user's active color
   ctx.beginPath();
-  ctx.arc(64, 64, 59, 0, Math.PI * 2);
+  ctx.arc(128, 128, 118, 0, Math.PI * 2);
   ctx.strokeStyle = ringColor;
-  ctx.lineWidth = 10;
+  ctx.lineWidth = 20;
   ctx.stroke();
 
   URL.revokeObjectURL(imgUrl);
