@@ -1,5 +1,5 @@
 import { CanvasEngine, ToolType } from "../canvas/canvasEngine.js";
-import { processImageFile, processTokenImageFile } from "../canvas/imageResizer.js";
+import { processImageFile, processTokenImageFile, generatePlainTokenImage, ProcessedImageResult } from "../canvas/imageResizer.js";
 import { assetStore } from "../state/idbAssetStore.js";
 import { docStore } from "../state/documentStore.js";
 import { sessionManager } from "../network/sessionManager.js";
@@ -233,14 +233,7 @@ export function setupToolbarUI(engine: CanvasEngine): void {
   tokenInput.accept = "image/*";
   tokenInput.style.display = "none";
 
-  uploadTokenBtn.addEventListener("click", () => tokenInput.click());
-
-  tokenInput.addEventListener("change", async () => {
-    const file = tokenInput.files?.[0];
-    if (!file) return;
-
-    console.log("[toolbarUI] Token upload selected:", file.name, file.size);
-    const processed = await processTokenImageFile(file, engine.drawColor);
+  const createAndDispatchToken = async (processed: ProcessedImageResult) => {
     await assetStore.saveAsset(processed.assetHash, processed.blob);
     docStore.registerAssetManifest(
       processed.assetHash,
@@ -286,18 +279,48 @@ export function setupToolbarUI(engine: CanvasEngine): void {
       statusEffects: []
     };
 
-    console.log("[toolbarUI] Dispatching CREATE_ENTITY for Token:", newToken.id, "hash:", processed.assetHash);
     sessionManager.dispatchOperation({
       opType: "CREATE_ENTITY",
       entity: newToken
     });
 
-    console.log("[toolbarUI] Starting async network upload for token asset:", processed.assetHash);
     sessionManager.uploadAsset(processed.assetHash, processed.blob)
-      .then(() => console.log("[toolbarUI] Network upload succeeded for token asset:", processed.assetHash))
       .catch((err) => console.error("[toolbarUI] Network upload failed for token asset:", err));
+  };
 
+  let tokenPickerActive = false;
+  uploadTokenBtn.addEventListener("click", () => {
+    tokenPickerActive = true;
+    tokenInput.click();
+  });
+
+  tokenInput.addEventListener("change", async () => {
+    tokenPickerActive = false;
+    const file = tokenInput.files?.[0];
+    if (file) {
+      const processed = await processTokenImageFile(file, engine.drawColor);
+      await createAndDispatchToken(processed);
+    }
     tokenInput.value = "";
+  });
+
+  tokenInput.addEventListener("cancel", async () => {
+    if (!tokenPickerActive) return;
+    tokenPickerActive = false;
+    const processed = await generatePlainTokenImage(engine.drawColor);
+    await createAndDispatchToken(processed);
+  });
+
+  window.addEventListener("focus", () => {
+    if (tokenPickerActive) {
+      setTimeout(async () => {
+        if (tokenPickerActive && (!tokenInput.files || tokenInput.files.length === 0)) {
+          tokenPickerActive = false;
+          const processed = await generatePlainTokenImage(engine.drawColor);
+          await createAndDispatchToken(processed);
+        }
+      }, 350);
+    }
   });
 
   bar.appendChild(uploadTokenBtn);

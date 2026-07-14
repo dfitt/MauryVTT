@@ -695,7 +695,8 @@ export class CanvasEngine {
         ctx.lineWidth = 3 / this.zoom;
         ctx.strokeRect(-halfW, -halfH, displayW, displayH);
 
-        if (token.label) {
+        const isHoveredOrSelected = hoverScale > 1.05 || this.selectedEntityId === ent.id;
+        if (token.label && isHoveredOrSelected) {
           ctx.font = `600 ${Math.max(12, 14 / this.zoom)}px Outfit, sans-serif`;
           const textWidth = ctx.measureText(token.label).width;
           ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
