@@ -203,7 +203,7 @@ export function setupChatPanel(): void {
         }
         total += sign * sum;
         const prefix = breakdowns.length === 0 ? (sign === -1 ? "-" : "") : (sign === -1 ? " - " : " + ");
-        breakdowns.push(`${prefix}${count}d${sides}[${rolls.join(", ")}]`);
+        breakdowns.push(`${prefix}[${rolls.join(", ")}]`);
       } else if (/^\d+$/.test(term)) {
         valid = true;
         const val = parseInt(term, 10);
@@ -216,7 +216,7 @@ export function setupChatPanel(): void {
     }
 
     if (!valid) return null;
-    return `🎲 Rolled ${rawExpr}: ${breakdowns.join("")} = <span style="color: #ffffff; font-weight: 800; font-size: 1.15em; text-shadow: 0 0 6px rgba(255, 255, 255, 0.35);">${total}</span>`;
+    return `🎲 ${rawExpr}: ${breakdowns.join("")} = <span style="color: #ffffff; font-weight: 800; font-size: 1.15em; text-shadow: 0 0 6px rgba(255, 255, 255, 0.35);">${total}</span>`;
   }
 
   inputEl.addEventListener("keydown", (e) => {
@@ -305,7 +305,10 @@ export function setupChatPanel(): void {
         const hasReactions = (msg.thumbsUp || 0) > 0 || (msg.thumbsDown || 0) > 0;
         let displayContent = msg.content;
         if (msg.type === "roll") {
-          displayContent = displayContent.replace(/\*\*/g, "").replace(/\bTotal:\s*/gi, "");
+          displayContent = displayContent
+            .replace(/\*\*/g, "")
+            .replace(/\bTotal:\s*/gi, "")
+            .replace(/\bRolled\s+/gi, "");
         }
         return `
           <div class="chat-msg ${msg.type === "roll" ? "roll" : ""}" style="cursor: pointer;" title="Click message to show/hide reactions">
