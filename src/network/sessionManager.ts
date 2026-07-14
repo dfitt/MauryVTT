@@ -91,8 +91,18 @@ class SessionManager {
     }
   }
 
+  public lastSeenMap: Map<string, number> = new Map();
+
+  public recordActivity(peerId: string): void {
+    if (peerId) {
+      this.lastSeenMap.set(peerId, Date.now());
+    }
+  }
+
   public getActiveUsers(): Array<{ username: string; color: string; role: string }> {
     const map = new Map<string, { username: string; color: string; role: string }>();
+    const now = Date.now();
+    const FIVE_MINUTES_MS = 5 * 60 * 1000;
 
     if (this.myUsername) {
       map.set(this.myUsername.toLowerCase().trim(), {
@@ -104,6 +114,13 @@ class SessionManager {
 
     const docUsers = docStore.getDocument().users;
     for (const u of Object.values(docUsers)) {
+      if (u.peerId === this.myPeerId) continue;
+
+      const lastSeen = this.lastSeenMap.get(u.peerId) || (this.role === "host" ? hostEngine.lastSeenMap.get(u.peerId) : undefined) || u.joinedAt || now;
+      if (now - lastSeen > FIVE_MINUTES_MS) {
+        continue;
+      }
+
       const nameKey = (u.username || "Anonymous").toLowerCase().trim();
       if (!map.has(nameKey)) {
         map.set(nameKey, {

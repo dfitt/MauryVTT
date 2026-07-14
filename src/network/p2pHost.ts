@@ -56,6 +56,7 @@ export class P2PHost {
   private ephemeralListeners: Set<(payload: EphemeralPayload) => void> = new Set();
   private pendingAssets = new Map<string, PendingAssetBuffer>();
   public hostRoomId: string = "";
+  public lastSeenMap: Map<string, number> = new Map();
 
   private async tryFinalizeAsset(assetHash: string, sourcePeerId?: string): Promise<void> {
     const buf = this.pendingAssets.get(assetHash);
@@ -133,6 +134,7 @@ export class P2PHost {
   }
 
   private async handleIncomingData(conn: DataConnection, data: any): Promise<void> {
+    this.lastSeenMap.set(conn.peer, Date.now());
     if (data && typeof data === "object" && "type" in data) {
       const type = data.type;
       if (type === "CURSOR" || type === "PING" || type === "MEASURE_LINE") {

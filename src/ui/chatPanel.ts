@@ -116,11 +116,12 @@ export function setupChatPanel(): void {
         if (msg.type === "system") {
           return `<div class="chat-msg system">${msg.content}</div>`;
         }
+        const hasReactions = (msg.thumbsUp || 0) > 0 || (msg.thumbsDown || 0) > 0;
         return `
-          <div class="chat-msg ${msg.type === "roll" ? "roll" : ""}">
+          <div class="chat-msg ${msg.type === "roll" ? "roll" : ""}" style="cursor: pointer;" title="Click message to show/hide reactions">
             <div class="msg-author" style="color: #38bdf8">${msg.senderUsername}</div>
             <div class="msg-text">${msg.content}</div>
-            <div class="chat-reactions">
+            <div class="chat-reactions" style="display: ${hasReactions ? "flex" : "none"};">
               <button class="chat-reaction-btn" data-reaction="up" data-id="${msg.id}" title="Thumbs Up">
                 👍 <span>${msg.thumbsUp || 0}</span>
               </button>
@@ -136,24 +137,35 @@ export function setupChatPanel(): void {
   });
 
   container.addEventListener("click", (e) => {
-    const btn = (e.target as HTMLElement).closest(".chat-reaction-btn");
-    if (!btn) return;
-    const msgId = btn.getAttribute("data-id");
-    const reaction = btn.getAttribute("data-reaction");
-    if (!msgId || !reaction) return;
+    const targetEl = e.target as HTMLElement;
+    const btn = targetEl.closest(".chat-reaction-btn");
+    if (btn) {
+      const msgId = btn.getAttribute("data-id");
+      const reaction = btn.getAttribute("data-reaction");
+      if (!msgId || !reaction) return;
 
-    const doc = docStore.getDocument();
-    const msg = doc.chatHistory.find((m) => m.id === msgId);
-    if (!msg) return;
+      const doc = docStore.getDocument();
+      const msg = doc.chatHistory.find((m) => m.id === msgId);
+      if (!msg) return;
 
-    const currentUp = msg.thumbsUp || 0;
-    const currentDown = msg.thumbsDown || 0;
-    const patch = reaction === "up" ? { thumbsUp: currentUp + 1 } : { thumbsDown: currentDown + 1 };
+      const currentUp = msg.thumbsUp || 0;
+      const currentDown = msg.thumbsDown || 0;
+      const patch = reaction === "up" ? { thumbsUp: currentUp + 1 } : { thumbsDown: currentDown + 1 };
 
-    sessionManager.dispatchOperation({
-      opType: "UPDATE_CHAT_MESSAGE",
-      id: msgId,
-      patch
-    });
+      sessionManager.dispatchOperation({
+        opType: "UPDATE_CHAT_MESSAGE",
+        id: msgId,
+        patch
+      });
+      return;
+    }
+
+    const msgBox = targetEl.closest(".chat-msg");
+    if (msgBox) {
+      const reactionsBox = msgBox.querySelector<HTMLElement>(".chat-reactions");
+      if (reactionsBox) {
+        reactionsBox.style.display = reactionsBox.style.display === "none" ? "flex" : "none";
+      }
+    }
   });
 }

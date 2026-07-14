@@ -2,6 +2,7 @@ import { Peer, DataConnection } from "peerjs";
 import { PEERJS_CONFIG } from "./stunConfig.js";
 import { docStore } from "../state/documentStore.js";
 import { assetStore } from "../state/idbAssetStore.js";
+import { sessionManager } from "./sessionManager.js";
 import {
   SyncMessage,
   DocumentOperation,
@@ -128,6 +129,9 @@ export class P2PClient {
         const type = raw.type;
         if (type === "CURSOR" || type === "PING" || type === "MEASURE_LINE") {
           const payload = raw as EphemeralPayload;
+          if (payload.peerId) {
+            sessionManager.recordActivity(payload.peerId);
+          }
           for (const l of this.ephemeralListeners) {
             l(payload);
           }
@@ -169,6 +173,13 @@ export class P2PClient {
 
           case "OP_COMMIT": {
             console.log("[p2pClient] Received OP_COMMIT from host:", msg.op.opType, msg.op);
+            if ("entity" in msg.op && msg.op.entity?.lastModifiedBy) {
+              sessionManager.recordActivity(msg.op.entity.lastModifiedBy);
+            } else if ("message" in msg.op && msg.op.message?.senderPeerId) {
+              sessionManager.recordActivity(msg.op.message.senderPeerId);
+            } else if ("profile" in msg.op && msg.op.profile?.peerId) {
+              sessionManager.recordActivity(msg.op.profile.peerId);
+            }
             docStore.applyOperation(msg.op);
             await this.syncMissingAssets();
             break;

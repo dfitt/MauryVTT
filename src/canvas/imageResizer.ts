@@ -77,7 +77,8 @@ export async function processImageFile(
 }
 
 export async function processTokenImageFile(
-  file: File
+  file: File,
+  ringColor: string = "#38bdf8"
 ): Promise<ProcessedImageResult> {
   const imgUrl = URL.createObjectURL(file);
   const img = await new Promise<HTMLImageElement>((resolve, reject) => {
@@ -87,7 +88,7 @@ export async function processTokenImageFile(
     image.src = imgUrl;
   });
 
-  const size = 256;
+  const size = 128;
   const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
@@ -101,7 +102,7 @@ export async function processTokenImageFile(
   ctx.clearRect(0, 0, size, size);
   ctx.save();
   ctx.beginPath();
-  ctx.arc(128, 128, 126, 0, Math.PI * 2);
+  ctx.arc(64, 64, 58, 0, Math.PI * 2);
   ctx.closePath();
   ctx.clip();
 
@@ -110,11 +111,11 @@ export async function processTokenImageFile(
   ctx.drawImage(img, 0, 0, size, size);
   ctx.restore();
 
-  // Draw circular exterior token ring
+  // Draw circular exterior token ring with increased thickness and importing user's active color
   ctx.beginPath();
-  ctx.arc(128, 128, 125, 0, Math.PI * 2);
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
-  ctx.lineWidth = 4;
+  ctx.arc(64, 64, 59, 0, Math.PI * 2);
+  ctx.strokeStyle = ringColor;
+  ctx.lineWidth = 10;
   ctx.stroke();
 
   URL.revokeObjectURL(imgUrl);

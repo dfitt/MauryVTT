@@ -184,7 +184,7 @@ export function setupToolbarUI(engine: CanvasEngine): void {
     if (!file) return;
 
     console.log("[toolbarUI] Token upload selected:", file.name, file.size);
-    const processed = await processTokenImageFile(file);
+    const processed = await processTokenImageFile(file, engine.drawColor);
     await assetStore.saveAsset(processed.assetHash, processed.blob);
     docStore.registerAssetManifest(
       processed.assetHash,
