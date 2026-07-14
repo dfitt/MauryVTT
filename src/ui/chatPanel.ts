@@ -216,7 +216,7 @@ export function setupChatPanel(): void {
     }
 
     if (!valid) return null;
-    return `🎲 Rolled **${rawExpr}**: ${breakdowns.join("")} = Total: **${total}**`;
+    return `🎲 Rolled ${rawExpr}: ${breakdowns.join("")} = <span style="color: #ffffff; font-weight: 800; font-size: 1.15em; text-shadow: 0 0 6px rgba(255, 255, 255, 0.35);">${total}</span>`;
   }
 
   inputEl.addEventListener("keydown", (e) => {
@@ -303,10 +303,14 @@ export function setupChatPanel(): void {
           return `<div class="chat-msg system">${msg.content}</div>`;
         }
         const hasReactions = (msg.thumbsUp || 0) > 0 || (msg.thumbsDown || 0) > 0;
+        let displayContent = msg.content;
+        if (msg.type === "roll") {
+          displayContent = displayContent.replace(/\*\*/g, "").replace(/\bTotal:\s*/gi, "");
+        }
         return `
           <div class="chat-msg ${msg.type === "roll" ? "roll" : ""}" style="cursor: pointer;" title="Click message to show/hide reactions">
             <div class="msg-author" style="color: #38bdf8">${msg.senderUsername}${msg.rollLabel ? ` - <span style="color: #cbd5e1; font-weight: normal;">${msg.rollLabel}</span>` : ""}</div>
-            <div class="msg-text">${msg.content}</div>
+            <div class="msg-text">${displayContent}</div>
             <div class="chat-reactions" style="display: ${hasReactions ? "flex" : "none"};">
               <button class="chat-reaction-btn" data-reaction="up" data-id="${msg.id}" title="Thumbs Up">
                 👍 <span>${msg.thumbsUp || 0}</span>
