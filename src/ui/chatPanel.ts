@@ -288,6 +288,7 @@ export function setupChatPanel(): void {
   });
 
   const animatedRollMsgIds = new Set<string>();
+  const activeRollIntervals = new Map<string, any>();
   let isFirstChatRender = true;
 
   // Subscribe to reactive document updates
@@ -297,6 +298,7 @@ export function setupChatPanel(): void {
         if (msg.type === "roll") animatedRollMsgIds.add(msg.id);
       });
       isFirstChatRender = false;
+      console.log("[DiceAnimation] Initialized chat render. Existing roll messages marked as already animated:", animatedRollMsgIds.size);
     }
 
     const newCount = doc.chatHistory.length;
@@ -307,99 +309,126 @@ export function setupChatPanel(): void {
     }
     lastMessageCount = newCount;
 
-    container.innerHTML = doc.chatHistory
-      .map((msg) => {
-        if (msg.type === "system") {
-          return `<div class="chat-msg system">${msg.content}</div>`;
+    // Smart DOM reconciliation so active roll animations are never destroyed midway by document updates
+    doc.chatHistory.forEach((msg) => {
+      const existingEl = container.querySelector(`[data-msg-id="${msg.id}"]`) as HTMLElement | null;
+      const hasReactions = (msg.thumbsUp || 0) > 0 || (msg.thumbsDown || 0) > 0;
+
+      if (existingEl) {
+        // Update reactions on existing elements without touching actively animating or completed message text
+        const reactionsEl = existingEl.querySelector<HTMLElement>(".chat-reactions");
+        if (reactionsEl) {
+          reactionsEl.style.display = hasReactions ? "flex" : "none";
+          const upBtn = reactionsEl.querySelector('[data-reaction="up"] span');
+          const downBtn = reactionsEl.querySelector('[data-reaction="down"] span');
+          if (upBtn) upBtn.textContent = String(msg.thumbsUp || 0);
+          if (downBtn) downBtn.textContent = String(msg.thumbsDown || 0);
         }
-        const hasReactions = (msg.thumbsUp || 0) > 0 || (msg.thumbsDown || 0) > 0;
-        let displayContent = msg.content;
-        if (msg.type === "roll") {
-          displayContent = displayContent
-            .replace(/\*\*/g, "")
-            .replace(/\bTotal:\s*/gi, "")
-            .replace(/\bRolled\s+/gi, "");
-        }
-
-        const isNewRoll =
-          msg.type === "roll" &&
-          !animatedRollMsgIds.has(msg.id) &&
-          displayContent.includes("=") &&
-          displayContent.includes("[");
-
-        let formattedText = displayContent;
-        if (isNewRoll) {
-          const eqIdx = displayContent.lastIndexOf("=");
-          const beforeEquals = displayContent.substring(0, eqIdx);
-          const afterEquals = displayContent.substring(eqIdx);
-          formattedText = `<span class="roll-before-equals" data-final="${encodeURIComponent(beforeEquals)}">${beforeEquals}</span><span class="roll-after-equals" style="display: none; opacity: 0;">${afterEquals}</span>`;
-        }
-
-        return `
-          <div class="chat-msg ${msg.type === "roll" ? "roll" : ""} ${isNewRoll ? "roll-animating" : ""}" data-msg-id="${msg.id}" style="cursor: pointer;" title="Click message to show/hide reactions">
-            <div class="msg-author" style="color: #38bdf8">${msg.senderUsername}${msg.rollLabel ? ` - <span style="color: #cbd5e1; font-weight: normal;">${msg.rollLabel}</span>` : ""}</div>
-            <div class="msg-text">${formattedText}</div>
-            <div class="chat-reactions" style="display: ${hasReactions ? "flex" : "none"};">
-              <button class="chat-reaction-btn" data-reaction="up" data-id="${msg.id}" title="Thumbs Up">
-                👍 <span>${msg.thumbsUp || 0}</span>
-              </button>
-              <button class="chat-reaction-btn" data-reaction="down" data-id="${msg.id}" title="Thumbs Down">
-                👎 <span>${msg.thumbsDown || 0}</span>
-              </button>
-            </div>
-          </div>
-        `;
-      })
-      .join("");
-    container.scrollTop = container.scrollHeight;
-
-    const animatingRolls = container.querySelectorAll(".roll-animating");
-    animatingRolls.forEach((el) => {
-      el.classList.remove("roll-animating");
-      const msgId = el.getAttribute("data-msg-id");
-      if (msgId) animatedRollMsgIds.add(msgId);
-
-      const beforeSpan = el.querySelector<HTMLElement>(".roll-before-equals");
-      const afterSpan = el.querySelector<HTMLElement>(".roll-after-equals");
-      if (!beforeSpan || !afterSpan) return;
-
-      const finalBefore = decodeURIComponent(beforeSpan.getAttribute("data-final") || "");
-
-      const diceSides: number[] = [];
-      const diceMatches = finalBefore.matchAll(/(\d*)d(\d+)/gi);
-      for (const m of diceMatches) {
-        diceSides.push(parseInt(m[2], 10));
+        return;
       }
 
-      let frame = 0;
-      const totalFrames = 20;
-      const interval = setInterval(() => {
-        frame++;
-        if (frame >= totalFrames) {
-          clearInterval(interval);
-          beforeSpan.innerHTML = finalBefore;
-          afterSpan.style.display = "inline";
-          afterSpan.style.opacity = "1";
-          afterSpan.classList.add("roll-punch-anim");
-          container.scrollTop = container.scrollHeight;
-          return;
+      // Create new message element
+      const msgEl = document.createElement("div");
+      msgEl.className = `chat-msg ${msg.type === "roll" ? "roll" : ""}`;
+      if (msg.type === "system") {
+        msgEl.className = "chat-msg system";
+        msgEl.textContent = msg.content;
+        container.appendChild(msgEl);
+        container.scrollTop = container.scrollHeight;
+        return;
+      }
+
+      msgEl.setAttribute("data-msg-id", msg.id);
+      msgEl.style.cursor = "pointer";
+      msgEl.title = "Click message to show/hide reactions";
+
+      let displayContent = msg.content;
+      if (msg.type === "roll") {
+        displayContent = displayContent
+          .replace(/\*\*/g, "")
+          .replace(/\bTotal:\s*/gi, "")
+          .replace(/\bRolled\s+/gi, "");
+      }
+
+      const isNewRoll =
+        msg.type === "roll" &&
+        !animatedRollMsgIds.has(msg.id) &&
+        displayContent.includes("=") &&
+        displayContent.includes("[");
+
+      let formattedText = displayContent;
+      if (isNewRoll) {
+        const eqIdx = displayContent.lastIndexOf("=");
+        const beforeEquals = displayContent.substring(0, eqIdx);
+        const afterEquals = displayContent.substring(eqIdx);
+        formattedText = `<span class="roll-before-equals" data-final="${encodeURIComponent(beforeEquals)}">${beforeEquals}</span><span class="roll-after-equals" style="display: none; opacity: 0;">${afterEquals}</span>`;
+      }
+
+      msgEl.innerHTML = `
+        <div class="msg-author" style="color: #38bdf8">${msg.senderUsername}${msg.rollLabel ? ` - <span style="color: #cbd5e1; font-weight: normal;">${msg.rollLabel}</span>` : ""}</div>
+        <div class="msg-text">${formattedText}</div>
+        <div class="chat-reactions" style="display: ${hasReactions ? "flex" : "none"};">
+          <button class="chat-reaction-btn" data-reaction="up" data-id="${msg.id}" title="Thumbs Up">
+            👍 <span>${msg.thumbsUp || 0}</span>
+          </button>
+          <button class="chat-reaction-btn" data-reaction="down" data-id="${msg.id}" title="Thumbs Down">
+            👎 <span>${msg.thumbsDown || 0}</span>
+          </button>
+        </div>
+      `;
+
+      container.appendChild(msgEl);
+      container.scrollTop = container.scrollHeight;
+
+      if (isNewRoll) {
+        animatedRollMsgIds.add(msg.id);
+        const beforeSpan = msgEl.querySelector<HTMLElement>(".roll-before-equals");
+        const afterSpan = msgEl.querySelector<HTMLElement>(".roll-after-equals");
+        if (!beforeSpan || !afterSpan) return;
+
+        const finalBefore = decodeURIComponent(beforeSpan.getAttribute("data-final") || "");
+        const diceSides: number[] = [];
+        const diceMatches = finalBefore.matchAll(/(\d*)d(\d+)/gi);
+        for (const m of diceMatches) {
+          diceSides.push(parseInt(m[2], 10));
         }
 
-        let bracketIdx = 0;
-        const randomized = finalBefore.replace(/\[([0-9,\s]+)\]/g, (match, numsStr) => {
-          const sides = diceSides[bracketIdx] || 20;
-          bracketIdx++;
-          const nums = numsStr.split(",").map((s: string) => {
-            const trimmed = s.trim();
-            if (!trimmed || isNaN(Number(trimmed))) return s;
-            const r = Math.floor(Math.random() * sides) + 1;
-            return r.toString();
-          });
-          return `[${nums.join(", ")}]`;
-        });
+        console.log("[DiceAnimation] Starting 1-second rapid rolling animation for message:", msg.id, "Sides:", diceSides);
 
-        beforeSpan.innerHTML = randomized;
-      }, 50);
+        let frame = 0;
+        const totalFrames = 20;
+        const interval = setInterval(() => {
+          frame++;
+          if (frame >= totalFrames) {
+            clearInterval(interval);
+            activeRollIntervals.delete(msg.id);
+            beforeSpan.innerHTML = finalBefore;
+            afterSpan.style.display = "inline-block";
+            afterSpan.style.opacity = "1";
+            afterSpan.classList.add("roll-punch-anim");
+            container.scrollTop = container.scrollHeight;
+            console.log("[DiceAnimation] Finished animation for message:", msg.id, "- Revealed final total and applied punch tween.");
+            return;
+          }
+
+          let bracketIdx = 0;
+          const randomized = finalBefore.replace(/\[([0-9,\s]+)\]/g, (match, numsStr) => {
+            const sides = diceSides[bracketIdx] || 20;
+            bracketIdx++;
+            const nums = numsStr.split(",").map((s: string) => {
+              const trimmed = s.trim();
+              if (!trimmed || isNaN(Number(trimmed))) return s;
+              const r = Math.floor(Math.random() * sides) + 1;
+              return r.toString();
+            });
+            return `[${nums.join(", ")}]`;
+          });
+
+          beforeSpan.innerHTML = randomized;
+        }, 50);
+
+        activeRollIntervals.set(msg.id, interval);
+      }
     });
   });
 
