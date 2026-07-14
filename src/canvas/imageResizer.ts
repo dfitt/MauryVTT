@@ -108,7 +108,10 @@ export async function processTokenImageFile(
 
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
-  ctx.drawImage(img, 0, 0, size, size);
+  const cropSize = Math.min(img.naturalWidth || img.width, img.naturalHeight || img.height);
+  const sx = ((img.naturalWidth || img.width) - cropSize) / 2;
+  const sy = ((img.naturalHeight || img.height) - cropSize) / 2;
+  ctx.drawImage(img, sx, sy, cropSize, cropSize, 0, 0, size, size);
   ctx.restore();
 
   // Draw circular exterior token ring with increased thickness and importing user's active color
