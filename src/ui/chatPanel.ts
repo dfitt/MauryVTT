@@ -341,16 +341,16 @@ export function setupChatPanel(): void {
 
       // Create new message element
       const msgEl = document.createElement("div");
+      msgEl.setAttribute("data-msg-id", msg.id);
       msgEl.className = `chat-msg ${msg.type === "roll" ? "roll" : ""}`;
       if (msg.type === "system") {
         msgEl.className = "chat-msg system";
-        msgEl.textContent = msg.content;
+        msgEl.innerHTML = msg.content;
         container.appendChild(msgEl);
         container.scrollTop = container.scrollHeight;
         return;
       }
 
-      msgEl.setAttribute("data-msg-id", msg.id);
       msgEl.style.cursor = "pointer";
       msgEl.title = "Click message to show/hide reactions";
 
