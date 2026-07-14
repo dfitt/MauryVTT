@@ -324,6 +324,18 @@ export function setupChatPanel(): void {
           if (upBtn) upBtn.textContent = String(msg.thumbsUp || 0);
           if (downBtn) downBtn.textContent = String(msg.thumbsDown || 0);
         }
+
+        // Guarantee that if the roll animation is already completed or not active, the afterSpan total is never stuck hidden
+        if (msg.type === "roll" && !activeRollIntervals.has(msg.id)) {
+          const afterSpan = existingEl.querySelector<HTMLElement>(".roll-after-equals");
+          if (afterSpan && (afterSpan.style.display === "none" || afterSpan.style.opacity === "0")) {
+            console.log("[DiceAnimation] Reconciling existing completed roll - revealing afterSpan total for:", msg.id);
+            afterSpan.style.removeProperty("display");
+            afterSpan.style.removeProperty("opacity");
+            afterSpan.style.display = "inline-block";
+            afterSpan.style.opacity = "1";
+          }
+        }
         return;
       }
 
@@ -362,6 +374,7 @@ export function setupChatPanel(): void {
         const beforeEquals = displayContent.substring(0, eqIdx);
         const afterEquals = displayContent.substring(eqIdx);
         formattedText = `<span class="roll-before-equals" data-final="${encodeURIComponent(beforeEquals)}">${beforeEquals}</span><span class="roll-after-equals" style="display: none; opacity: 0;">${afterEquals}</span>`;
+        console.log("[DiceAnimation] Formatted new roll spans - beforeEquals:", beforeEquals, "afterEquals:", afterEquals);
       }
 
       msgEl.innerHTML = `
@@ -384,7 +397,10 @@ export function setupChatPanel(): void {
         animatedRollMsgIds.add(msg.id);
         const beforeSpan = msgEl.querySelector<HTMLElement>(".roll-before-equals");
         const afterSpan = msgEl.querySelector<HTMLElement>(".roll-after-equals");
-        if (!beforeSpan || !afterSpan) return;
+        if (!beforeSpan || !afterSpan) {
+          console.error("[DiceAnimation] Error: Could not locate beforeSpan or afterSpan inside msgEl for:", msg.id);
+          return;
+        }
 
         const finalBefore = decodeURIComponent(beforeSpan.getAttribute("data-final") || "");
         const diceSides: number[] = [];
@@ -403,11 +419,17 @@ export function setupChatPanel(): void {
             clearInterval(interval);
             activeRollIntervals.delete(msg.id);
             beforeSpan.innerHTML = finalBefore;
+
+            // Force reflow and clear restrictions before applying punch tween
+            afterSpan.style.removeProperty("display");
+            afterSpan.style.removeProperty("opacity");
             afterSpan.style.display = "inline-block";
             afterSpan.style.opacity = "1";
+            void afterSpan.offsetWidth;
             afterSpan.classList.add("roll-punch-anim");
+
             container.scrollTop = container.scrollHeight;
-            console.log("[DiceAnimation] Finished animation for message:", msg.id, "- Revealed final total and applied punch tween.");
+            console.log("[DiceAnimation] Finished animation for message:", msg.id, "- afterSpan diagnostics -> innerHTML:", afterSpan.innerHTML, "display:", afterSpan.style.display, "opacity:", afterSpan.style.opacity, "rect:", afterSpan.getBoundingClientRect());
             return;
           }
 
