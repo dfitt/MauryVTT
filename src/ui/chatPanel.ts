@@ -370,7 +370,9 @@ export function setupChatPanel(): void {
 
       let formattedText = displayContent;
       if (isNewRoll) {
-        const eqIdx = displayContent.lastIndexOf("=");
+        // Find the equation's equals sign without matching the "=" inside HTML attributes (like style="color...")
+        const eqMatch = displayContent.match(/(\s*=\s*)<span/i);
+        const eqIdx = eqMatch && eqMatch.index !== undefined ? eqMatch.index : displayContent.indexOf("=");
         const beforeEquals = displayContent.substring(0, eqIdx);
         const afterEquals = displayContent.substring(eqIdx);
         formattedText = `<span class="roll-before-equals" data-final="${encodeURIComponent(beforeEquals)}">${beforeEquals}</span><span class="roll-after-equals" style="display: none; opacity: 0;">${afterEquals}</span>`;
