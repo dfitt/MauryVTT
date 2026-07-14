@@ -6,6 +6,8 @@ export function bindMeasureTool(engine: CanvasEngine): void {
   let isMeasuring = false;
   let startPt = { x: 0, y: 0 };
   const measureId = "measure-" + Math.random().toString(36).substring(2, 7);
+  let lastMeasureSendTime = 0;
+  let pendingMeasureTimeout: any = null;
 
   engine.onMouseDown((_e, worldX, worldY) => {
     if (engine.activeTool !== "measure") return;
@@ -38,23 +40,46 @@ export function bindMeasureTool(engine: CanvasEngine): void {
     engine.localMeasurement.endPoint = { x: worldX, y: worldY };
     engine.localMeasurement.unitLabel = unitLabel;
 
-    sessionManager.sendEphemeral({
-      type: "MEASURE_LINE",
-      measureId,
-      peerId: sessionManager.myPeerId || "local",
-      username: sessionManager.myUsername || "Me",
-      active: true,
-      startPoint: startPt,
-      endPoint: { x: worldX, y: worldY },
-      color: sessionManager.myColor || "#38bdf8",
-      unitLabel
-    });
+    const now = Date.now();
+    const sendMeasure = () => {
+      if (!engine.localMeasurement) return;
+      lastMeasureSendTime = Date.now();
+      sessionManager.sendEphemeral({
+        type: "MEASURE_LINE",
+        measureId,
+        peerId: sessionManager.myPeerId || "local",
+        username: sessionManager.myUsername || "Me",
+        active: true,
+        startPoint: startPt,
+        endPoint: { ...engine.localMeasurement.endPoint },
+        color: sessionManager.myColor || "#38bdf8",
+        unitLabel: engine.localMeasurement.unitLabel
+      });
+    };
+
+    if (now - lastMeasureSendTime >= 33) {
+      if (pendingMeasureTimeout) {
+        clearTimeout(pendingMeasureTimeout);
+        pendingMeasureTimeout = null;
+      }
+      sendMeasure();
+    } else if (!pendingMeasureTimeout) {
+      pendingMeasureTimeout = setTimeout(() => {
+        pendingMeasureTimeout = null;
+        sendMeasure();
+      }, 33 - (now - lastMeasureSendTime));
+    }
   });
 
   engine.onMouseUp(() => {
     if (!isMeasuring) return;
     isMeasuring = false;
     engine.localMeasurement = null;
+
+    if (pendingMeasureTimeout) {
+      clearTimeout(pendingMeasureTimeout);
+      pendingMeasureTimeout = null;
+    }
 
     sessionManager.sendEphemeral({
       type: "MEASURE_LINE",

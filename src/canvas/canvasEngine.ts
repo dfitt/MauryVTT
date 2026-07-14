@@ -18,6 +18,7 @@ export interface ActiveMeasurement {
   username: string;
   startPoint: { x: number; y: number };
   endPoint: { x: number; y: number };
+  targetEndPoint?: { x: number; y: number };
   color: string;
   unitLabel: string;
 }
@@ -39,6 +40,8 @@ export interface RemoteCursor {
   color: string;
   x: number;
   y: number;
+  targetX: number;
+  targetY: number;
   lastSeenAt: number;
 }
 
@@ -81,6 +84,9 @@ export class CanvasEngine {
   private onMouseDownListeners: ((e: MouseEvent, worldX: number, worldY: number) => void)[] = [];
   private onMouseMoveListeners: ((e: MouseEvent, worldX: number, worldY: number) => void)[] = [];
   private onMouseUpListeners: ((e: MouseEvent, worldX: number, worldY: number) => void)[] = [];
+
+  private lastCursorSendTime: number = 0;
+  private pendingCursorTimeout: any = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -200,14 +206,33 @@ export class CanvasEngine {
       }
 
       if (sessionManager.myPeerId) {
-        sessionManager.sendEphemeral({
-          type: "CURSOR",
-          peerId: sessionManager.myPeerId,
-          username: sessionManager.myUsername || "Guest",
-          color: sessionManager.myColor || "#eab308",
-          x: world.x,
-          y: world.y
-        });
+        const now = Date.now();
+        const sendCursor = (wx: number, wy: number) => {
+          this.lastCursorSendTime = Date.now();
+          sessionManager.sendEphemeral({
+            type: "CURSOR",
+            peerId: sessionManager.myPeerId,
+            username: sessionManager.myUsername || "Guest",
+            color: sessionManager.myColor || "#eab308",
+            x: wx,
+            y: wy
+          });
+        };
+
+        if (now - this.lastCursorSendTime >= 33) {
+          if (this.pendingCursorTimeout) {
+            clearTimeout(this.pendingCursorTimeout);
+            this.pendingCursorTimeout = null;
+          }
+          sendCursor(world.x, world.y);
+        } else if (!this.pendingCursorTimeout) {
+          this.pendingCursorTimeout = setTimeout(() => {
+            this.pendingCursorTimeout = null;
+            if (this.hoverWorldPos && sessionManager.myPeerId) {
+              sendCursor(this.hoverWorldPos.x, this.hoverWorldPos.y);
+            }
+          }, 33 - (now - this.lastCursorSendTime));
+        }
       }
 
       for (const l of this.onMouseMoveListeners) l(e, world.x, world.y);
@@ -384,14 +409,23 @@ export class CanvasEngine {
 
   public handleEphemeralPayload(payload: EphemeralPayload): void {
     if (payload.type === "CURSOR") {
-      this.remoteCursors.set(payload.peerId, {
-        peerId: payload.peerId,
-        username: payload.username,
-        color: payload.color,
-        x: payload.x,
-        y: payload.y,
-        lastSeenAt: Date.now()
-      });
+      const existing = this.remoteCursors.get(payload.peerId);
+      if (existing) {
+        existing.targetX = payload.x;
+        existing.targetY = payload.y;
+        existing.lastSeenAt = Date.now();
+      } else {
+        this.remoteCursors.set(payload.peerId, {
+          peerId: payload.peerId,
+          username: payload.username,
+          color: payload.color,
+          x: payload.x,
+          y: payload.y,
+          targetX: payload.x,
+          targetY: payload.y,
+          lastSeenAt: Date.now()
+        });
+      }
     } else if (payload.type === "PING") {
       this.activePings.set(payload.pingId, {
         pingId: payload.pingId,
@@ -407,15 +441,22 @@ export class CanvasEngine {
       if (!payload.active) {
         this.activeMeasurements.delete(payload.measureId);
       } else {
-        this.activeMeasurements.set(payload.measureId, {
-          measureId: payload.measureId,
-          peerId: payload.peerId,
-          username: payload.username,
-          startPoint: payload.startPoint,
-          endPoint: payload.endPoint,
-          color: payload.color,
-          unitLabel: payload.unitLabel
-        });
+        const existing = this.activeMeasurements.get(payload.measureId);
+        if (existing) {
+          existing.targetEndPoint = payload.endPoint;
+          existing.unitLabel = payload.unitLabel;
+        } else {
+          this.activeMeasurements.set(payload.measureId, {
+            measureId: payload.measureId,
+            peerId: payload.peerId,
+            username: payload.username,
+            startPoint: payload.startPoint,
+            endPoint: { ...payload.endPoint },
+            targetEndPoint: { ...payload.endPoint },
+            color: payload.color,
+            unitLabel: payload.unitLabel
+          });
+        }
       }
     }
   }
@@ -537,6 +578,12 @@ export class CanvasEngine {
     }
 
     for (const m of this.activeMeasurements.values()) {
+      if (m.targetEndPoint) {
+        m.endPoint.x += (m.targetEndPoint.x - m.endPoint.x) * 0.35;
+        m.endPoint.y += (m.targetEndPoint.y - m.endPoint.y) * 0.35;
+        if (Math.abs(m.targetEndPoint.x - m.endPoint.x) < 0.1) m.endPoint.x = m.targetEndPoint.x;
+        if (Math.abs(m.targetEndPoint.y - m.endPoint.y) < 0.1) m.endPoint.y = m.targetEndPoint.y;
+      }
       this.drawMeasurement(ctx, m);
     }
     if (this.localMeasurement) {
@@ -857,6 +904,11 @@ export class CanvasEngine {
         this.remoteCursors.delete(id);
         continue;
       }
+      cursor.x += (cursor.targetX - cursor.x) * 0.35;
+      cursor.y += (cursor.targetY - cursor.y) * 0.35;
+      if (Math.abs(cursor.targetX - cursor.x) < 0.1) cursor.x = cursor.targetX;
+      if (Math.abs(cursor.targetY - cursor.y) < 0.1) cursor.y = cursor.targetY;
+
       const screen = this.worldToScreen(cursor.x, cursor.y);
       ctx.save();
       ctx.translate(screen.x, screen.y);

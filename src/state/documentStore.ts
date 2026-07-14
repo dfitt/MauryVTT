@@ -54,14 +54,29 @@ export class DocumentStore {
     return () => this.listeners.delete(listener);
   }
 
+  private storageTimeout: any = null;
+
   private notify(): void {
+    for (const listener of this.listeners) {
+      listener(this.doc);
+    }
+    if (!this.storageTimeout) {
+      this.storageTimeout = setTimeout(() => {
+        this.storageTimeout = null;
+        this.flush();
+      }, 500);
+    }
+  }
+
+  public flush(): void {
+    if (this.storageTimeout) {
+      clearTimeout(this.storageTimeout);
+      this.storageTimeout = null;
+    }
     try {
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(this.doc));
     } catch {
       // Ignore storage quota limits
-    }
-    for (const listener of this.listeners) {
-      listener(this.doc);
     }
   }
 
