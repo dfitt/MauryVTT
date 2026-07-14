@@ -34,7 +34,11 @@ export function setupToolbarUI(engine: CanvasEngine): void {
     { id: "erase", icon: "🧹", title: "Eraser (Clear lines & fills under cursor)" },
     { id: "hide", icon: "⬛", title: "Fog" },
     { id: "unhide", icon: "⬜", title: "Fog Away" },
-    { id: "measure", icon: "📐", title: "Distance Ruler (Ephemeral)" },
+    {
+      id: "measure",
+      icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle;"><rect x="2" y="7" width="11" height="11" rx="3" fill="#eab308" stroke="currentColor" stroke-width="1.6"/><circle cx="7.5" cy="12.5" r="2" fill="#fef08a" stroke="currentColor" stroke-width="1.2"/><path d="M13 15H22V10H13" fill="#fef9c3" stroke="currentColor" stroke-width="1.4"/><line x1="16" y1="10" x2="16" y2="12.5" stroke="currentColor" stroke-width="1.4"/><line x1="19" y1="10" x2="19" y2="12.5" stroke="currentColor" stroke-width="1.4"/></svg>`,
+      title: "Distance Tape Measure (Ephemeral)"
+    },
     { id: "ping", icon: "📡", title: "Ripple Ping (Ephemeral)" }
   ];
 

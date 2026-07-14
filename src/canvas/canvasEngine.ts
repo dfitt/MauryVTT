@@ -423,7 +423,8 @@ export class CanvasEngine {
     const ctx = this.ctx;
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-    ctx.fillStyle = doc.canvasSettings.backgroundColor;
+    const bg = doc.canvasSettings.backgroundColor === "#13151b" ? "#475569" : (doc.canvasSettings.backgroundColor || "#475569");
+    ctx.fillStyle = bg;
     ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
     ctx.save();
@@ -535,8 +536,8 @@ export class CanvasEngine {
     const endX = startX + (this.canvas.width / this.zoom) + size * 2;
     const endY = startY + (this.canvas.height / this.zoom) + size * 2;
 
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
-    ctx.lineWidth = 1 / this.zoom;
+    ctx.strokeStyle = "#000000";
+    ctx.lineWidth = 1.25 / this.zoom;
 
     if (settings.gridType === "square") {
       ctx.beginPath();

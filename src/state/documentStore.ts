@@ -22,7 +22,7 @@ export class DocumentStore {
       documentId: "vtt-doc-" + Math.random().toString(36).substring(2, 9),
       revision: 1,
       canvasSettings: {
-        backgroundColor: "#13151b",
+        backgroundColor: "#475569",
         gridEnabled: true,
         gridType: "square",
         gridSizePx: 50,
