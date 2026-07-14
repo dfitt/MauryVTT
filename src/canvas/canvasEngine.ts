@@ -537,17 +537,17 @@ export class CanvasEngine {
     const endY = startY + (this.canvas.height / this.zoom) + size * 2;
 
     ctx.strokeStyle = "#000000";
-    ctx.lineWidth = 1.25 / this.zoom;
+    ctx.lineWidth = 0.5 / this.zoom;
 
     if (settings.gridType === "square") {
       ctx.beginPath();
       for (let x = startX; x <= endX; x += size) {
-        ctx.moveTo(x, startY);
-        ctx.lineTo(x, endY);
+        ctx.moveTo(x + 0.5, startY);
+        ctx.lineTo(x + 0.5, endY);
       }
       for (let y = startY; y <= endY; y += size) {
-        ctx.moveTo(startX, y);
-        ctx.lineTo(endX, y);
+        ctx.moveTo(startX, y + 0.5);
+        ctx.lineTo(endX, y + 0.5);
       }
       ctx.stroke();
     }
