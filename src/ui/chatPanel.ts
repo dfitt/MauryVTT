@@ -287,8 +287,18 @@ export function setupChatPanel(): void {
     }
   });
 
+  const animatedRollMsgIds = new Set<string>();
+  let isFirstChatRender = true;
+
   // Subscribe to reactive document updates
   docStore.subscribe((doc) => {
+    if (isFirstChatRender) {
+      doc.chatHistory.forEach((msg) => {
+        if (msg.type === "roll") animatedRollMsgIds.add(msg.id);
+      });
+      isFirstChatRender = false;
+    }
+
     const newCount = doc.chatHistory.length;
     if (newCount > lastMessageCount && panel.classList.contains("minimized") && lastMessageCount > 0) {
       unreadCount += newCount - lastMessageCount;
@@ -310,10 +320,25 @@ export function setupChatPanel(): void {
             .replace(/\bTotal:\s*/gi, "")
             .replace(/\bRolled\s+/gi, "");
         }
+
+        const isNewRoll =
+          msg.type === "roll" &&
+          !animatedRollMsgIds.has(msg.id) &&
+          displayContent.includes("=") &&
+          displayContent.includes("[");
+
+        let formattedText = displayContent;
+        if (isNewRoll) {
+          const eqIdx = displayContent.lastIndexOf("=");
+          const beforeEquals = displayContent.substring(0, eqIdx);
+          const afterEquals = displayContent.substring(eqIdx);
+          formattedText = `<span class="roll-before-equals" data-final="${encodeURIComponent(beforeEquals)}">${beforeEquals}</span><span class="roll-after-equals" style="display: none; opacity: 0;">${afterEquals}</span>`;
+        }
+
         return `
-          <div class="chat-msg ${msg.type === "roll" ? "roll" : ""}" style="cursor: pointer;" title="Click message to show/hide reactions">
+          <div class="chat-msg ${msg.type === "roll" ? "roll" : ""} ${isNewRoll ? "roll-animating" : ""}" data-msg-id="${msg.id}" style="cursor: pointer;" title="Click message to show/hide reactions">
             <div class="msg-author" style="color: #38bdf8">${msg.senderUsername}${msg.rollLabel ? ` - <span style="color: #cbd5e1; font-weight: normal;">${msg.rollLabel}</span>` : ""}</div>
-            <div class="msg-text">${displayContent}</div>
+            <div class="msg-text">${formattedText}</div>
             <div class="chat-reactions" style="display: ${hasReactions ? "flex" : "none"};">
               <button class="chat-reaction-btn" data-reaction="up" data-id="${msg.id}" title="Thumbs Up">
                 👍 <span>${msg.thumbsUp || 0}</span>
@@ -327,6 +352,55 @@ export function setupChatPanel(): void {
       })
       .join("");
     container.scrollTop = container.scrollHeight;
+
+    const animatingRolls = container.querySelectorAll(".roll-animating");
+    animatingRolls.forEach((el) => {
+      el.classList.remove("roll-animating");
+      const msgId = el.getAttribute("data-msg-id");
+      if (msgId) animatedRollMsgIds.add(msgId);
+
+      const beforeSpan = el.querySelector<HTMLElement>(".roll-before-equals");
+      const afterSpan = el.querySelector<HTMLElement>(".roll-after-equals");
+      if (!beforeSpan || !afterSpan) return;
+
+      const finalBefore = decodeURIComponent(beforeSpan.getAttribute("data-final") || "");
+
+      const diceSides: number[] = [];
+      const diceMatches = finalBefore.matchAll(/(\d*)d(\d+)/gi);
+      for (const m of diceMatches) {
+        diceSides.push(parseInt(m[2], 10));
+      }
+
+      let frame = 0;
+      const totalFrames = 20;
+      const interval = setInterval(() => {
+        frame++;
+        if (frame >= totalFrames) {
+          clearInterval(interval);
+          beforeSpan.innerHTML = finalBefore;
+          afterSpan.style.display = "inline";
+          afterSpan.style.opacity = "1";
+          afterSpan.classList.add("roll-punch-anim");
+          container.scrollTop = container.scrollHeight;
+          return;
+        }
+
+        let bracketIdx = 0;
+        const randomized = finalBefore.replace(/\[([0-9,\s]+)\]/g, (match, numsStr) => {
+          const sides = diceSides[bracketIdx] || 20;
+          bracketIdx++;
+          const nums = numsStr.split(",").map((s: string) => {
+            const trimmed = s.trim();
+            if (!trimmed || isNaN(Number(trimmed))) return s;
+            const r = Math.floor(Math.random() * sides) + 1;
+            return r.toString();
+          });
+          return `[${nums.join(", ")}]`;
+        });
+
+        beforeSpan.innerHTML = randomized;
+      }, 50);
+    });
   });
 
   container.addEventListener("click", (e) => {

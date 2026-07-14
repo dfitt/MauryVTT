@@ -445,6 +445,32 @@ body.simple-mode-active #selection-toolbar {
   color: #fcd34d;
 }
 
+.roll-punch-anim {
+  display: inline-block;
+  animation: rollTotalPunch 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: left center;
+}
+
+@keyframes rollTotalPunch {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  45% {
+    opacity: 1;
+    transform: scale(1.65);
+    filter: drop-shadow(0 0 16px #38bdf8) brightness(1.4);
+  }
+  75% {
+    transform: scale(0.92);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1.0);
+    filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.35)) brightness(1);
+  }
+}
+
 .chat-reactions {
   display: flex;
   align-items: center;
