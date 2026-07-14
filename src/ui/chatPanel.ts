@@ -19,6 +19,29 @@ export function setupChatPanel(): void {
       </div>
       <button class="chat-toggle-btn" id="btn-toggle-chat" title="Toggle Chat Window">${panel.classList.contains("minimized") ? "▲" : "▼"}</button>
     </div>
+    <div class="dice-builder-section" id="dice-builder-section">
+      <div class="dice-builder-icons">
+        <button class="dice-icon-btn" data-dice="d20" title="Add d20">d20</button>
+        <button class="dice-icon-btn" data-dice="d12" title="Add d12">d12</button>
+        <button class="dice-icon-btn" data-dice="d10" title="Add d10">d10</button>
+        <button class="dice-icon-btn" data-dice="d8" title="Add d8">d8</button>
+        <button class="dice-icon-btn" data-dice="d6" title="Add d6">d6</button>
+        <button class="dice-icon-btn" data-dice="d4" title="Add d4">d4</button>
+        <button class="dice-icon-btn mod-btn" data-dice="+1" title="Add +1">+1</button>
+        <button class="dice-icon-btn mod-btn" data-dice="-1" title="Subtract 1">-1</button>
+      </div>
+      <div class="dice-builder-details" id="dice-builder-details" style="display: none;">
+        <div class="dice-builder-expression">
+          <span>Expression:</span>
+          <strong id="dice-builder-expr-txt">---</strong>
+        </div>
+        <input type="text" id="dice-builder-label" class="dice-builder-label-input" placeholder="Label (e.g. Attack or Holy Damage)..." />
+        <div class="dice-builder-actions">
+          <button class="btn-glass btn-primary" id="dice-builder-roll-btn" style="flex: 1; padding: 6px;">🎲 Roll</button>
+          <button class="btn-glass" id="dice-builder-clear-btn" style="flex: 1; padding: 6px;">Clear</button>
+        </div>
+      </div>
+    </div>
     <div class="chat-messages" id="chat-messages-container"></div>
     <div class="chat-input-bar">
       <input type="text" id="chat-input-el" class="chat-input" placeholder="Type a message or /roll 1d20..." />
@@ -49,6 +72,105 @@ export function setupChatPanel(): void {
 
   headerBar.addEventListener("click", () => toggleChat());
   (window as any).toggleVttChat = toggleChat;
+
+  const builderState: Record<string, number> = {
+    d20: 0,
+    d12: 0,
+    d10: 0,
+    d8: 0,
+    d6: 0,
+    d4: 0,
+    mod: 0
+  };
+
+  const detailsEl = panel.querySelector<HTMLElement>("#dice-builder-details")!;
+  const exprTxtEl = panel.querySelector<HTMLElement>("#dice-builder-expr-txt")!;
+  const labelInputEl = panel.querySelector<HTMLInputElement>("#dice-builder-label")!;
+  const rollBtnEl = panel.querySelector<HTMLButtonElement>("#dice-builder-roll-btn")!;
+  const clearBtnEl = panel.querySelector<HTMLButtonElement>("#dice-builder-clear-btn")!;
+
+  function formatBuilderExpression(): string {
+    const terms: string[] = [];
+    const diceTypes = ["d20", "d12", "d10", "d8", "d6", "d4"];
+    for (const d of diceTypes) {
+      const count = builderState[d];
+      if (count > 0) {
+        terms.push(`${count}${d}`);
+      }
+    }
+    let expr = terms.join("+");
+    if (builderState.mod > 0) {
+      expr += `${expr ? "+" : ""}${builderState.mod}`;
+    } else if (builderState.mod < 0) {
+      expr += `${builderState.mod}`;
+    }
+    return expr;
+  }
+
+  function updateBuilderUI(): void {
+    const expr = formatBuilderExpression();
+    if (!expr) {
+      detailsEl.style.display = "none";
+    } else {
+      detailsEl.style.display = "flex";
+      exprTxtEl.textContent = expr;
+    }
+  }
+
+  function resetBuilderState(): void {
+    for (const key of Object.keys(builderState)) {
+      builderState[key] = 0;
+    }
+    labelInputEl.value = "";
+    updateBuilderUI();
+  }
+
+  panel.querySelectorAll<HTMLButtonElement>(".dice-icon-btn").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const type = btn.getAttribute("data-dice");
+      if (!type) return;
+      if (type === "+1") {
+        builderState.mod += 1;
+      } else if (type === "-1") {
+        builderState.mod -= 1;
+      } else if (type in builderState) {
+        builderState[type] += 1;
+      }
+      updateBuilderUI();
+    });
+  });
+
+  clearBtnEl.addEventListener("click", (e) => {
+    e.stopPropagation();
+    resetBuilderState();
+  });
+
+  rollBtnEl.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const expr = formatBuilderExpression();
+    if (!expr) return;
+    const label = labelInputEl.value.trim();
+    const rollRes = parseAndRollDice(expr);
+    if (!rollRes) return;
+
+    const newMsg: ChatMessage = {
+      id: "msg-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6),
+      timestamp: Date.now(),
+      senderPeerId: sessionManager.myPeerId || "local",
+      senderUsername: sessionManager.myUsername || "Me",
+      content: rollRes,
+      type: "roll",
+      rollLabel: label || undefined
+    };
+
+    sessionManager.dispatchOperation({
+      opType: "APPEND_CHAT_MESSAGE",
+      message: newMsg
+    });
+
+    resetBuilderState();
+  });
 
   function parseAndRollDice(cmd: string): string | null {
     const rawExpr = cmd.replace(/^\/(roll|r)\s+/i, "").replace(/\s+/g, "");

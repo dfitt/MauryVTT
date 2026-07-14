@@ -326,6 +326,101 @@ body.simple-mode-active #selection-toolbar {
   font-size: 15px;
 }
 
+/* =========================================
+   DICE ROLL BUILDER (HEADER SECTION)
+   ========================================= */
+.dice-builder-section {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--glass-border);
+  background: rgba(15, 23, 42, 0.4);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dice-builder-icons {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.dice-icon-btn {
+  flex: 1;
+  padding: 6px 2px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #f8fafc;
+  font-weight: 700;
+  font-size: 11px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s ease;
+}
+
+.dice-icon-btn:hover {
+  background: rgba(56, 189, 248, 0.25);
+  border-color: rgba(56, 189, 248, 0.5);
+  color: #38bdf8;
+  transform: translateY(-1px);
+}
+
+.dice-icon-btn.mod-btn {
+  background: rgba(234, 179, 8, 0.15);
+  border-color: rgba(234, 179, 8, 0.35);
+  color: #fde047;
+}
+
+.dice-icon-btn.mod-btn:hover {
+  background: rgba(234, 179, 8, 0.3);
+  color: #fff;
+}
+
+.dice-builder-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  animation: fadeInUp 0.15s ease;
+}
+
+.dice-builder-expression {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+.dice-builder-expression strong {
+  color: #38bdf8;
+  font-size: 14px;
+}
+
+.dice-builder-label-input {
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f8fafc;
+  font-size: 12px;
+  outline: none;
+}
+
+.dice-builder-label-input:focus {
+  border-color: #38bdf8;
+}
+
+.dice-builder-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .chat-messages {
   flex: 1;
   overflow-y: auto;
