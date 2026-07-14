@@ -122,12 +122,19 @@ export function setupChatPanel(): void {
 
       let content = val;
       let msgType: ChatMessage["type"] = "text";
+      let rollLabel: string | undefined = undefined;
 
-      if (/^\/(roll|r)\s+/i.test(val)) {
-        const rollRes = parseAndRollDice(val);
+      const rollMatch = val.match(/^(.*?)(?:\/(?:roll|r)\s+)(.+)$/i);
+      if (rollMatch) {
+        const labelText = rollMatch[1].trim();
+        const expr = rollMatch[2].trim();
+        const rollRes = parseAndRollDice(expr);
         if (rollRes) {
           content = rollRes;
           msgType = "roll";
+          if (labelText) {
+            rollLabel = labelText;
+          }
         }
       } else if (/^\/flip$/i.test(val)) {
         const result = Math.random() < 0.5 ? "Heads" : "Tails";
@@ -147,7 +154,8 @@ export function setupChatPanel(): void {
         senderPeerId: sessionManager.myPeerId || "local",
         senderUsername: sessionManager.myUsername || "Me",
         content,
-        type: msgType
+        type: msgType,
+        rollLabel
       };
 
       sessionManager.dispatchOperation({
@@ -175,7 +183,7 @@ export function setupChatPanel(): void {
         const hasReactions = (msg.thumbsUp || 0) > 0 || (msg.thumbsDown || 0) > 0;
         return `
           <div class="chat-msg ${msg.type === "roll" ? "roll" : ""}" style="cursor: pointer;" title="Click message to show/hide reactions">
-            <div class="msg-author" style="color: #38bdf8">${msg.senderUsername}</div>
+            <div class="msg-author" style="color: #38bdf8">${msg.senderUsername}${msg.rollLabel ? ` - <span style="color: #cbd5e1; font-weight: normal;">${msg.rollLabel}</span>` : ""}</div>
             <div class="msg-text">${msg.content}</div>
             <div class="chat-reactions" style="display: ${hasReactions ? "flex" : "none"};">
               <button class="chat-reaction-btn" data-reaction="up" data-id="${msg.id}" title="Thumbs Up">

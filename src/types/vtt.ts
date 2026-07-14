@@ -111,6 +111,7 @@ export interface ChatMessage {
   senderUsername: string;
   content: string;
   type: "text" | "system" | "action" | "roll";
+  rollLabel?: string;
   thumbsUp?: number;
   thumbsDown?: number;
 }

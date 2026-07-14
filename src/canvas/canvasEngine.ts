@@ -55,7 +55,7 @@ export class CanvasEngine {
   // Tool state
   public activeTool: ToolType = "select";
   public drawColor: string = "#38bdf8";
-  public drawWidth: number = 4;
+  public drawWidth: number = 8;
   private _selectedEntityId: string | null = null;
   public aligningImageEntityId: string | null = null;
   private selectionListeners: Set<(id: string | null) => void> = new Set();

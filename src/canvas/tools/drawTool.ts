@@ -1,6 +1,23 @@
 import { CanvasEngine } from "../canvasEngine.js";
 import { sessionManager } from "../../network/sessionManager.js";
+import { docStore } from "../../state/documentStore.js";
 import { LineEntity } from "../../types/vtt.js";
+
+function snapToGridPoint(x: number, y: number, gridPx: number): [number, number] {
+  const ix = Math.round(x / gridPx) * gridPx;
+  const iy = Math.round(y / gridPx) * gridPx;
+  const distI = Math.hypot(x - ix, y - iy);
+
+  const cx = Math.floor(x / gridPx) * gridPx + gridPx / 2;
+  const cy = Math.floor(y / gridPx) * gridPx + gridPx / 2;
+  const distC = Math.hypot(x - cx, y - cy);
+
+  if (distI <= distC) {
+    return [ix, iy];
+  } else {
+    return [cx, cy];
+  }
+}
 
 export function bindDrawTool(engine: CanvasEngine): void {
   let isDrawing = false;
@@ -8,7 +25,14 @@ export function bindDrawTool(engine: CanvasEngine): void {
   engine.onMouseDown((_e, worldX, worldY) => {
     if (engine.activeTool !== "draw" && engine.activeTool !== "line") return;
     isDrawing = true;
-    engine.draftPoints = [[worldX, worldY]];
+    if (engine.activeTool === "line") {
+      const doc = docStore.getDocument();
+      const gridPx = doc.canvasSettings.gridSizePx || 50;
+      const snapped = snapToGridPoint(worldX, worldY, gridPx);
+      engine.draftPoints = [snapped, snapped];
+    } else {
+      engine.draftPoints = [[worldX, worldY]];
+    }
   });
 
   engine.onMouseMove((_e, worldX, worldY) => {
@@ -17,7 +41,10 @@ export function bindDrawTool(engine: CanvasEngine): void {
     if (engine.activeTool === "draw") {
       engine.draftPoints.push([worldX, worldY]);
     } else if (engine.activeTool === "line") {
-      engine.draftPoints = [engine.draftPoints[0], [worldX, worldY]];
+      const doc = docStore.getDocument();
+      const gridPx = doc.canvasSettings.gridSizePx || 50;
+      const snapped = snapToGridPoint(worldX, worldY, gridPx);
+      engine.draftPoints = [engine.draftPoints[0], snapped];
     }
   });
 
