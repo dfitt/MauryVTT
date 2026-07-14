@@ -261,16 +261,27 @@ export class CanvasEngine {
           e.touches[0].clientY - e.touches[1].clientY
         );
 
-        if (initialPinchDist > 0 && Math.abs(dist - initialPinchDist) > 5) {
-          const zoomFactor = dist / initialPinchDist;
-          this.zoom = Math.min(Math.max(0.1, this.zoom * zoomFactor), 8.0);
-          initialPinchDist = dist;
-        }
+        const rect = this.canvas.getBoundingClientRect();
+        const screenX = midX - rect.left;
+        const screenY = midY - rect.top;
 
+        // Apply panning from finger drag first
         this.panX += midX - lastTouchX;
         this.panY += midY - lastTouchY;
         lastTouchX = midX;
         lastTouchY = midY;
+
+        // Apply pinch zoom anchored to the pinch center point
+        if (initialPinchDist > 0 && Math.abs(dist - initialPinchDist) > 2) {
+          const zoomFactor = dist / initialPinchDist;
+          const worldBefore = this.screenToWorld(screenX, screenY);
+          this.zoom = Math.min(Math.max(0.1, this.zoom * zoomFactor), 8.0);
+          const worldAfter = this.screenToWorld(screenX, screenY);
+
+          this.panX += (worldAfter.x - worldBefore.x) * this.zoom;
+          this.panY += (worldAfter.y - worldBefore.y) * this.zoom;
+          initialPinchDist = dist;
+        }
         return;
       }
 
@@ -419,17 +430,28 @@ export class CanvasEngine {
     ctx.translate(this.panX, this.panY);
     ctx.scale(this.zoom, this.zoom);
 
-    if (doc.canvasSettings.gridEnabled) {
-      this.drawGrid(ctx, doc.canvasSettings);
-    }
-
     const entities = Object.values(doc.entities).sort((a, b) => {
       const typeA = a.type === "token" ? 1 : 0;
       const typeB = b.type === "token" ? 1 : 0;
       if (typeA !== typeB) return typeA - typeB;
       return a.zIndex - b.zIndex;
     });
-    for (const ent of entities) {
+
+    const mapEntities = entities.filter((ent) => ent.type === "image" && Boolean((ent as any).isMap));
+    const regularEntities = entities.filter((ent) => !(ent.type === "image" && Boolean((ent as any).isMap)));
+
+    // 1. Draw Map background entities behind the grid
+    for (const ent of mapEntities) {
+      this.drawEntity(ctx, ent);
+    }
+
+    // 2. Draw Grid over Map background images
+    if (doc.canvasSettings.gridEnabled) {
+      this.drawGrid(ctx, doc.canvasSettings);
+    }
+
+    // 3. Draw regular entities (images, tokens, etc.) over the Grid
+    for (const ent of regularEntities) {
       this.drawEntity(ctx, ent);
     }
 

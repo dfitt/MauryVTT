@@ -51,6 +51,7 @@ export interface ImageEntity extends BaseEntity {
   rotation: number;
   opacity: number;
   hiddenCells?: string[];
+  isMap?: boolean;
 }
 
 export interface TokenEntity extends BaseEntity {

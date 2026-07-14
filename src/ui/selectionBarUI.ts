@@ -42,7 +42,7 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
       sessionManager.dispatchOperation({
         opType: "UPDATE_ENTITY",
         id: ent.id,
-        patch: { zIndex: maxZ } as any
+        patch: { zIndex: maxZ, isMap: false } as any
       });
     });
     bar.appendChild(frontBtn);
@@ -58,10 +58,31 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
       sessionManager.dispatchOperation({
         opType: "UPDATE_ENTITY",
         id: ent.id,
-        patch: { zIndex: minZ } as any
+        patch: { zIndex: minZ, isMap: false } as any
       });
     });
     bar.appendChild(backBtn);
+
+    // Set as Map (behind grid)
+    if (ent.type === "image") {
+      const isMap = Boolean((ent as any).isMap);
+      const mapBtn = document.createElement("button");
+      mapBtn.className = `btn-glass btn-sm ${isMap ? "btn-active" : ""}`;
+      mapBtn.title = isMap
+        ? "Currently Map Layer behind grid lines (Click to toggle)"
+        : "Send to Map Layer behind grid lines";
+      mapBtn.innerHTML = isMap ? "🗺️ Map ✓" : "🗺️ Map";
+      mapBtn.addEventListener("click", () => {
+        const allZ = Object.values(docStore.getDocument().entities).map((e) => e.zIndex);
+        const minZ = Math.min(...allZ, 0) - 10;
+        sessionManager.dispatchOperation({
+          opType: "UPDATE_ENTITY",
+          id: ent.id,
+          patch: { zIndex: minZ, isMap: !isMap } as any
+        });
+      });
+      bar.appendChild(mapBtn);
+    }
 
     // Lock / Unlock (anyone can lock or unlock)
     const lockBtn = document.createElement("button");
