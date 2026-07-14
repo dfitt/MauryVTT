@@ -633,12 +633,15 @@ export class CanvasEngine {
         ctx.fillRect(-halfW, -halfH, imgEnt.size.width, imgEnt.size.height);
       }
 
-      // Render Black Mask / Hidden Pixels Overlay
+      // Render Fog Overlay
       if (imgEnt.hiddenCells && imgEnt.hiddenCells.length > 0) {
-        const cellSize = 50; // Grid square size for mask
-        ctx.fillStyle = "#000000";
-        for (const cellKey of imgEnt.hiddenCells) {
-          const [cx, cy] = cellKey.split(",").map(Number);
+        const cellSize = 50; // Grid square size for fog
+        for (const rawKey of imgEnt.hiddenCells) {
+          const [coord, creatorPeerId] = rawKey.split("@");
+          const [cx, cy] = coord.split(",").map(Number);
+
+          const isMine = creatorPeerId && (creatorPeerId === sessionManager.myPeerId || creatorPeerId === "local");
+          ctx.fillStyle = isMine ? "rgba(0, 0, 0, 0.45)" : "#000000";
           ctx.fillRect(cx, cy, cellSize, cellSize);
         }
       }

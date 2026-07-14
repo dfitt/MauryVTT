@@ -36,10 +36,12 @@ export function bindHideTool(engine: CanvasEngine): void {
         processedCellsInStroke.add(strokeKey);
 
         const existing = imgEnt.hiddenCells ? [...imgEnt.hiddenCells] : [];
+        const isAlreadyHidden = existing.some((k) => k.split("@")[0] === cellKey);
 
         if (engine.activeTool === "hide") {
-          if (!existing.includes(cellKey)) {
-            existing.push(cellKey);
+          if (!isAlreadyHidden) {
+            const creator = sessionManager.myPeerId || "local";
+            existing.push(`${cellKey}@${creator}`);
             sessionManager.dispatchOperation({
               opType: "UPDATE_ENTITY",
               id: imgEnt.id,
@@ -47,8 +49,8 @@ export function bindHideTool(engine: CanvasEngine): void {
             });
           }
         } else if (engine.activeTool === "unhide") {
-          if (existing.includes(cellKey)) {
-            const updated = existing.filter((k) => k !== cellKey);
+          if (isAlreadyHidden) {
+            const updated = existing.filter((k) => k.split("@")[0] !== cellKey);
             sessionManager.dispatchOperation({
               opType: "UPDATE_ENTITY",
               id: imgEnt.id,

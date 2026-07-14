@@ -29,11 +29,11 @@ export function setupToolbarUI(engine: CanvasEngine): void {
     { id: "select", icon: "↖️", title: "Select & Move / Resize Entities" },
     { id: "pan", icon: "✋", title: "Pan Map (Touch or Drag with 1 finger)" },
     { id: "draw", icon: "✏️", title: "Freehand Sketch" },
-    { id: "line", icon: "📏", title: "Straight Line" },
-    { id: "fill", icon: "🔲", title: "Grid Square Fill Tool" },
+    { id: "line", icon: "🖊️", title: "Straight Line" },
+    { id: "fill", icon: "🪣", title: "Grid Square Fill Tool" },
     { id: "erase", icon: "🧹", title: "Eraser (Clear lines & fills under cursor)" },
-    { id: "hide", icon: "⬛", title: "Image Hider (Black mask overlay on image)" },
-    { id: "unhide", icon: "⬜", title: "Image Restorer (Remove black overlay mask)" },
+    { id: "hide", icon: "⬛", title: "Fog" },
+    { id: "unhide", icon: "⬜", title: "Fog Away" },
     { id: "measure", icon: "📐", title: "Distance Ruler (Ephemeral)" },
     { id: "ping", icon: "📡", title: "Ripple Ping (Ephemeral)" }
   ];
