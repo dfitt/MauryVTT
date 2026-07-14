@@ -32,9 +32,8 @@ export function bindMeasureTool(engine: CanvasEngine): void {
 
     const doc = docStore.getDocument();
     const gridPx = doc.canvasSettings.gridSizePx || 50;
-    const squares = (distPx / gridPx).toFixed(1);
     const feet = Math.round((distPx / gridPx) * 5);
-    const unitLabel = `${feet} ft (${squares} sq)`;
+    const unitLabel = `${feet} ft`;
 
     engine.localMeasurement.endPoint = { x: worldX, y: worldY };
     engine.localMeasurement.unitLabel = unitLabel;

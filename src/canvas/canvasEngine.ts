@@ -770,6 +770,21 @@ export class CanvasEngine {
 
   private drawMeasurement(ctx: CanvasRenderingContext2D, m: ActiveMeasurement): void {
     ctx.save();
+    const dx = m.endPoint.x - m.startPoint.x;
+    const dy = m.endPoint.y - m.startPoint.y;
+    const radius = Math.sqrt(dx * dx + dy * dy);
+
+    // Ephemeral dashed circle centered at startPoint with radius = distance
+    if (radius > 2) {
+      ctx.beginPath();
+      ctx.arc(m.startPoint.x, m.startPoint.y, radius, 0, Math.PI * 2);
+      ctx.strokeStyle = m.color;
+      ctx.lineWidth = 2 / this.zoom;
+      ctx.setLineDash([6 / this.zoom, 6 / this.zoom]);
+      ctx.stroke();
+    }
+
+    // Measuring line from startPoint to endPoint
     ctx.beginPath();
     ctx.moveTo(m.startPoint.x, m.startPoint.y);
     ctx.lineTo(m.endPoint.x, m.endPoint.y);
