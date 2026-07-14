@@ -67,6 +67,7 @@ export class CanvasEngine {
   private remoteCursors: Map<string, RemoteCursor> = new Map();
   private activePings: Map<string, ActivePing> = new Map();
   private activeMeasurements: Map<string, ActiveMeasurement> = new Map();
+  private tokenHoverScales: Map<string, number> = new Map();
 
   // Active user drawing draft
   public draftPoints: [number, number][] | null = null;
@@ -427,6 +428,8 @@ export class CanvasEngine {
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
+    this.updateTokenHoverScales(doc);
+
     ctx.save();
     ctx.translate(this.panX, this.panY);
     ctx.scale(this.zoom, this.zoom);
@@ -591,6 +594,42 @@ export class CanvasEngine {
     ctx.restore();
   }
 
+  private updateTokenHoverScales(doc: VTTDocument): void {
+    const size = doc.canvasSettings.gridSizePx || 50;
+    const curGx = this.hoverWorldPos ? Math.floor(this.hoverWorldPos.x / size) : null;
+    const curGy = this.hoverWorldPos ? Math.floor(this.hoverWorldPos.y / size) : null;
+
+    for (const ent of Object.values(doc.entities)) {
+      if (ent.type !== "token") continue;
+      const tok = ent as TokenEntity;
+
+      let targetScale = 1.0;
+      if (this.selectedEntityId !== tok.id && curGx !== null && curGy !== null) {
+        const tokGx = Math.floor(tok.position.x / size);
+        const tokGy = Math.floor(tok.position.y / size);
+
+        const minGx = Math.floor((tok.position.x - tok.size.width / 2) / size);
+        const maxGx = Math.floor((tok.position.x + tok.size.width / 2 - 0.001) / size);
+        const minGy = Math.floor((tok.position.y - tok.size.height / 2) / size);
+        const maxGy = Math.floor((tok.position.y + tok.size.height / 2 - 0.001) / size);
+
+        if (
+          (curGx === tokGx && curGy === tokGy) ||
+          (curGx >= minGx && curGx <= maxGx && curGy >= minGy && curGy <= maxGy)
+        ) {
+          targetScale = 2.0;
+        }
+      }
+
+      const currentScale = this.tokenHoverScales.get(tok.id) ?? 1.0;
+      let newScale = currentScale + (targetScale - currentScale) * 0.25;
+      if (Math.abs(targetScale - newScale) < 0.005) {
+        newScale = targetScale;
+      }
+      this.tokenHoverScales.set(tok.id, newScale);
+    }
+  }
+
   private drawEntity(ctx: CanvasRenderingContext2D, ent: CanvasEntity): void {
     ctx.save();
     if (ent.type === "line") {
@@ -624,14 +663,17 @@ export class CanvasEngine {
       ctx.rotate(imgEnt.rotation || 0);
       ctx.globalAlpha = imgEnt.opacity ?? 1.0;
 
-      const halfW = imgEnt.size.width / 2;
-      const halfH = imgEnt.size.height / 2;
+      const hoverScale = ent.type === "token" ? (this.tokenHoverScales.get(ent.id) ?? 1.0) : 1.0;
+      const displayW = imgEnt.size.width * hoverScale;
+      const displayH = imgEnt.size.height * hoverScale;
+      const halfW = displayW / 2;
+      const halfH = displayH / 2;
 
       if (img && img.complete && img.naturalWidth > 0) {
-        ctx.drawImage(img, -halfW, -halfH, imgEnt.size.width, imgEnt.size.height);
+        ctx.drawImage(img, -halfW, -halfH, displayW, displayH);
       } else {
         ctx.fillStyle = "rgba(100, 116, 139, 0.35)";
-        ctx.fillRect(-halfW, -halfH, imgEnt.size.width, imgEnt.size.height);
+        ctx.fillRect(-halfW, -halfH, displayW, displayH);
       }
 
       // Render Fog Overlay
@@ -651,7 +693,7 @@ export class CanvasEngine {
         const token = ent as TokenEntity;
         ctx.strokeStyle = "#38bdf8";
         ctx.lineWidth = 3 / this.zoom;
-        ctx.strokeRect(-halfW, -halfH, token.size.width, token.size.height);
+        ctx.strokeRect(-halfW, -halfH, displayW, displayH);
 
         if (token.label) {
           ctx.font = `600 ${Math.max(12, 14 / this.zoom)}px Outfit, sans-serif`;
