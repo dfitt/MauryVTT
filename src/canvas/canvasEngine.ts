@@ -135,9 +135,35 @@ export class CanvasEngine {
     let lastMouseX = 0;
     let lastMouseY = 0;
 
+    this.canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+
     window.addEventListener("keydown", (e) => {
-      if (e.code === "Space" && document.activeElement?.tagName !== "INPUT") {
+      const activeEl = document.activeElement;
+      const isTyping =
+        activeEl &&
+        (activeEl.tagName === "INPUT" ||
+          activeEl.tagName === "TEXTAREA" ||
+          (activeEl as HTMLElement).isContentEditable);
+
+      if (e.code === "Space" && !isTyping) {
         isSpacePressed = true;
+      }
+
+      if (!isTyping) {
+        const panStep = 45;
+        if (e.code === "ArrowUp") {
+          this.panY += panStep;
+          e.preventDefault();
+        } else if (e.code === "ArrowDown") {
+          this.panY -= panStep;
+          e.preventDefault();
+        } else if (e.code === "ArrowLeft") {
+          this.panX += panStep;
+          e.preventDefault();
+        } else if (e.code === "ArrowRight") {
+          this.panX -= panStep;
+          e.preventDefault();
+        }
       }
     });
     window.addEventListener("keyup", (e) => {
@@ -147,7 +173,7 @@ export class CanvasEngine {
     this.canvas.addEventListener("mousedown", (e) => {
       const world = this.screenToWorld(e.offsetX, e.offsetY);
       const activeTool = (window as any).vttActiveTool;
-      if (e.button === 1 || (e.button === 0 && (isSpacePressed || activeTool === "pan"))) {
+      if (e.button === 1 || e.button === 2 || (e.button === 0 && (isSpacePressed || activeTool === "pan"))) {
         isPanning = true;
         lastMouseX = e.clientX;
         lastMouseY = e.clientY;

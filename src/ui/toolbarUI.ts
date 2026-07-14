@@ -27,7 +27,6 @@ export function setupToolbarUI(engine: CanvasEngine): void {
 
   const tools: { id: ToolType; icon: string; title: string }[] = [
     { id: "select", icon: "↖️", title: "Select & Move / Resize Entities" },
-    { id: "pan", icon: "✋", title: "Pan Map (Touch or Drag with 1 finger)" },
     { id: "draw", icon: "✏️", title: "Freehand Sketch" },
     { id: "line", icon: "🖊️", title: "Straight Line" },
     { id: "fill", icon: "🪣", title: "Grid Square Fill Tool" },
