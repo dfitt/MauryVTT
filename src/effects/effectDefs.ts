@@ -25,8 +25,10 @@ export function getEffectIdForIcon(icon?: string): string | null {
   if (icon.includes("🗡️")) return "dagger_twirl";
   if (icon.includes("☀️") || icon.includes("✝️")) return "holy_healing";
   if (icon.includes("📿") || icon.includes("🧿") || icon.includes("⚰️")) return "turn_undead";
-  if (icon.includes("🪕") || icon.includes("🎸") || icon.includes("🪈")) return "lute_music";
+  if (icon.includes("🪕") || icon.includes("circle cx=\"26\" cy=\"42\" r=\"16\" fill=\"#92400e\"") || icon.includes("🎸") || icon.includes("🪈")) return "lute_music";
   if (icon.includes("⚡")) return "lightning_strikes";
+  if (icon.includes("☁️") || icon.includes("☣️") || icon.includes("🧪") || icon.includes("toxic_cloud")) return "toxic_cloud";
+  if (icon.includes("🪓")) return "massive_axe";
   return null;
 }
 
@@ -64,35 +66,31 @@ export const EFFECT_REGISTRY: Record<string, VttEffectDefinition> = {
         }
       </style>
       <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
-        <!-- Glowing Cut Line 1 (Right to Left) -->
-        <div style="position: absolute; width: 180%; height: 3px; background: linear-gradient(90deg, transparent, #ffffff, #38bdf8, transparent); box-shadow: 0 0 12px #38bdf8; animation: vttSlashCutLine1 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;"></div>
-        <!-- Glowing Cut Line 2 (Left to Right) -->
-        <div style="position: absolute; width: 180%; height: 3px; background: linear-gradient(90deg, transparent, #ffffff, #ef4444, transparent); box-shadow: 0 0 12px #ef4444; animation: vttSlashCutLine2 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;"></div>
-        <!-- Sword Slash 1 (Right to Left) -->
-        <svg viewBox="0 0 64 64" width="84" height="84" style="position: absolute; animation: vttSwordSlash1 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.8));">
-          <path d="M54 10 L14 50 L10 54 L6 50 L10 46 L50 6 Z" fill="url(#swordGrad)" stroke="#ffffff" stroke-width="1.5" />
-          <path d="M14 50 L6 58 L10 62 L18 54 Z" fill="#64748b" />
-          <circle cx="8" cy="60" r="3" fill="#fbbf24" />
-          <defs>
-            <linearGradient id="swordGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#ffffff" />
-              <stop offset="50%" stop-color="#38bdf8" />
-              <stop offset="100%" stop-color="#0284c7" />
-            </linearGradient>
-          </defs>
+        <!-- Metallic Steel Slash Line 1 (Right to Left) -->
+        <div style="position: absolute; width: 180%; height: 2px; background: linear-gradient(90deg, transparent, #ffffff, #cbd5e1, transparent); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.7); animation: vttSlashCutLine1 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;"></div>
+        <!-- Metallic Steel Slash Line 2 (Left to Right) -->
+        <div style="position: absolute; width: 180%; height: 2px; background: linear-gradient(90deg, transparent, #ffffff, #94a3b8, transparent); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.7); animation: vttSlashCutLine2 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;"></div>
+        <!-- Authentic Metal Longsword 1 (Right to Left) -->
+        <svg viewBox="0 0 64 64" width="84" height="84" style="position: absolute; animation: vttSwordSlash1 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.75));">
+          <!-- Blade -->
+          <path d="M54 10 L14 50 L10 54 L6 50 L10 46 L50 6 Z" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.2" />
+          <!-- Fuller -->
+          <path d="M46 18 L18 46" stroke="#64748b" stroke-width="1.5" />
+          <!-- Crossguard -->
+          <path d="M14 50 L6 58 L10 62 L18 54 Z" fill="#475569" stroke="#334155" stroke-width="1" />
+          <!-- Pommel -->
+          <circle cx="8" cy="60" r="3" fill="#f59e0b" stroke="#78350f" stroke-width="1" />
         </svg>
-        <!-- Sword Slash 2 (Left to Right) -->
-        <svg viewBox="0 0 64 64" width="84" height="84" style="position: absolute; animation: vttSwordSlash2 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards; filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.8));">
-          <path d="M54 10 L14 50 L10 54 L6 50 L10 46 L50 6 Z" fill="url(#swordGrad2)" stroke="#ffffff" stroke-width="1.5" />
-          <path d="M14 50 L6 58 L10 62 L18 54 Z" fill="#64748b" />
-          <circle cx="8" cy="60" r="3" fill="#fbbf24" />
-          <defs>
-            <linearGradient id="swordGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#ffffff" />
-              <stop offset="50%" stop-color="#ef4444" />
-              <stop offset="100%" stop-color="#991b1b" />
-            </linearGradient>
-          </defs>
+        <!-- Authentic Metal Longsword 2 (Left to Right) -->
+        <svg viewBox="0 0 64 64" width="84" height="84" style="position: absolute; animation: vttSwordSlash2 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.75));">
+          <!-- Blade -->
+          <path d="M54 10 L14 50 L10 54 L6 50 L10 46 L50 6 Z" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.2" />
+          <!-- Fuller -->
+          <path d="M46 18 L18 46" stroke="#64748b" stroke-width="1.5" />
+          <!-- Crossguard -->
+          <path d="M14 50 L6 58 L10 62 L18 54 Z" fill="#475569" stroke="#334155" stroke-width="1" />
+          <!-- Pommel -->
+          <circle cx="8" cy="60" r="3" fill="#f59e0b" stroke="#78350f" stroke-width="1" />
         </svg>
       </div>
     `,
@@ -338,7 +336,7 @@ export const EFFECT_REGISTRY: Record<string, VttEffectDefinition> = {
         }
         @keyframes vttHolySymbolPulse {
           0% { transform: scale(0.5); opacity: 0; }
-          25% { transform: scale(1.3); opacity: 1; filter: drop-shadow(0 0 20px #facc15); }
+          25% { transform: scale(1.3); opacity: 1; filter: drop-shadow(0 0 20px #a855f7); }
           70% { transform: scale(1.1); opacity: 0.9; }
           100% { transform: scale(1.6); opacity: 0; }
         }
@@ -347,20 +345,20 @@ export const EFFECT_REGISTRY: Record<string, VttEffectDefinition> = {
         <!-- Darkness Mist Layer -->
         <div style="position: absolute; width: 140px; height: 140px; background: radial-gradient(circle, #0f172a 0%, #1e293b 50%, transparent 100%); border-radius: 50%; animation: vttDarknessLayer 0.9s ease-out forwards;"></div>
         <!-- Holy Light Wipe Wave -->
-        <div style="position: absolute; width: 80px; height: 80px; background: radial-gradient(circle, #ffffff 10%, #facc15 60%, transparent 100%); border-radius: 50%; animation: vttHolyLightWipe 0.88s cubic-bezier(0.16, 1, 0.3, 1) forwards;"></div>
-        <!-- Upside-Down Cross igniting into Holy Light -->
+        <div style="position: absolute; width: 80px; height: 80px; background: radial-gradient(circle, #ffffff 10%, #a855f7 60%, transparent 100%); border-radius: 50%; animation: vttHolyLightWipe 0.88s cubic-bezier(0.16, 1, 0.3, 1) forwards;"></div>
+        <!-- Upside-Down Holy Healing Cross inverted -->
         <svg viewBox="0 0 100 100" width="80" height="80" style="position: absolute; animation: vttHolySymbolPulse 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
-          <circle cx="50" cy="50" r="32" fill="none" stroke="#facc15" stroke-width="4" stroke-dasharray="8 6" />
-          <path d="M44 20 L56 20 L56 44 L80 44 L80 56 L56 56 L56 80 L44 80 L44 56 L20 56 L20 44 L44 44 Z" transform="rotate(180 50 50)" fill="#ffffff" stroke="#eab308" stroke-width="2" />
+          <!-- Holy Cross turned upside down (rotate(180 50 50)) and inverted colors -->
+          <path d="M44 20 L56 20 L56 44 L80 44 L80 56 L56 56 L56 80 L44 80 L44 56 L20 56 L20 44 L44 44 Z" transform="rotate(180 50 50)" fill="#3b0764" stroke="#c084fc" stroke-width="2" />
         </svg>
       </div>
     `,
     particles: {
       count: 32,
-      colors: ["#fef08a", "#facc15", "#ffffff", "#eab308"],
+      colors: ["#c084fc", "#a855f7", "#ffffff", "#e9d5ff"],
       speedRange: [50, 140],
       sizeRangePx: [3, 6],
-      gravity: -65, // Rising holy ash
+      gravity: -65, // Rising holy violet ash
       shape: "sparkle",
       lifeMs: 800
     }
@@ -380,12 +378,12 @@ export const EFFECT_REGISTRY: Record<string, VttEffectDefinition> = {
         }
       </style>
       <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
-        <svg viewBox="0 0 64 64" width="84" height="84" style="animation: vttLuteStrum 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
-          <!-- Body -->
-          <circle cx="26" cy="42" r="16" fill="#b45309" stroke="#78350f" stroke-width="2" />
+        <svg viewBox="0 0 64 64" width="84" height="84" style="animation: vttLuteStrum 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.7));">
+          <!-- Body (Rich Dark Brown) -->
+          <circle cx="26" cy="42" r="16" fill="#92400e" stroke="#78350f" stroke-width="2" />
           <circle cx="26" cy="42" r="6" fill="#451a03" />
-          <!-- Neck & Head -->
-          <path d="M36 32 L54 14 L58 18 L40 36 Z" fill="#d97706" />
+          <!-- Neck & Head (Medium Brown) -->
+          <path d="M36 32 L54 14 L58 18 L40 36 Z" fill="#b45309" stroke="#78350f" stroke-width="1" />
           <path d="M52 12 L58 18 L62 14 L56 8 Z" fill="#78350f" />
           <!-- Strings -->
           <line x1="22" y1="46" x2="56" y2="12" stroke="#fef08a" stroke-width="1" />
@@ -464,6 +462,100 @@ export const EFFECT_REGISTRY: Record<string, VttEffectDefinition> = {
       gravity: 160,
       shape: "sparkle",
       lifeMs: 500
+    }
+  },
+
+  toxic_cloud: {
+    id: "toxic_cloud",
+    durationMs: 950,
+    renderSvg: () => `
+      <style>
+        @keyframes vttToxicGas1 {
+          0% { transform: scale(0.2) translate(-20px, 10px); opacity: 0; }
+          30% { transform: scale(1.6) translate(-10px, -5px); opacity: 0.85; filter: blur(4px); }
+          70% { transform: scale(2.2) translate(5px, -15px); opacity: 0.6; filter: blur(8px); }
+          100% { transform: scale(2.8) translate(15px, -25px); opacity: 0; filter: blur(14px); }
+        }
+        @keyframes vttToxicGas2 {
+          0% { transform: scale(0.2) translate(20px, 10px); opacity: 0; }
+          35% { transform: scale(1.5) translate(10px, -5px); opacity: 0.8; filter: blur(3px); }
+          75% { transform: scale(2.4) translate(-5px, -18px); opacity: 0.5; filter: blur(10px); }
+          100% { transform: scale(3.0) translate(-15px, -30px); opacity: 0; filter: blur(16px); }
+        }
+        @keyframes vttToxicSkull {
+          0% { transform: scale(0.4); opacity: 0; }
+          25% { transform: scale(1.2); opacity: 0.95; filter: drop-shadow(0 0 12px #22c55e); }
+          65% { transform: scale(1.3); opacity: 0.7; }
+          100% { transform: scale(1.6); opacity: 0; filter: blur(6px); }
+        }
+      </style>
+      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <!-- Billowing Gas Cloud 1 -->
+        <div style="position: absolute; width: 90px; height: 90px; background: radial-gradient(circle, #22c55e 10%, #15803d 50%, transparent 100%); border-radius: 50%; animation: vttToxicGas1 0.9s ease-out forwards;"></div>
+        <!-- Billowing Gas Cloud 2 -->
+        <div style="position: absolute; width: 90px; height: 90px; background: radial-gradient(circle, #a855f7 10%, #86198f 50%, transparent 100%); border-radius: 50%; animation: vttToxicGas2 0.92s ease-out forwards;"></div>
+        <!-- Biohazard Skull/Symbol -->
+        <svg viewBox="0 0 100 100" width="76" height="76" style="position: absolute; animation: vttToxicSkull 0.88s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
+          <circle cx="50" cy="50" r="32" fill="none" stroke="#22c55e" stroke-width="4" />
+          <circle cx="50" cy="50" r="10" fill="#22c55e" />
+          <path d="M50 18 L50 34 M23 65 L37 57 M77 65 L63 57" stroke="#22c55e" stroke-width="6" stroke-linecap="round" />
+        </svg>
+      </div>
+    `,
+    particles: {
+      count: 34,
+      colors: ["#22c55e", "#4ade80", "#86efac", "#a855f7", "#c084fc"],
+      speedRange: [30, 90],
+      sizeRangePx: [3, 7],
+      gravity: -45, // Rising poison bubbles
+      shape: "circle",
+      lifeMs: 800
+    }
+  },
+
+  massive_axe: {
+    id: "massive_axe",
+    durationMs: 850,
+    renderSvg: () => `
+      <style>
+        @keyframes vttAxeSlam {
+          0% { transform: translate(60%, -140%) rotate(-75deg) scale(1.4); opacity: 0; }
+          18% { opacity: 1; }
+          40% { transform: translate(0%, 8%) rotate(15deg) scale(1.5); opacity: 1; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.85)); }
+          48% { transform: translate(0%, 14%) rotate(18deg) scale(1.5); }
+          65% { transform: translate(0%, 8%) rotate(15deg) scale(1.5); opacity: 1; }
+          100% { transform: translate(0%, 8%) rotate(15deg) scale(1.2); opacity: 0; }
+        }
+        @keyframes vttAxeShock {
+          0% { transform: scaleX(0.1) scaleY(0.4); opacity: 1; }
+          40% { transform: scaleX(2.2) scaleY(1.3); opacity: 0.85; }
+          100% { transform: scaleX(3.4) scaleY(1.6); opacity: 0; }
+        }
+      </style>
+      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <!-- Ground Slam Shockwave -->
+        <div style="position: absolute; width: 90px; height: 36px; border: 4px solid #f59e0b; border-radius: 50%; box-shadow: 0 0 16px #78350f; animation: vttAxeShock 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards; animation-delay: 0.3s; opacity: 0;"></div>
+        <!-- Massive Axe SVG -->
+        <svg viewBox="0 0 64 64" width="92" height="92" style="position: absolute; animation: vttAxeSlam 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;">
+          <!-- Haft / Handle -->
+          <path d="M12 52 L52 12" stroke="#78350f" stroke-width="4" stroke-linecap="round" />
+          <path d="M14 50 L50 14" stroke="#92400e" stroke-width="2" stroke-linecap="round" />
+          <!-- Axe Head -->
+          <path d="M38 10 L54 26 C60 16 60 8 54 2 C48 -4 40 -4 38 10 Z" fill="#94a3b8" stroke="#475569" stroke-width="1.5" />
+          <path d="M42 14 L50 22 C54 16 54 10 50 6 C46 2 42 6 42 14 Z" fill="#e2e8f0" />
+          <!-- Spike on Back -->
+          <path d="M42 22 L28 36 L24 32 L38 18 Z" fill="#64748b" />
+        </svg>
+      </div>
+    `,
+    particles: {
+      count: 22,
+      colors: ["#94a3b8", "#64748b", "#cbd5e1", "#78350f", "#f59e0b"],
+      speedRange: [60, 160],
+      sizeRangePx: [3, 6],
+      gravity: 220,
+      shape: "splinter",
+      lifeMs: 550
     }
   }
 };
