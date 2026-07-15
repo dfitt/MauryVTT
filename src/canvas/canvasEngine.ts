@@ -73,6 +73,7 @@ export class CanvasEngine {
   private activePings: Map<string, ActivePing> = new Map();
   private activeMeasurements: Map<string, ActiveMeasurement> = new Map();
   private tokenHoverScales: Map<string, number> = new Map();
+  private pingPunchScales: Map<string, number> = new Map();
   public draggingEntityId: string | null = null;
   private renderPositions: Map<string, { x: number; y: number }> = new Map();
 
@@ -487,6 +488,43 @@ export class CanvasEngine {
         createdAt: Date.now(),
         ttlMs: payload.ttlMs
       });
+
+      const doc = docStore.getDocument();
+      const entities = Object.values(doc.entities);
+      let hitToken = false;
+      for (const ent of entities) {
+        if (ent.type === "token") {
+          const tok = ent as TokenEntity;
+          const halfW = tok.size.width / 2;
+          const halfH = tok.size.height / 2;
+          if (
+            payload.x >= tok.position.x - halfW &&
+            payload.x <= tok.position.x + halfW &&
+            payload.y >= tok.position.y - halfH &&
+            payload.y <= tok.position.y + halfH
+          ) {
+            this.pingPunchScales.set(tok.id, 4.0);
+            hitToken = true;
+          }
+        }
+      }
+      if (!hitToken) {
+        for (const ent of entities) {
+          if (ent.type === "image" && !ent.locked) {
+            const img = ent as ImageEntity;
+            const halfW = img.size.width / 2;
+            const halfH = img.size.height / 2;
+            if (
+              payload.x >= img.position.x - halfW &&
+              payload.x <= img.position.x + halfW &&
+              payload.y >= img.position.y - halfH &&
+              payload.y <= img.position.y + halfH
+            ) {
+              this.pingPunchScales.set(img.id, 1.25);
+            }
+          }
+        }
+      }
     } else if (payload.type === "MEASURE_LINE") {
       if (!payload.active) {
         this.activeMeasurements.delete(payload.measureId);
@@ -546,6 +584,15 @@ export class CanvasEngine {
     ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
     this.updateTokenHoverScales(doc);
+
+    for (const [id, currentPunch] of this.pingPunchScales.entries()) {
+      let nextPunch = currentPunch + (1.0 - currentPunch) * 0.12;
+      if (Math.abs(1.0 - nextPunch) < 0.005) {
+        this.pingPunchScales.delete(id);
+      } else {
+        this.pingPunchScales.set(id, nextPunch);
+      }
+    }
 
     ctx.save();
     ctx.translate(this.panX, this.panY);
@@ -861,8 +908,10 @@ export class CanvasEngine {
       ctx.globalAlpha = imgEnt.opacity ?? 1.0;
 
       const hoverScale = ent.type === "token" ? (this.tokenHoverScales.get(ent.id) ?? 1.0) : 1.0;
-      const displayW = imgEnt.size.width * hoverScale;
-      const displayH = imgEnt.size.height * hoverScale;
+      const pingPunch = this.pingPunchScales.get(ent.id) ?? 1.0;
+      const totalScale = hoverScale * pingPunch;
+      const displayW = imgEnt.size.width * totalScale;
+      const displayH = imgEnt.size.height * totalScale;
       const halfW = displayW / 2;
       const halfH = displayH / 2;
 
@@ -906,7 +955,7 @@ export class CanvasEngine {
         ctx.strokeStyle = "#a855f7";
         ctx.lineWidth = 2 / this.zoom;
         ctx.setLineDash([6 / this.zoom, 4 / this.zoom]);
-        ctx.strokeRect(-halfW - 4, -halfH - 4, imgEnt.size.width + 8, imgEnt.size.height + 8);
+        ctx.strokeRect(-halfW - 4, -halfH - 4, displayW + 8, displayH + 8);
         ctx.setLineDash([]);
 
         // 4 Corner resize handle squares (only show for tokens when resizingTokenId matches)

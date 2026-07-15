@@ -235,8 +235,8 @@ export function setupToolbarUI(engine: CanvasEngine): void {
     const origH = processed.heightPx;
     const maxSide = Math.max(origW, origH);
     const scale = maxSide > maxDisplaySide ? maxDisplaySide / maxSide : 1.0;
-    const displayWidth = Math.round(origW * scale);
-    const displayHeight = Math.round(origH * scale);
+    const displayWidth = Math.round(origW * scale) * 3;
+    const displayHeight = Math.round(origH * scale) * 3;
 
     const centerWorld = engine.screenToWorld(window.innerWidth / 2, window.innerHeight / 2);
     const newImage: ImageEntity = {
@@ -348,8 +348,8 @@ export function setupToolbarUI(engine: CanvasEngine): void {
     const normalDisplayWidth = Math.round(origW * scale);
     const normalDisplayHeight = Math.round(origH * scale);
 
-    const displayWidth = normalDisplayWidth * 5;
-    const displayHeight = normalDisplayHeight * 5;
+    const displayWidth = normalDisplayWidth * 15;
+    const displayHeight = normalDisplayHeight * 15;
 
     const newMapImage: ImageEntity = {
       id: "img-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6),
