@@ -207,6 +207,10 @@ export class DocumentStore {
         this.doc.quickRolls[op.username] = op.quickRolls;
         break;
       }
+      case "CLEAR_CHAT_HISTORY": {
+        this.doc.chatHistory = [];
+        break;
+      }
       case "BATCH": {
         for (const subOp of op.ops) {
           this.applySingleOp(subOp);

@@ -60,6 +60,41 @@ export class P2PClient {
   private ephemeralListeners: Set<(payload: EphemeralPayload) => void> = new Set();
   private pendingAssets = new Map<string, PendingAssetBuffer>();
   public clientPeerId: string = "";
+  private hostRoomId: string = "";
+  private savedProfile: Omit<UserProfile, "peerId" | "joinedAt" | "role"> | null = null;
+  private isReconnecting: boolean = false;
+  private reconnectTimer: any = null;
+
+  constructor() {
+    if (typeof window !== "undefined" && typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible" && this.hostRoomId) {
+          console.log("[p2pClient] Phone/tab woke up (visibilityState: visible). Checking connection...");
+          const activeConn = this.conn as DataConnection | null;
+          if (!activeConn || !activeConn.open || (this.peer && this.peer.disconnected)) {
+            this.attemptReconnect();
+          } else {
+            this.requestResync();
+          }
+        }
+      });
+
+      window.addEventListener("online", () => {
+        const activeConn = this.conn as DataConnection | null;
+        if (this.hostRoomId && (!activeConn || !activeConn.open)) {
+          console.log("[p2pClient] Network online. Triggering automatic reconnect...");
+          this.attemptReconnect();
+        }
+      });
+
+      window.addEventListener("focus", () => {
+        const activeConn = this.conn as DataConnection | null;
+        if (this.hostRoomId && (!activeConn || !activeConn.open || (this.peer && this.peer.disconnected))) {
+          this.attemptReconnect();
+        }
+      });
+    }
+  }
 
   private async tryFinalizeAsset(assetHash: string): Promise<void> {
     const buf = this.pendingAssets.get(assetHash);
@@ -87,6 +122,9 @@ export class P2PClient {
     hostRoomId: string,
     profile: Omit<UserProfile, "peerId" | "joinedAt" | "role">
   ): Promise<string> {
+    this.hostRoomId = hostRoomId;
+    this.savedProfile = profile;
+
     return new Promise((resolve, reject) => {
       this.peer = new Peer(PEERJS_CONFIG);
 
@@ -103,11 +141,33 @@ export class P2PClient {
           resolve(myId);
         });
 
-        conn.on("error", (err) => reject(err));
+        conn.on("error", (err) => {
+          console.error("[p2pClient] DataConnection open error:", err);
+          const activeConn = this.conn as DataConnection | null;
+          if (!activeConn || !activeConn.open) {
+            this.attemptReconnect();
+          }
+          reject(err);
+        });
+
+        conn.on("close", () => {
+          console.warn("[p2pClient] DataConnection closed. Triggering automatic reconnect...");
+          this.conn = null;
+          this.attemptReconnect();
+        });
+      });
+
+      this.peer.on("disconnected", () => {
+        console.warn("[p2pClient] Peer disconnected from signaling server.");
+        this.attemptReconnect();
       });
 
       this.peer.on("error", (err) => {
         console.error("P2P Client PeerJS Error:", err);
+        const activeConn = this.conn as DataConnection | null;
+        if (!activeConn || !activeConn.open) {
+          this.attemptReconnect();
+        }
         reject(err);
       });
     });
@@ -343,7 +403,58 @@ export class P2PClient {
     }
   }
 
+  public async attemptReconnect(): Promise<void> {
+    if (this.isReconnecting || !this.hostRoomId || !this.savedProfile) return;
+    if (this.conn && this.conn.open && this.peer && !this.peer.disconnected) {
+      this.requestResync();
+      return;
+    }
+
+    console.log("[p2pClient] Attempting automatic reconnection to host room:", this.hostRoomId);
+    this.isReconnecting = true;
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+
+    try {
+      if (this.conn) {
+        try { this.conn.close(); } catch (e) {}
+        this.conn = null;
+      }
+      if (this.peer) {
+        try {
+          if (this.peer.disconnected && !this.peer.destroyed) {
+            this.peer.reconnect();
+            await new Promise((r) => setTimeout(r, 1200));
+          }
+        } catch (e) {}
+      }
+
+      const activeConn = this.conn as DataConnection | null;
+      if (!activeConn || !activeConn.open) {
+        if (this.peer) {
+          try { this.peer.destroy(); } catch (e) {}
+          this.peer = null;
+        }
+        await this.connectToHost(this.hostRoomId, this.savedProfile);
+      } else {
+        this.requestResync();
+      }
+      console.log("[p2pClient] Reconnected to host successfully after wake/disconnect!");
+    } catch (err) {
+      console.warn("[p2pClient] Reconnect failed. Retrying shortly...", err);
+      this.reconnectTimer = setTimeout(() => {
+        this.isReconnecting = false;
+        this.attemptReconnect();
+      }, 3000);
+    } finally {
+      this.isReconnecting = false;
+    }
+  }
+
   public disconnect(): void {
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+    this.isReconnecting = false;
+    this.hostRoomId = "";
+    this.savedProfile = null;
     if (this.conn) {
       this.conn.close();
       this.conn = null;
@@ -356,3 +467,4 @@ export class P2PClient {
 }
 
 export const clientEngine = new P2PClient();
+

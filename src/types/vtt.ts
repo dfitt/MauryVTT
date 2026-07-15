@@ -156,6 +156,7 @@ export type DocumentOperation =
   | { opType: "UPDATE_CHAT_MESSAGE"; id: string; patch: Partial<ChatMessage> }
   | { opType: "UPDATE_GRID_CELL"; cellKey: string; patch: Partial<GridCellData> }
   | { opType: "UPDATE_QUICK_ROLLS"; username: string; quickRolls: QuickRoll[] }
+  | { opType: "CLEAR_CHAT_HISTORY" }
   | { opType: "BATCH"; ops: DocumentOperation[] };
 
 // ==========================================

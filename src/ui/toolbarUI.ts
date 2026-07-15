@@ -491,7 +491,7 @@ export function setupToolbarUI(engine: CanvasEngine): void {
   simpleBar.style.display = "none";
   simpleBar.innerHTML = `
     <button class="btn-glass btn-sm" id="btn-simple-chat" style="cursor: pointer; padding: 8px 16px; font-size: 14px; font-weight: 600; border-radius: 999px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(56, 189, 248, 0.45); color: #f8fafc; margin-right: 8px;">💬 Chat & Dice</button>
-    <button class="btn-glass btn-sm btn-primary" id="btn-toggle-advanced" style="cursor: pointer; padding: 8px 18px; font-size: 14px; font-weight: 600; border-radius: 999px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);">⚙️ Advanced Mode</button>
+    <button class="btn-glass btn-sm btn-primary" id="btn-toggle-advanced" style="cursor: pointer; padding: 8px 14px; font-size: 14px; font-weight: 600; border-radius: 999px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);">⚙️ Adv Mode</button>
   `;
   document.body.appendChild(simpleBar);
 

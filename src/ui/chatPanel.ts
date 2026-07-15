@@ -362,7 +362,11 @@ export function setupChatPanel(): void {
       inputEl.value = "";
 
       if (/^\/clear$/i.test(val)) {
-        container.innerHTML = "";
+        if (sessionManager.role === "host" || sessionManager.myPeerId === docStore.getDocument().documentId) {
+          sessionManager.dispatchOperation({ opType: "CLEAR_CHAT_HISTORY" } as any);
+        } else {
+          container.innerHTML = "";
+        }
         return;
       }
 
@@ -465,6 +469,22 @@ export function setupChatPanel(): void {
     }
     lastMessageCount = newCount;
     renderQuickRolls();
+
+    if (doc.chatHistory.length === 0) {
+      container.innerHTML = "";
+      animatedRollMsgIds.clear();
+      activeRollIntervals.forEach(clearInterval);
+      activeRollIntervals.clear();
+      return;
+    } else {
+      const existingIds = new Set(doc.chatHistory.map((m) => m.id));
+      container.querySelectorAll(".chat-msg").forEach((el) => {
+        const id = el.getAttribute("data-msg-id");
+        if (id && !existingIds.has(id)) {
+          el.remove();
+        }
+      });
+    }
 
     // Smart DOM reconciliation so active roll animations are never destroyed midway by document updates
     doc.chatHistory.forEach((msg) => {
