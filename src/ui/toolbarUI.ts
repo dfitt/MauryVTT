@@ -193,11 +193,8 @@ export function setupToolbarUI(engine: CanvasEngine): void {
 
   uploadBtn.addEventListener("click", () => fileInput.click());
 
-  fileInput.addEventListener("change", async () => {
-    const file = fileInput.files?.[0];
-    if (!file) return;
-
-    console.log("[toolbarUI] Image upload selected:", file.name, file.size);
+  const createAndDispatchImage = async (file: File) => {
+    console.log("[toolbarUI] Standard image upload/paste selected:", file.name || "pasted-image", file.size);
     const processed = await processImageFile(file, 1024);
     await assetStore.saveAsset(processed.assetHash, processed.blob);
     docStore.registerAssetManifest(
@@ -248,17 +245,130 @@ export function setupToolbarUI(engine: CanvasEngine): void {
     sessionManager.uploadAsset(processed.assetHash, processed.blob)
       .then(() => console.log("[toolbarUI] Network upload succeeded for asset:", processed.assetHash))
       .catch((err) => console.error("[toolbarUI] Network upload failed for asset:", err));
+  };
 
+  fileInput.addEventListener("change", async () => {
+    const file = fileInput.files?.[0];
+    if (!file) return;
+    await createAndDispatchImage(file);
     fileInput.value = "";
+  });
+
+  window.addEventListener("paste", async (e: ClipboardEvent) => {
+    const target = e.target as HTMLElement;
+    if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) {
+      return;
+    }
+    const items = e.clipboardData?.items;
+    if (items) {
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf("image") !== -1) {
+          const file = items[i].getAsFile();
+          if (file) {
+            e.preventDefault();
+            await createAndDispatchImage(file);
+            return;
+          }
+        }
+      }
+    }
+    const files = e.clipboardData?.files;
+    if (files && files.length > 0) {
+      for (let i = 0; i < files.length; i++) {
+        if (files[i].type.indexOf("image") !== -1) {
+          e.preventDefault();
+          await createAndDispatchImage(files[i]);
+          return;
+        }
+      }
+    }
   });
 
   bar.appendChild(uploadBtn);
   bar.appendChild(fileInput);
 
+  // Add Map Button
+  const addMapBtn = document.createElement("button");
+  addMapBtn.className = "tool-btn";
+  addMapBtn.title = "Add Map (Max size 4096px, placed on Map layer behind grid at world origin)";
+  addMapBtn.innerHTML = "🗺️";
+
+  const mapFileInput = document.createElement("input");
+  mapFileInput.type = "file";
+  mapFileInput.accept = "image/*";
+  mapFileInput.style.display = "none";
+
+  addMapBtn.addEventListener("click", () => mapFileInput.click());
+
+  mapFileInput.addEventListener("change", async () => {
+    const file = mapFileInput.files?.[0];
+    if (!file) return;
+
+    console.log("[toolbarUI] Map upload selected:", file.name, file.size);
+    const processed = await processImageFile(file, 4096);
+    await assetStore.saveAsset(processed.assetHash, processed.blob);
+    docStore.registerAssetManifest(
+      processed.assetHash,
+      processed.mimeType,
+      processed.byteSize,
+      processed.widthPx,
+      processed.heightPx
+    );
+
+    const maxDisplaySide = 300;
+    const origW = processed.widthPx;
+    const origH = processed.heightPx;
+    const maxSide = Math.max(origW, origH);
+    const scale = maxSide > maxDisplaySide ? maxDisplaySide / maxSide : 1.0;
+    const normalDisplayWidth = Math.round(origW * scale);
+    const normalDisplayHeight = Math.round(origH * scale);
+
+    const displayWidth = normalDisplayWidth * 5;
+    const displayHeight = normalDisplayHeight * 5;
+
+    const newMapImage: ImageEntity = {
+      id: "img-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6),
+      type: "image",
+      layerId: "map-layer",
+      isMap: true,
+      zIndex: 0,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      lastModifiedBy: sessionManager.myPeerId || "local",
+      locked: false,
+      assetHash: processed.assetHash,
+      position: { x: 0, y: 0 },
+      size: {
+        width: displayWidth,
+        height: displayHeight
+      },
+      rotation: 0,
+      opacity: 1.0
+    };
+
+    console.log("[toolbarUI] Dispatching CREATE_ENTITY for Map Image:", newMapImage.id, "hash:", processed.assetHash);
+    sessionManager.dispatchOperation({
+      opType: "CREATE_ENTITY",
+      entity: newMapImage
+    });
+    engine.setTool("select");
+    engine.selectedEntityId = newMapImage.id;
+
+    console.log("[toolbarUI] Starting async network upload for map asset:", processed.assetHash);
+    sessionManager.uploadAsset(processed.assetHash, processed.blob)
+      .then(() => console.log("[toolbarUI] Network upload succeeded for map asset:", processed.assetHash))
+      .catch((err) => console.error("[toolbarUI] Network upload failed for map asset:", err));
+
+    mapFileInput.value = "";
+  });
+
+  bar.appendChild(addMapBtn);
+  bar.appendChild(mapFileInput);
+
   // Upload Token Button
   const uploadTokenBtn = document.createElement("button");
   uploadTokenBtn.className = "tool-btn";
-  uploadTokenBtn.title = "Upload Token (Circular 256x256 PNG, sized & snapped to 1 grid cell)";
+  uploadTokenBtn.title = "Add Token (any image works)";
   uploadTokenBtn.innerHTML = "♟️";
 
   const tokenInput = document.createElement("input");
