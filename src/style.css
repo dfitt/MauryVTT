@@ -1013,3 +1013,25 @@ body.simple-mode-active #selection-toolbar {
   transition: opacity 0.15s ease 250ms, transform 0.15s ease 250ms, visibility 0s 250ms;
 }
 
+/* Animated Ping Toolbar Icon */
+@keyframes pingCircle1 {
+  0% { transform: scale(0.5); opacity: 0.95; }
+  100% { transform: scale(1.3); opacity: 0; }
+}
+
+@keyframes pingCircle2 {
+  0% { transform: scale(0.5); opacity: 0.95; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+.ping-circle-1 {
+  transform-origin: 12px 12px;
+  animation: pingCircle1 1.6s infinite cubic-bezier(0, 0, 0.2, 1);
+}
+
+.ping-circle-2 {
+  transform-origin: 12px 12px;
+  animation: pingCircle2 1.6s infinite cubic-bezier(0, 0, 0.2, 1) 0.5s;
+}
+
+

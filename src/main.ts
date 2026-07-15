@@ -18,6 +18,35 @@ import { registerTroubleshootingUtilities } from "./utils/troubleshooting.js";
 function bootstrap(): void {
   registerTroubleshootingUtilities();
 
+  // Global mobile/touch haptic feedback (using capturing listeners so e.stopPropagation() never blocks it)
+  let lastVibrateTime = 0;
+  const triggerHaptic = (e: Event) => {
+    if (typeof navigator === "undefined" || !("vibrate" in navigator)) return;
+    const isMobileOrTouch = navigator.maxTouchPoints > 0 || /iPhone|iPod|Android.*Mobile/i.test(navigator.userAgent);
+    if (!isMobileOrTouch) return;
+
+    const target = (e.target as HTMLElement)?.closest(
+      "button, input[type='button'], input[type='submit'], .tool-btn, .btn-glass, .dice-icon-btn, .toolbar-color-swatch, .brand-icon, .copy-btn, .chat-toggle-btn, .user-pill"
+    );
+    if (!target) return;
+
+    const now = Date.now();
+    if (now - lastVibrateTime < 80) return;
+    lastVibrateTime = now;
+
+    try {
+      // 35ms produces a crisp, noticeable tactile pulse on phones (12ms was often below threshold)
+      if (!navigator.vibrate([35])) {
+        navigator.vibrate(35);
+      }
+    } catch (err) {
+      // Ignore if unsupported
+    }
+  };
+
+  window.addEventListener("pointerdown", triggerHaptic, { capture: true, passive: true });
+  window.addEventListener("click", triggerHaptic, { capture: true, passive: true });
+
   const canvas = document.getElementById("vtt-canvas") as HTMLCanvasElement;
   if (!canvas) throw new Error("Canvas element not found");
 

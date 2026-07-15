@@ -66,6 +66,7 @@ export class CanvasEngine {
 
   // Hover cursor state for tool previews
   public hoverWorldPos: { x: number; y: number } | null = null;
+  public isTouchInput: boolean = false;
 
   // Ephemeral states
   private remoteCursors: Map<string, RemoteCursor> = new Map();
@@ -165,6 +166,18 @@ export class CanvasEngine {
     let lastMouseY = 0;
 
     this.canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+
+    window.addEventListener("pointerdown", (e) => {
+      this.isTouchInput = e.pointerType === "touch" || e.pointerType === "pen";
+    }, { passive: true });
+
+    window.addEventListener("pointermove", (e) => {
+      if (e.pointerType === "touch" || e.pointerType === "pen") {
+        this.isTouchInput = true;
+      } else if (e.pointerType === "mouse") {
+        this.isTouchInput = false;
+      }
+    }, { passive: true });
 
     window.addEventListener("keydown", (e) => {
       const activeEl = document.activeElement;
@@ -300,6 +313,7 @@ export class CanvasEngine {
     let initialPinchDist = 0;
 
     this.canvas.addEventListener("touchstart", (e) => {
+      this.isTouchInput = true;
       e.preventDefault();
       if (e.touches.length === 2) {
         touchPan = true;
@@ -334,6 +348,7 @@ export class CanvasEngine {
     }, { passive: false });
 
     window.addEventListener("touchmove", (e) => {
+      this.isTouchInput = true;
       if (e.target === this.canvas) {
         e.preventDefault();
       }
@@ -394,6 +409,9 @@ export class CanvasEngine {
 
     window.addEventListener("touchend", (e) => {
       touchPan = false;
+      if (this.isTouchInput) {
+        this.hoverWorldPos = null;
+      }
       if (e.changedTouches.length === 1) {
         const touch = e.changedTouches[0];
         const rect = this.canvas.getBoundingClientRect();
@@ -745,7 +763,7 @@ export class CanvasEngine {
       const tok = ent as TokenEntity;
 
       let targetScale = 1.0;
-      if (this.selectedEntityId !== tok.id && curGx !== null && curGy !== null) {
+      if (!this.isTouchInput && this.selectedEntityId !== tok.id && curGx !== null && curGy !== null) {
         const tokGx = Math.floor(tok.position.x / size);
         const tokGy = Math.floor(tok.position.y / size);
 

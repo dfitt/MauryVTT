@@ -31,14 +31,26 @@ export function setupToolbarUI(engine: CanvasEngine): void {
     { id: "select", icon: "↖️", title: "Select & Move / Resize Entities" },
     { id: "draw", icon: "✏️", title: "Freehand Sketch" },
     { id: "line", icon: "🖊️", title: "Straight Line" },
-    { id: "fill", icon: "🪣", title: "Grid Square Fill Tool" },
-    { id: "erase", icon: "🧹", title: "Eraser (Clear lines & fills under cursor)" },
+    {
+      id: "fill",
+      icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle;"><rect x="4" y="4" width="16" height="16" rx="2.5" fill="currentColor" fill-opacity="0.35"/></svg>`,
+      title: "Grid Square Fill Tool"
+    },
+    {
+      id: "erase",
+      icon: `<svg width="19" height="19" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle;"><path d="M20 20H7L3 16C2.5 15.5 2.5 14.7 3 14.2L13 4.2C13.5 3.7 14.3 3.7 14.8 4.2L19.8 9.2C20.3 9.7 20.3 10.5 19.8 11L11 19.8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M18 13L11 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+      title: "Eraser (Clear lines & fills under cursor)"
+    },
     {
       id: "measure",
       icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle;"><rect x="2" y="7" width="11" height="11" rx="3" fill="#eab308" stroke="currentColor" stroke-width="1.6"/><circle cx="7.5" cy="12.5" r="2" fill="#fef08a" stroke="currentColor" stroke-width="1.2"/><path d="M13 15H22V10H13" fill="#fef9c3" stroke="currentColor" stroke-width="1.4"/><line x1="16" y1="10" x2="16" y2="12.5" stroke="currentColor" stroke-width="1.4"/><line x1="19" y1="10" x2="19" y2="12.5" stroke="currentColor" stroke-width="1.4"/></svg>`,
       title: "Distance Tape Measure (Ephemeral)"
     },
-    { id: "ping", icon: "📡", title: "Ripple Ping (Ephemeral)" }
+    {
+      id: "ping",
+      icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; overflow: visible;"><circle cx="12" cy="12" r="2.5" fill="currentColor"/><circle cx="12" cy="12" r="6" stroke="currentColor" stroke-width="2" class="ping-circle-1"/><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" class="ping-circle-2"/></svg>`,
+      title: "Ripple Ping (Ephemeral)"
+    }
   ];
 
   const bar = document.createElement("div");
@@ -79,12 +91,14 @@ export function setupToolbarUI(engine: CanvasEngine): void {
   const activeColorBtn = document.createElement("div");
   activeColorBtn.className = "toolbar-color-active-btn";
   if (defaultColor === "fog") {
-    activeColorBtn.style.background = "radial-gradient(circle, #cbd5e1 10%, #475569 50%, #0f172a 90%)";
-    activeColorBtn.innerHTML = `<span style="font-size: 14px; display: flex; align-items: center; justify-content: center; text-shadow: 0 0 3px #000;">🌫️</span>`;
+    activeColorBtn.style.background = "repeating-linear-gradient(45deg, #64748b 0px, #64748b 3px, #0f172a 3px, #0f172a 8px)";
+    activeColorBtn.style.border = "1.5px solid #94a3b8";
+    activeColorBtn.innerHTML = "";
   } else {
     activeColorBtn.style.backgroundColor = defaultColor;
+    activeColorBtn.style.border = "";
   }
-  activeColorBtn.title = "Current Drawing Color (Click to change)";
+  activeColorBtn.setAttribute("data-tooltip", "Current Drawing Color (Click to change)");
 
   const colorPopover = document.createElement("div");
   colorPopover.className = "toolbar-color-popover";
@@ -96,15 +110,17 @@ export function setupToolbarUI(engine: CanvasEngine): void {
   const updateColor = (color: string) => {
     engine.drawColor = color;
     if (color === "fog") {
-      activeColorBtn.style.background = "radial-gradient(circle, #cbd5e1 10%, #475569 50%, #0f172a 90%)";
+      activeColorBtn.style.background = "repeating-linear-gradient(45deg, #64748b 0px, #64748b 3px, #0f172a 3px, #0f172a 8px)";
       activeColorBtn.style.backgroundColor = "";
-      activeColorBtn.innerHTML = `<span style="font-size: 14px; display: flex; align-items: center; justify-content: center; text-shadow: 0 0 3px #000;">🌫️</span>`;
-      activeColorBtn.title = "Current Drawing Color: Fog of War";
+      activeColorBtn.style.border = "1.5px solid #94a3b8";
+      activeColorBtn.innerHTML = "";
+      activeColorBtn.setAttribute("data-tooltip", "Current Drawing Color: Fog of War");
     } else {
       activeColorBtn.style.background = color;
       activeColorBtn.style.backgroundColor = color;
+      activeColorBtn.style.border = "";
       activeColorBtn.innerHTML = "";
-      activeColorBtn.title = `Current Drawing Color: ${color} (Click to change)`;
+      activeColorBtn.setAttribute("data-tooltip", `Current Drawing Color: ${color} (Click to change)`);
     }
     colorPopover.style.display = "none";
     popoverSwatches.querySelectorAll(".toolbar-color-swatch").forEach((s) => {
@@ -118,18 +134,21 @@ export function setupToolbarUI(engine: CanvasEngine): void {
     swatch.className = `toolbar-color-swatch ${color === defaultColor ? "active" : ""}`;
     swatch.setAttribute("data-color", color);
     if (color === "fog") {
-      swatch.style.background = "radial-gradient(circle, #cbd5e1 10%, #475569 50%, #0f172a 90%)";
+      swatch.style.background = "repeating-linear-gradient(45deg, #64748b 0px, #64748b 3px, #0f172a 3px, #0f172a 8px)";
+      swatch.style.border = "1.5px solid #94a3b8";
       swatch.style.boxShadow = "inset 0 0 4px rgba(255, 255, 255, 0.6)";
       swatch.style.position = "relative";
       swatch.style.overflow = "hidden";
-      swatch.innerHTML = `<span style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 14px; text-shadow: 0 0 3px #000;">🌫️</span>`;
-      swatch.title = "Drawing Color: Fog of War (Pure black to others, semi-transparent to you)";
+      swatch.innerHTML = "";
+      swatch.setAttribute("data-tooltip", "Drawing Color: Fog of War (Pure black to others, semi-transparent to you)");
     } else {
       swatch.style.backgroundColor = color;
-      swatch.title = `Drawing Color: ${color}`;
+      swatch.style.border = "";
+      swatch.setAttribute("data-tooltip", `Drawing Color: ${color}`);
     }
     swatch.addEventListener("click", (e) => {
       e.stopPropagation();
+      engine.selectedEntityId = null;
       updateColor(color);
     });
     popoverSwatches.appendChild(swatch);
@@ -151,7 +170,12 @@ export function setupToolbarUI(engine: CanvasEngine): void {
   customInput.style.border = "none";
   customInput.style.background = "transparent";
 
+  customInput.addEventListener("click", () => {
+    engine.selectedEntityId = null;
+  });
+
   customInput.addEventListener("change", () => {
+    engine.selectedEntityId = null;
     updateColor(customInput.value);
   });
 
@@ -163,6 +187,7 @@ export function setupToolbarUI(engine: CanvasEngine): void {
 
   activeColorBtn.addEventListener("click", (e) => {
     e.stopPropagation();
+    engine.selectedEntityId = null;
     colorPopover.style.display = colorPopover.style.display === "none" ? "flex" : "none";
   });
 
@@ -541,20 +566,6 @@ export function setupToolbarUI(engine: CanvasEngine): void {
         } else {
           chatWindow.classList.add("minimized");
           chatWindow.style.display = "none";
-        }
-      }
-    }
-  });
-
-  document.body.addEventListener("click", (e) => {
-    if (!isMobilePhone()) return;
-    const target = (e.target as HTMLElement)?.closest("button, .tool-btn, .btn-glass, .toolbar-color-swatch, .brand-icon");
-    if (target) {
-      if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-        try {
-          navigator.vibrate(12);
-        } catch (err) {
-          // Ignore if unsupported
         }
       }
     }

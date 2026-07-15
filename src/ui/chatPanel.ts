@@ -387,13 +387,39 @@ export function setupChatPanel(): void {
         return;
       }
 
+      if (/^\/resync$/i.test(val)) {
+        const sysMsg: ChatMessage = {
+          id: "sys-" + Date.now(),
+          timestamp: Date.now(),
+          senderPeerId: "system",
+          senderUsername: "System",
+          content: `🔄 Requesting full state resync from peers...`,
+          type: "system"
+        };
+        sessionManager.dispatchOperation({ opType: "APPEND_CHAT_MESSAGE", message: sysMsg });
+        sessionManager.resyncState().then(() => {
+          const doneMsg: ChatMessage = {
+            id: "sys-" + Date.now() + "-done",
+            timestamp: Date.now(),
+            senderPeerId: "system",
+            senderUsername: "System",
+            content: `✅ Resync complete!`,
+            type: "system"
+          };
+          sessionManager.dispatchOperation({ opType: "APPEND_CHAT_MESSAGE", message: doneMsg });
+        }).catch((err) => {
+          console.error("[Resync] Error:", err);
+        });
+        return;
+      }
+
       if (/^\/(help|\?)$/i.test(val)) {
         const helpMsg: ChatMessage = {
           id: "sys-" + Date.now(),
           timestamp: Date.now(),
           senderPeerId: "system",
           senderUsername: "System",
-          content: `**Commands:**<br/>• <code>/roll &lt;expr&gt;</code> (or <code>/r</code>): Roll dice (e.g. <code>/r 1d6+3d4+12</code> or <code>/r d20+5</code>)<br/>• <code>/flip</code>: Flip a coin (Heads/Tails)<br/>• <code>/me &lt;action&gt;</code>: Roleplay emote action<br/>• <code>/room</code>: Show room code link<br/>• <code>/clear</code>: Clear local chat view`,
+          content: `**Commands:**<br/>• <code>/roll &lt;expr&gt;</code> (or <code>/r</code>): Roll dice (e.g. <code>/r 1d6+3d4+12</code> or <code>/r d20+5</code>)<br/>• <code>/flip</code>: Flip a coin (Heads/Tails)<br/>• <code>/me &lt;action&gt;</code>: Roleplay emote action<br/>• <code>/room</code>: Show room code link<br/>• <code>/clear</code>: Clear local chat view<br/>• <code>/resync</code>: Resync full state with peers`,
           type: "system"
         };
         sessionManager.dispatchOperation({ opType: "APPEND_CHAT_MESSAGE", message: helpMsg });
