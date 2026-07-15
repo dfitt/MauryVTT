@@ -249,15 +249,21 @@ export const EFFECT_REGISTRY: Record<string, VttEffectDefinition> = {
     renderSvg: () => `
       <style>
         @keyframes vttDaggerTwirl {
-          0% { transform: translate(-160%, 0%) rotate(0deg) scale(1.1); opacity: 0; }
-          15% { opacity: 1; }
-          50% { transform: translate(0%, 0%) rotate(360deg) scale(1.1); opacity: 1; }
-          85% { opacity: 1; }
+          0%   { transform: translate(-160%, 0%) rotate(0deg) scale(1.1); opacity: 0; }
+          10%  { transform: translate(-128%, 0%) rotate(72deg) scale(1.1); opacity: 1; }
+          20%  { transform: translate(-96%, 0%) rotate(144deg) scale(1.1); opacity: 1; }
+          30%  { transform: translate(-64%, 0%) rotate(216deg) scale(1.1); opacity: 1; }
+          40%  { transform: translate(-32%, 0%) rotate(288deg) scale(1.1); opacity: 1; }
+          50%  { transform: translate(0%, 0%) rotate(360deg) scale(1.1); opacity: 1; }
+          60%  { transform: translate(32%, 0%) rotate(432deg) scale(1.1); opacity: 1; }
+          70%  { transform: translate(64%, 0%) rotate(504deg) scale(1.1); opacity: 1; }
+          80%  { transform: translate(96%, 0%) rotate(576deg) scale(1.1); opacity: 1; }
+          90%  { transform: translate(128%, 0%) rotate(648deg) scale(1.1); opacity: 1; }
           100% { transform: translate(160%, 0%) rotate(720deg) scale(1.1); opacity: 0; }
         }
       </style>
       <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
-        <svg viewBox="0 0 64 64" width="68" height="68" style="animation: vttDaggerTwirl 0.68s cubic-bezier(0.25, 1, 0.5, 1) forwards; filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.7));">
+        <svg viewBox="0 0 64 64" width="68" height="68" style="animation: vttDaggerTwirl 0.68s linear forwards; filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.7));">
           <path d="M52 12 L26 38 L22 34 L48 8 Z" fill="#e2e8f0" stroke="#64748b" stroke-width="1.5" />
           <path d="M22 34 L16 40 L24 48 L30 42 Z" fill="#334155" />
           <path d="M16 40 L8 48 L16 56 L24 48 Z" fill="#78350f" />
@@ -297,8 +303,7 @@ export const EFFECT_REGISTRY: Record<string, VttEffectDefinition> = {
       <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
         <div style="position: absolute; width: 70px; height: 70px; border: 4px solid #4ade80; border-radius: 50%; box-shadow: 0 0 20px #facc15, inset 0 0 20px #86efac; animation: vttHealingAura 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;"></div>
         <svg viewBox="0 0 100 100" width="88" height="88" style="animation: vttHolyCore 0.88s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
-          <!-- Holy Sun & Cross Symbol -->
-          <circle cx="50" cy="50" r="28" fill="#fef08a" opacity="0.3" />
+          <!-- Holy Cross Symbol -->
           <path d="M44 20 L56 20 L56 44 L80 44 L80 56 L56 56 L56 80 L44 80 L44 56 L20 56 L20 44 L44 44 Z" fill="#facc15" stroke="#ffffff" stroke-width="2" />
         </svg>
       </div>
@@ -343,10 +348,10 @@ export const EFFECT_REGISTRY: Record<string, VttEffectDefinition> = {
         <div style="position: absolute; width: 140px; height: 140px; background: radial-gradient(circle, #0f172a 0%, #1e293b 50%, transparent 100%); border-radius: 50%; animation: vttDarknessLayer 0.9s ease-out forwards;"></div>
         <!-- Holy Light Wipe Wave -->
         <div style="position: absolute; width: 80px; height: 80px; background: radial-gradient(circle, #ffffff 10%, #facc15 60%, transparent 100%); border-radius: 50%; animation: vttHolyLightWipe 0.88s cubic-bezier(0.16, 1, 0.3, 1) forwards;"></div>
-        <!-- Dark Symbol igniting into Holy Light -->
+        <!-- Upside-Down Cross igniting into Holy Light -->
         <svg viewBox="0 0 100 100" width="80" height="80" style="position: absolute; animation: vttHolySymbolPulse 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
           <circle cx="50" cy="50" r="32" fill="none" stroke="#facc15" stroke-width="4" stroke-dasharray="8 6" />
-          <path d="M45 25 L55 25 L55 45 L75 45 L75 55 L55 55 L55 75 L45 75 L45 55 L25 55 L25 45 L45 45 Z" fill="#ffffff" stroke="#eab308" stroke-width="2" />
+          <path d="M44 20 L56 20 L56 44 L80 44 L80 56 L56 56 L56 80 L44 80 L44 56 L20 56 L20 44 L44 44 Z" transform="rotate(180 50 50)" fill="#ffffff" stroke="#eab308" stroke-width="2" />
         </svg>
       </div>
     `,

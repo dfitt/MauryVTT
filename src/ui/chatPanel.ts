@@ -58,16 +58,16 @@ export function setupChatPanel(): void {
           <button class="btn-glass" id="dice-builder-clear-btn" style="flex: 1; padding: 6px;">Clear</button>
         </div>
         <div id="dice-builder-icon-popover" style="display: none; width: 100%; box-sizing: border-box; background: rgba(15, 23, 42, 0.98); border: 1px solid rgba(56, 189, 248, 0.6); border-radius: 8px; padding: 8px; flex-direction: row; justify-content: center; flex-wrap: wrap; gap: 8px; box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.5);">
-          <button class="btn-glass roll-icon-swatch active" data-icon="🎲" title="Dice" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🎲</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="⚔️" title="Sword" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">⚔️</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="🏹" title="Bow and Arrow" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🏹</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="🔥" title="Fireball" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🔥</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="✨" title="Charming Pink Sparkles" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">✨</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="🗡️" title="Dagger" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🗡️</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="☀️" title="Holy Symbol (Healing)" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">☀️</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="📿" title="Turn Undead" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">📿</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="🪕" title="Lute (Music)" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🪕</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="⚡" title="Lightning Strikes" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">⚡</button>
+          <button class="btn-glass roll-icon-swatch active" data-icon="🎲" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🎲</button>
+          <button class="btn-glass roll-icon-swatch" data-icon="⚔️" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">⚔️</button>
+          <button class="btn-glass roll-icon-swatch" data-icon="🏹" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🏹</button>
+          <button class="btn-glass roll-icon-swatch" data-icon="🔥" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🔥</button>
+          <button class="btn-glass roll-icon-swatch" data-icon="✨" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">✨</button>
+          <button class="btn-glass roll-icon-swatch" data-icon="🗡️" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🗡️</button>
+          <button class="btn-glass roll-icon-swatch" data-icon="✝️" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">✝️</button>
+          <button class="btn-glass roll-icon-swatch" data-icon="📿" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">📿</button>
+          <button class="btn-glass roll-icon-swatch" data-icon="🪕" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🪕</button>
+          <button class="btn-glass roll-icon-swatch" data-icon="⚡" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">⚡</button>
         </div>
       </div>
     </div>
