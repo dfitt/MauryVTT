@@ -1,6 +1,8 @@
 import { docStore } from "../state/documentStore.js";
 import { sessionManager } from "../network/sessionManager.js";
 import { ChatMessage } from "../types/vtt.js";
+import { EffectEngine } from "../effects/effectEngine.js";
+import { getEffectIdForIcon } from "../effects/effectDefs.js";
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } {
   let c = hex.replace(/^#/, "");
@@ -51,18 +53,16 @@ export function setupChatPanel(): void {
         </div>
         <input type="text" id="dice-builder-label" class="dice-builder-label-input" placeholder="Label (e.g. Attack or Holy Damage)..." />
         <div class="dice-builder-actions" style="position: relative; display: flex; gap: 6px; align-items: center;">
-          <div style="position: relative; display: flex; align-items: center;">
-            <button class="btn-glass" id="dice-builder-icon-btn" data-tooltip="Choose Icon for this Roll & QuickRoll" style="padding: 6px 10px; font-size: 1.1em; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 6px;">🎲</button>
-            <div id="dice-builder-icon-popover" class="toolbar-color-popover" style="display: none; position: absolute; bottom: 100%; left: 0; margin-bottom: 8px; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(12px); border: 1px solid rgba(56, 189, 248, 0.45); border-radius: 10px; padding: 6px; z-index: 1000; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6); flex-direction: row; gap: 6px;">
-              <button class="btn-glass roll-icon-swatch active" data-icon="🎲" title="Dice" style="padding: 6px 8px; font-size: 1.2em; cursor: pointer;">🎲</button>
-              <button class="btn-glass roll-icon-swatch" data-icon="⚔️" title="Sword" style="padding: 6px 8px; font-size: 1.2em; cursor: pointer;">⚔️</button>
-              <button class="btn-glass roll-icon-swatch" data-icon="🏹" title="Bow and Arrow" style="padding: 6px 8px; font-size: 1.2em; cursor: pointer;">🏹</button>
-              <button class="btn-glass roll-icon-swatch" data-icon="🔥" title="Fireball" style="padding: 6px 8px; font-size: 1.2em; cursor: pointer;">🔥</button>
-              <button class="btn-glass roll-icon-swatch" data-icon="✨" title="Charming Pink Sparkles" style="padding: 6px 8px; font-size: 1.2em; cursor: pointer;">✨</button>
-            </div>
-          </div>
+          <button class="btn-glass" id="dice-builder-icon-btn" data-tooltip="Choose Icon for this Roll & QuickRoll" style="padding: 6px 10px; font-size: 1.1em; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 6px;">🎲</button>
           <button class="btn-glass btn-primary" id="dice-builder-roll-btn" style="flex: 1; padding: 6px;">Roll</button>
           <button class="btn-glass" id="dice-builder-clear-btn" style="flex: 1; padding: 6px;">Clear</button>
+          <div id="dice-builder-icon-popover" class="toolbar-color-popover" style="display: none; position: absolute; top: calc(100% + 6px); left: 0; right: 0; background: rgba(15, 23, 42, 0.98); backdrop-filter: blur(14px); border: 1px solid rgba(56, 189, 248, 0.55); border-radius: 10px; padding: 8px; z-index: 5000; box-shadow: 0 8px 28px rgba(0, 0, 0, 0.7); flex-direction: row; justify-content: center; flex-wrap: wrap; gap: 8px;">
+            <button class="btn-glass roll-icon-swatch active" data-icon="🎲" title="Dice" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🎲</button>
+            <button class="btn-glass roll-icon-swatch" data-icon="⚔️" title="Sword" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">⚔️</button>
+            <button class="btn-glass roll-icon-swatch" data-icon="🏹" title="Bow and Arrow" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🏹</button>
+            <button class="btn-glass roll-icon-swatch" data-icon="🔥" title="Fireball" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🔥</button>
+            <button class="btn-glass roll-icon-swatch" data-icon="✨" title="Charming Pink Sparkles" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">✨</button>
+          </div>
         </div>
       </div>
     </div>
@@ -258,6 +258,16 @@ export function setupChatPanel(): void {
     if (!expr) {
       detailsEl.style.display = "none";
     } else {
+      if (detailsEl.style.display === "none") {
+        selectedRollIcon = "🎲";
+        iconBtnEl.innerHTML = "🎲";
+        if (iconPopoverEl) {
+          iconPopoverEl.style.display = "none";
+          iconPopoverEl.querySelectorAll(".roll-icon-swatch").forEach((s) => {
+            s.classList.toggle("active", s.getAttribute("data-icon") === "🎲");
+          });
+        }
+      }
       detailsEl.style.display = "flex";
       exprTxtEl.textContent = expr;
     }
@@ -269,6 +279,14 @@ export function setupChatPanel(): void {
       builderState[key] = 0;
     }
     labelInputEl.value = "";
+    selectedRollIcon = "🎲";
+    iconBtnEl.innerHTML = "🎲";
+    if (iconPopoverEl) {
+      iconPopoverEl.style.display = "none";
+      iconPopoverEl.querySelectorAll(".roll-icon-swatch").forEach((s) => {
+        s.classList.toggle("active", s.getAttribute("data-icon") === "🎲");
+      });
+    }
     updateBuilderUI();
   }
 
@@ -604,6 +622,13 @@ export function setupChatPanel(): void {
     toastEl.style.opacity = "1";
     toastEl.style.display = "flex";
 
+    if (msg.type === "roll" && msg.rollIcon) {
+      const effectId = getEffectIdForIcon(msg.rollIcon);
+      if (effectId) {
+        EffectEngine.playOverElement(toastEl, effectId);
+      }
+    }
+
     simpleToastTimeout = setTimeout(() => {
       if (toastEl) {
         toastEl.style.opacity = "0";
@@ -770,6 +795,12 @@ export function setupChatPanel(): void {
         const afterSpan = msgEl.querySelector<HTMLElement>(".roll-after-equals");
         if (!beforeSpan || !afterSpan) {
           console.error("[DiceAnimation] Error: Could not locate beforeSpan or afterSpan inside msgEl for:", msg.id);
+          if (msg.rollIcon) {
+            const effectId = getEffectIdForIcon(msg.rollIcon);
+            if (effectId) {
+              EffectEngine.playOverElement(msgEl, effectId);
+            }
+          }
           return;
         }
 
@@ -798,6 +829,13 @@ export function setupChatPanel(): void {
             afterSpan.style.opacity = "1";
             void afterSpan.offsetWidth;
             afterSpan.classList.add("roll-punch-anim");
+
+            if (msg.rollIcon) {
+              const effectId = getEffectIdForIcon(msg.rollIcon);
+              if (effectId) {
+                EffectEngine.playOverElement(msgEl, effectId);
+              }
+            }
 
             container.scrollTop = container.scrollHeight;
             console.log("[DiceAnimation] Finished animation for message:", msg.id, "- afterSpan diagnostics -> innerHTML:", afterSpan.innerHTML, "display:", afterSpan.style.display, "opacity:", afterSpan.style.opacity, "rect:", afterSpan.getBoundingClientRect());
