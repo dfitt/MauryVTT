@@ -827,19 +827,26 @@ body.simple-mode-active #selection-toolbar {
     font-size: 11px;
   }
 
-  .chat-window {
-    top: 64px;
-    right: 8px;
-    width: calc(100vw - 16px);
-    max-height: 280px;
-    bottom: auto;
+  .chat-window:not(.minimized) {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+    z-index: 9999 !important;
   }
 
   .chat-window.minimized {
+    position: absolute;
     top: 64px;
     right: 8px;
     width: 175px !important;
     height: 44px !important;
+    z-index: 10;
   }
 
   .bottom-toolbar {

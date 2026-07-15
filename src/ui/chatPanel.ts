@@ -62,6 +62,12 @@ export function setupChatPanel(): void {
   let lastMessageCount = 0;
 
   function toggleChat() {
+    if ((window as any).vttSimpleMode && !panel.classList.contains("minimized")) {
+      panel.classList.add("minimized");
+      panel.style.display = "none";
+      toggleBtn.textContent = "▲";
+      return;
+    }
     panel.classList.toggle("minimized");
     const isMin = panel.classList.contains("minimized");
     toggleBtn.textContent = isMin ? "▲" : "▼";

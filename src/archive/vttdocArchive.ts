@@ -7,15 +7,36 @@ export async function exportVTTDocArchive(): Promise<void> {
   const doc = docStore.getDocument();
   const zip = new JSZip();
 
-  // 1. Write JSON manifest
-  zip.file("document.json", JSON.stringify(doc, null, 2));
+  // 1. Find all active asset hashes referenced by entities in this document
+  const activeHashes = new Set<string>();
+  for (const ent of Object.values(doc.entities)) {
+    if (("assetHash" in ent) && (ent as any).assetHash) {
+      activeHashes.add((ent as any).assetHash);
+    }
+  }
 
-  // 2. Write all assets referenced in assetManifest
+  // 2. Build clean document snapshot containing ONLY active asset hashes in assetManifest
+  const cleanDoc: VTTDocument = JSON.parse(JSON.stringify(doc));
+  cleanDoc.assetManifest = {};
+  for (const hash of activeHashes) {
+    if (doc.assetManifest[hash]) {
+      cleanDoc.assetManifest[hash] = doc.assetManifest[hash];
+    }
+  }
+
+  // 3. Write JSON manifest
+  zip.file("document.json", JSON.stringify(cleanDoc, null, 2));
+
+  // 4. Write ONLY assets needed for this VTT instance
   const assetsFolder = zip.folder("assets");
   if (assetsFolder) {
-    const allAssets = await assetStore.getAllAssetsMap();
-    for (const [hash, blob] of Object.entries(allAssets)) {
-      assetsFolder.file(hash, blob);
+    for (const hash of activeHashes) {
+      const blob = await assetStore.getAsset(hash);
+      if (blob) {
+        assetsFolder.file(hash, blob);
+      } else {
+        console.warn(`[exportVTTDocArchive] Asset ${hash} referenced by entity but not found in IDB assetStore`);
+      }
     }
   }
 

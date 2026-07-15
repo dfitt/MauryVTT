@@ -6,6 +6,7 @@ import { CanvasEntity, ImageEntity, TokenEntity } from "../../types/vtt.js";
 export function bindSelectTool(engine: CanvasEngine): void {
   let draggingEntity: CanvasEntity | null = null;
   let dragOffset = { x: 0, y: 0 };
+  let lastTokenMoveSendTime = 0;
 
   // Resizing state
   let isResizing = false;
@@ -90,6 +91,7 @@ export function bindSelectTool(engine: CanvasEngine): void {
       engine.selectedEntityId = found.id;
       if (!found.locked) {
         draggingEntity = found;
+        engine.draggingEntityId = found.id;
         if (found.type === "image") {
           engine.aligningImageEntityId = found.id;
         }
@@ -97,10 +99,12 @@ export function bindSelectTool(engine: CanvasEngine): void {
         dragOffset = { x: worldX - pos.x, y: worldY - pos.y };
       } else {
         draggingEntity = null;
+        engine.draggingEntityId = null;
       }
     } else {
       engine.selectedEntityId = null;
       draggingEntity = null;
+      engine.draggingEntityId = null;
     }
   });
 
@@ -133,6 +137,18 @@ export function bindSelectTool(engine: CanvasEngine): void {
       const newY = worldY - dragOffset.y;
       if (draggingEntity.type === "image" || draggingEntity.type === "token") {
         (draggingEntity as ImageEntity).position = { x: newX, y: newY };
+
+        if (draggingEntity.type === "token") {
+          const now = Date.now();
+          if (now - lastTokenMoveSendTime >= 33) {
+            lastTokenMoveSendTime = now;
+            sessionManager.dispatchOperation({
+              opType: "UPDATE_ENTITY",
+              id: draggingEntity.id,
+              patch: { position: { x: newX, y: newY } } as any
+            });
+          }
+        }
       }
     }
   });
@@ -201,5 +217,6 @@ export function bindSelectTool(engine: CanvasEngine): void {
     });
 
     draggingEntity = null;
+    engine.draggingEntityId = null;
   });
 }

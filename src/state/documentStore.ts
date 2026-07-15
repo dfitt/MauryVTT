@@ -5,6 +5,7 @@ import {
   UserProfile,
   ChatMessage
 } from "../types/vtt.js";
+import { assetStore } from "./idbAssetStore.js";
 
 const LOCAL_STORAGE_KEY = "vtt_active_document_snapshot";
 
@@ -113,6 +114,7 @@ export class DocumentStore {
     if (!this.doc.quickRolls) {
       this.doc.quickRolls = {};
     }
+    this.cleanupAllUnusedAssets();
     this.notify();
   }
 
@@ -133,16 +135,25 @@ export class DocumentStore {
       case "UPDATE_ENTITY": {
         const existing = this.doc.entities[op.id];
         if (existing) {
+          const oldHash = ("assetHash" in existing) ? (existing as any).assetHash : undefined;
           this.doc.entities[op.id] = {
             ...existing,
             ...op.patch,
             updatedAt: Date.now()
           } as CanvasEntity;
+          const newHash = ("assetHash" in this.doc.entities[op.id]) ? (this.doc.entities[op.id] as any).assetHash : undefined;
+          if (oldHash && oldHash !== newHash) {
+            this.cleanupUnusedAssetHash(oldHash);
+          }
         }
         break;
       }
       case "DELETE_ENTITY": {
+        const ent = this.doc.entities[op.id];
         delete this.doc.entities[op.id];
+        if (ent && ("assetHash" in ent) && (ent as any).assetHash) {
+          this.cleanupUnusedAssetHash((ent as any).assetHash);
+        }
         break;
       }
       case "UPDATE_CANVAS_SETTINGS": {
@@ -214,6 +225,38 @@ export class DocumentStore {
       heightPx
     };
     this.notify();
+  }
+
+  public cleanupUnusedAssetHash(hash: string): void {
+    if (!hash) return;
+    const isUsed = Object.values(this.doc.entities).some(
+      (e) => ("assetHash" in e) && (e as any).assetHash === hash
+    );
+    if (!isUsed) {
+      if (this.doc.assetManifest[hash]) {
+        delete this.doc.assetManifest[hash];
+      }
+      assetStore.deleteAsset(hash).catch((err) =>
+        console.error("[documentStore] Error deleting unused asset from store:", err)
+      );
+    }
+  }
+
+  public cleanupAllUnusedAssets(): void {
+    const activeHashes = new Set<string>();
+    for (const ent of Object.values(this.doc.entities)) {
+      if (("assetHash" in ent) && (ent as any).assetHash) {
+        activeHashes.add((ent as any).assetHash);
+      }
+    }
+    for (const hash of Object.keys(this.doc.assetManifest)) {
+      if (!activeHashes.has(hash)) {
+        delete this.doc.assetManifest[hash];
+        assetStore.deleteAsset(hash).catch((err) =>
+          console.error("[documentStore] Error deleting unused asset from store:", err)
+        );
+      }
+    }
   }
 }
 

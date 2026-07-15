@@ -71,6 +71,8 @@ export class CanvasEngine {
   private activePings: Map<string, ActivePing> = new Map();
   private activeMeasurements: Map<string, ActiveMeasurement> = new Map();
   private tokenHoverScales: Map<string, number> = new Map();
+  public draggingEntityId: string | null = null;
+  private renderPositions: Map<string, { x: number; y: number }> = new Map();
 
   // Active user drawing draft
   public draftPoints: [number, number][] | null = null;
@@ -805,7 +807,34 @@ export class CanvasEngine {
       this.ensureImageLoaded(imgEnt.assetHash);
       const img = this.imageElements.get(imgEnt.assetHash);
 
-      ctx.translate(imgEnt.position.x, imgEnt.position.y);
+      let renderX = imgEnt.position.x;
+      let renderY = imgEnt.position.y;
+
+      if (ent.type === "token") {
+        if (this.draggingEntityId === ent.id) {
+          renderX = imgEnt.position.x;
+          renderY = imgEnt.position.y;
+          this.renderPositions.set(ent.id, { x: renderX, y: renderY });
+        } else {
+          const cur = this.renderPositions.get(ent.id);
+          if (!cur) {
+            renderX = imgEnt.position.x;
+            renderY = imgEnt.position.y;
+            this.renderPositions.set(ent.id, { x: renderX, y: renderY });
+          } else {
+            cur.x += (imgEnt.position.x - cur.x) * 0.35;
+            cur.y += (imgEnt.position.y - cur.y) * 0.35;
+            if (Math.abs(imgEnt.position.x - cur.x) < 0.1 && Math.abs(imgEnt.position.y - cur.y) < 0.1) {
+              cur.x = imgEnt.position.x;
+              cur.y = imgEnt.position.y;
+            }
+            renderX = cur.x;
+            renderY = cur.y;
+          }
+        }
+      }
+
+      ctx.translate(renderX, renderY);
       ctx.rotate(imgEnt.rotation || 0);
       ctx.globalAlpha = imgEnt.opacity ?? 1.0;
 

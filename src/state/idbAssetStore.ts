@@ -57,6 +57,22 @@ class IDBAssetStore {
     return asset !== null;
   }
 
+  public async deleteAsset(hash: string): Promise<void> {
+    if (this.urlCache.has(hash)) {
+      const url = this.urlCache.get(hash)!;
+      URL.revokeObjectURL(url);
+      this.urlCache.delete(hash);
+    }
+    const db = await this.getDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, "readwrite");
+      const store = tx.objectStore(STORE_NAME);
+      const req = store.delete(hash);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  }
+
   public async getAssetObjectUrl(hash: string): Promise<string | null> {
     if (this.urlCache.has(hash)) {
       return this.urlCache.get(hash)!;

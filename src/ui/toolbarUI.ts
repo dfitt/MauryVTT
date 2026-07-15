@@ -391,6 +391,7 @@ export function setupToolbarUI(engine: CanvasEngine): void {
   simpleBar.className = "simple-mode-bar";
   simpleBar.style.display = "none";
   simpleBar.innerHTML = `
+    <button class="btn-glass btn-sm" id="btn-simple-chat" style="cursor: pointer; padding: 8px 16px; font-size: 14px; font-weight: 600; border-radius: 999px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(56, 189, 248, 0.45); color: #f8fafc; margin-right: 8px;">💬 Chat & Dice</button>
     <button class="btn-glass btn-sm btn-primary" id="btn-toggle-advanced" style="cursor: pointer; padding: 8px 18px; font-size: 14px; font-weight: 600; border-radius: 999px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);">⚙️ Advanced Mode</button>
   `;
   document.body.appendChild(simpleBar);
@@ -425,6 +426,15 @@ export function setupToolbarUI(engine: CanvasEngine): void {
 
   simpleModeBtn.addEventListener("click", () => applySimpleMode(true));
   simpleBar.querySelector<HTMLButtonElement>("#btn-toggle-advanced")!.addEventListener("click", () => applySimpleMode(false));
+  simpleBar.querySelector<HTMLButtonElement>("#btn-simple-chat")!.addEventListener("click", () => {
+    const chatWindow = document.querySelector<HTMLElement>(".chat-window");
+    if (chatWindow) {
+      chatWindow.style.display = "flex";
+      if (typeof (window as any).toggleVttChat === "function" && chatWindow.classList.contains("minimized")) {
+        (window as any).toggleVttChat();
+      }
+    }
+  });
 
   if (isMobilePhone()) {
     applySimpleMode(true);
