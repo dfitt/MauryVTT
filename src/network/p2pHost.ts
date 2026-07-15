@@ -57,6 +57,34 @@ export class P2PHost {
   private pendingAssets = new Map<string, PendingAssetBuffer>();
   public hostRoomId: string = "";
   public lastSeenMap: Map<string, number> = new Map();
+  private isReconnecting: boolean = false;
+  private reconnectTimer: any = null;
+
+  constructor() {
+    if (typeof window !== "undefined" && typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible" && this.hostRoomId) {
+          console.log("[p2pHost] Host machine woke up / tab visible. Checking signaling connection...");
+          if (!this.peer || this.peer.disconnected || this.peer.destroyed) {
+            this.attemptHostReconnect();
+          }
+        }
+      });
+
+      window.addEventListener("online", () => {
+        if (this.hostRoomId && (!this.peer || this.peer.disconnected || this.peer.destroyed)) {
+          console.log("[p2pHost] Network online. Recovering host signaling connection...");
+          this.attemptHostReconnect();
+        }
+      });
+
+      window.addEventListener("focus", () => {
+        if (this.hostRoomId && (!this.peer || this.peer.disconnected || this.peer.destroyed)) {
+          this.attemptHostReconnect();
+        }
+      });
+    }
+  }
 
   private async tryFinalizeAsset(assetHash: string, sourcePeerId?: string): Promise<void> {
     const buf = this.pendingAssets.get(assetHash);
@@ -107,8 +135,16 @@ export class P2PHost {
         this.setupConnection(conn);
       });
 
+      this.peer.on("disconnected", () => {
+        console.warn("[p2pHost] Host peer disconnected from signaling server.");
+        this.attemptHostReconnect();
+      });
+
       this.peer.on("error", (err) => {
         console.error("P2P Host PeerJS Error:", err);
+        if (this.hostRoomId && (!this.peer || this.peer.disconnected || this.peer.destroyed)) {
+          this.attemptHostReconnect();
+        }
         reject(err);
       });
     });
@@ -366,7 +402,42 @@ export class P2PHost {
     console.log(`[p2pHost] Finished streaming asset ${assetHash} to client ${conn.peer}.`);
   }
 
+  public async attemptHostReconnect(): Promise<void> {
+    if (this.isReconnecting || !this.hostRoomId) return;
+    if (this.peer && !this.peer.disconnected && !this.peer.destroyed) return;
+
+    console.log("[p2pHost] Attempting signaling recovery for room:", this.hostRoomId);
+    this.isReconnecting = true;
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+
+    try {
+      if (this.peer && this.peer.disconnected && !this.peer.destroyed) {
+        this.peer.reconnect();
+        await new Promise((r) => setTimeout(r, 1200));
+      }
+      if (!this.peer || this.peer.disconnected || this.peer.destroyed) {
+        if (this.peer) {
+          try { this.peer.destroy(); } catch (e) {}
+          this.peer = null;
+        }
+        await this.startHosting(this.hostRoomId);
+      }
+      console.log("[p2pHost] Host signaling recovered successfully!");
+    } catch (err) {
+      console.warn("[p2pHost] Host reconnect failed. Retrying shortly...", err);
+      this.reconnectTimer = setTimeout(() => {
+        this.isReconnecting = false;
+        this.attemptHostReconnect();
+      }, 3500);
+    } finally {
+      this.isReconnecting = false;
+    }
+  }
+
   public disconnect(): void {
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+    this.isReconnecting = false;
+    this.hostRoomId = "";
     if (this.peer) {
       this.peer.destroy();
       this.peer = null;

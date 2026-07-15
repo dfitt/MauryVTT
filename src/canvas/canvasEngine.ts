@@ -61,6 +61,7 @@ export class CanvasEngine {
   public drawWidth: number = 8;
   private _selectedEntityId: string | null = null;
   public aligningImageEntityId: string | null = null;
+  public resizingTokenId: string | null = null;
   private selectionListeners: Set<(id: string | null) => void> = new Set();
 
   // Hover cursor state for tool previews
@@ -127,6 +128,9 @@ export class CanvasEngine {
   public set selectedEntityId(id: string | null) {
     if (this._selectedEntityId !== id) {
       this._selectedEntityId = id;
+      if (id !== this.resizingTokenId) {
+        this.resizingTokenId = null;
+      }
       for (const l of this.selectionListeners) {
         l(id);
       }
@@ -887,9 +891,9 @@ export class CanvasEngine {
         ctx.strokeRect(-halfW - 4, -halfH - 4, imgEnt.size.width + 8, imgEnt.size.height + 8);
         ctx.setLineDash([]);
 
-        // 4 Corner resize handle squares (hide when in simple mode for tokens)
-        const isSimpleToken = (window as any).vttSimpleMode && ent.type === "token";
-        if (!isSimpleToken) {
+        // 4 Corner resize handle squares (only show for tokens when resizingTokenId matches)
+        const showCorners = ent.type === "token" ? (this.resizingTokenId === ent.id) : true;
+        if (showCorners) {
           const hs = Math.max(8, 10 / this.zoom);
           const corners = [
             { x: -halfW - hs / 2, y: -halfH - hs / 2 },

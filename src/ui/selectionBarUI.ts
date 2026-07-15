@@ -64,7 +64,7 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
       // Duplicate Button (1 cell right)
       const dupBtn = document.createElement("button");
       dupBtn.className = "btn-glass btn-sm";
-      dupBtn.title = "Duplicate Token 1 cell to the right";
+      dupBtn.setAttribute("data-tooltip", "Duplicate Token 1 cell to the right");
       dupBtn.innerHTML = "📋 Duplicate";
       dupBtn.addEventListener("click", () => {
         const gridSizePx = doc.canvasSettings.gridSizePx || 50;
@@ -88,10 +88,22 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
       });
       bar.appendChild(dupBtn);
 
+      // Resize Button next to Duplicate
+      const isResizingToken = engine.resizingTokenId === token.id;
+      const resizeBtn = document.createElement("button");
+      resizeBtn.className = `btn-glass btn-sm ${isResizingToken ? "btn-active" : ""}`;
+      resizeBtn.setAttribute("data-tooltip", isResizingToken ? "Click to disable resize handles" : "Click to enable resize handles");
+      resizeBtn.innerHTML = isResizingToken ? "📐 Resize ✓" : "📐 Resize";
+      resizeBtn.addEventListener("click", () => {
+        engine.resizingTokenId = engine.resizingTokenId === token.id ? null : token.id;
+        updateBar(token.id);
+      });
+      bar.appendChild(resizeBtn);
+
       // Delete Button
       const deleteBtn = document.createElement("button");
       deleteBtn.className = "btn-glass btn-sm btn-danger";
-      deleteBtn.title = "Delete Token";
+      deleteBtn.setAttribute("data-tooltip", "Delete Token");
       deleteBtn.innerHTML = "🗑️ Delete";
       deleteBtn.addEventListener("click", () => {
         sessionManager.dispatchOperation({
@@ -106,13 +118,32 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
 
     const title = document.createElement("span");
     title.className = "selection-title";
-    title.textContent = ent.type === "image" ? "🖼️ Image" : "Entity";
+    title.textContent = ent.type === "image" ? (ent.locked ? "🖼️ Image (Locked)" : "🖼️ Image") : "Entity";
     bar.appendChild(title);
+
+    // Lock / Unlock (anyone can lock or unlock)
+    const lockBtn = document.createElement("button");
+    lockBtn.className = `btn-glass btn-sm ${ent.locked ? "btn-warn" : ""}`;
+    lockBtn.setAttribute("data-tooltip", ent.locked ? "Click to Unlock" : "Click to Lock");
+    lockBtn.innerHTML = ent.locked ? "🔓 Unlock" : "🔒 Lock";
+    lockBtn.addEventListener("click", () => {
+      sessionManager.dispatchOperation({
+        opType: "UPDATE_ENTITY",
+        id: ent.id,
+        patch: { locked: !ent.locked } as any
+      });
+      updateBar(ent.id);
+    });
+
+    if (ent.locked && ent.type === "image") {
+      bar.appendChild(lockBtn);
+      return;
+    }
 
     // Move to Front
     const frontBtn = document.createElement("button");
     frontBtn.className = "btn-glass btn-sm";
-    frontBtn.title = "Move to Front";
+    frontBtn.setAttribute("data-tooltip", "Move to Front");
     frontBtn.innerHTML = "⬆️ Front";
     frontBtn.addEventListener("click", () => {
       const allZ = Object.values(docStore.getDocument().entities).map((e) => e.zIndex);
@@ -128,7 +159,7 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
     // Move to Back
     const backBtn = document.createElement("button");
     backBtn.className = "btn-glass btn-sm";
-    backBtn.title = "Move to Back";
+    backBtn.setAttribute("data-tooltip", "Move to Back");
     backBtn.innerHTML = "⬇️ Back";
     backBtn.addEventListener("click", () => {
       const allZ = Object.values(docStore.getDocument().entities).map((e) => e.zIndex);
@@ -146,9 +177,10 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
       const isMap = Boolean((ent as any).isMap);
       const mapBtn = document.createElement("button");
       mapBtn.className = `btn-glass btn-sm ${isMap ? "btn-active" : ""}`;
-      mapBtn.title = isMap
+      mapBtn.setAttribute("data-tooltip", isMap
         ? "Currently Map Layer behind grid lines (Click to toggle)"
-        : "Send to Map Layer behind grid lines";
+        : "Send to Map Layer behind grid lines"
+      );
       mapBtn.innerHTML = isMap ? "🗺️ Map ✓" : "🗺️ Map";
       mapBtn.addEventListener("click", () => {
         const allZ = Object.values(docStore.getDocument().entities).map((e) => e.zIndex);
@@ -162,25 +194,12 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
       bar.appendChild(mapBtn);
     }
 
-    // Lock / Unlock (anyone can lock or unlock)
-    const lockBtn = document.createElement("button");
-    lockBtn.className = `btn-glass btn-sm ${ent.locked ? "btn-warn" : ""}`;
-    lockBtn.title = ent.locked ? "Click to Unlock" : "Click to Lock";
-    lockBtn.innerHTML = ent.locked ? "🔓 Unlock" : "🔒 Lock";
-    lockBtn.addEventListener("click", () => {
-      sessionManager.dispatchOperation({
-        opType: "UPDATE_ENTITY",
-        id: ent.id,
-        patch: { locked: !ent.locked } as any
-      });
-      updateBar(ent.id);
-    });
     bar.appendChild(lockBtn);
 
     // Delete
     const deleteBtn = document.createElement("button");
     deleteBtn.className = "btn-glass btn-sm btn-danger";
-    deleteBtn.title = "Delete Entity";
+    deleteBtn.setAttribute("data-tooltip", "Delete Entity");
     deleteBtn.innerHTML = "🗑️ Delete";
     deleteBtn.addEventListener("click", () => {
       sessionManager.dispatchOperation({

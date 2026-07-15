@@ -25,23 +25,23 @@ export function setupChatPanel(): void {
   }
 
   panel.innerHTML = `
-    <div class="chat-header" id="chat-header-bar" title="Click to Minimize / Expand Chat">
+    <div class="chat-header" id="chat-header-bar" data-tooltip="Click to Minimize / Expand Chat">
       <div style="display: flex; align-items: center; gap: 8px;">
         <span>💬 Chat & Dice</span>
         <span class="chat-unread-badge" id="chat-unread-badge" style="display: none;">0</span>
       </div>
-      <button class="chat-toggle-btn" id="btn-toggle-chat" title="Toggle Chat Window">${panel.classList.contains("minimized") ? "▲" : "▼"}</button>
+      <button class="chat-toggle-btn" id="btn-toggle-chat" data-tooltip="Toggle Chat Window">${panel.classList.contains("minimized") ? "▲" : "▼"}</button>
     </div>
     <div class="dice-builder-section" id="dice-builder-section">
       <div class="dice-builder-icons">
-        <button class="dice-icon-btn" data-dice="d20" title="Add d20">d20</button>
-        <button class="dice-icon-btn" data-dice="d12" title="Add d12">d12</button>
-        <button class="dice-icon-btn" data-dice="d10" title="Add d10">d10</button>
-        <button class="dice-icon-btn" data-dice="d8" title="Add d8">d8</button>
-        <button class="dice-icon-btn" data-dice="d6" title="Add d6">d6</button>
-        <button class="dice-icon-btn" data-dice="d4" title="Add d4">d4</button>
-        <button class="dice-icon-btn mod-btn" data-dice="+1" title="Add +1">+1</button>
-        <button class="dice-icon-btn mod-btn" data-dice="-1" title="Subtract 1">-1</button>
+        <button class="dice-icon-btn" data-dice="d20" data-tooltip="Add d20">d20</button>
+        <button class="dice-icon-btn" data-dice="d12" data-tooltip="Add d12">d12</button>
+        <button class="dice-icon-btn" data-dice="d10" data-tooltip="Add d10">d10</button>
+        <button class="dice-icon-btn" data-dice="d8" data-tooltip="Add d8">d8</button>
+        <button class="dice-icon-btn" data-dice="d6" data-tooltip="Add d6">d6</button>
+        <button class="dice-icon-btn" data-dice="d4" data-tooltip="Add d4">d4</button>
+        <button class="dice-icon-btn mod-btn mod-btn-plus" data-dice="+1" data-tooltip="Add +1">+1</button>
+        <button class="dice-icon-btn mod-btn mod-btn-minus" data-dice="-1" data-tooltip="Subtract 1">-1</button>
       </div>
       <div class="quickrolls-container" id="quickrolls-container" style="display: none; flex-wrap: wrap; gap: 6px; margin-top: 6px; padding: 4px 0;"></div>
       <div class="dice-builder-details" id="dice-builder-details" style="display: none;">
@@ -75,10 +75,20 @@ export function setupChatPanel(): void {
   let lastMessageCount = 0;
 
   function toggleChat() {
-    if ((window as any).vttSimpleMode && !panel.classList.contains("minimized")) {
-      panel.classList.add("minimized");
-      panel.style.display = "none";
-      toggleBtn.textContent = "▲";
+    const isCurrentlyHiddenOrMin = panel.classList.contains("minimized") || panel.style.display === "none";
+    if ((window as any).vttSimpleMode) {
+      if (!isCurrentlyHiddenOrMin) {
+        panel.classList.add("minimized");
+        panel.style.display = "none";
+        toggleBtn.textContent = "▲";
+      } else {
+        panel.classList.remove("minimized");
+        panel.style.display = "flex";
+        toggleBtn.textContent = "▼";
+        unreadCount = 0;
+        badgeEl.style.display = "none";
+        container.scrollTop = container.scrollHeight;
+      }
       return;
     }
     panel.classList.toggle("minimized");
@@ -263,6 +273,13 @@ export function setupChatPanel(): void {
   clearBtnEl.addEventListener("click", (e) => {
     e.stopPropagation();
     resetBuilderState();
+  });
+
+  labelInputEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      rollBtnEl.click();
+    }
   });
 
   rollBtnEl.addEventListener("click", (e) => {
@@ -450,6 +467,85 @@ export function setupChatPanel(): void {
   const animatedRollMsgIds = new Set<string>();
   const activeRollIntervals = new Map<string, any>();
   let isFirstChatRender = true;
+  let simpleToastTimeout: any = null;
+
+  function showSimpleModeChatToast(msg: ChatMessage) {
+    if (!(window as any).vttSimpleMode) return;
+    const isChatHidden = panel.classList.contains("minimized") || panel.style.display === "none";
+    if (!isChatHidden) return;
+
+    let toastEl = document.getElementById("simple-mode-chat-toast");
+    if (!toastEl) {
+      toastEl = document.createElement("div");
+      toastEl.id = "simple-mode-chat-toast";
+      toastEl.style.cssText = `
+        position: fixed;
+        top: 16px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 10000;
+        max-width: calc(100vw - 32px);
+        width: 360px;
+        background: rgba(15, 23, 42, 0.92);
+        backdrop-filter: blur(16px);
+        border: 1px solid rgba(56, 189, 248, 0.4);
+        border-radius: 14px;
+        padding: 12px 16px;
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        pointer-events: auto;
+        cursor: pointer;
+        transition: opacity 0.2s ease, transform 0.2s ease;
+      `;
+      toastEl.addEventListener("click", () => {
+        if (typeof (window as any).toggleVttChat === "function") {
+          (window as any).toggleVttChat();
+        }
+        if (simpleToastTimeout) clearTimeout(simpleToastTimeout);
+        toastEl?.remove();
+      });
+      document.body.appendChild(toastEl);
+    }
+
+    if (simpleToastTimeout) clearTimeout(simpleToastTimeout);
+
+    const doc = docStore.getDocument();
+    const senderUser = doc.users[msg.senderPeerId];
+    const userColor = senderUser?.color || (msg.senderPeerId === (sessionManager.myPeerId || "local") ? sessionManager.myColor : "#38bdf8") || "#38bdf8";
+
+    let contentHtml = msg.content;
+    if (msg.type === "roll") {
+      contentHtml = `🎲 ${msg.rollLabel ? `<strong>${msg.rollLabel}</strong>: ` : ""}${msg.content}`;
+    } else if (msg.type === "action") {
+      contentHtml = `<em>* ${msg.senderUsername} ${msg.content} *</em>`;
+    }
+
+    toastEl.innerHTML = `
+      <div style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; font-weight: 700; color: ${userColor};">
+        <span>${msg.senderUsername || "User"}</span>
+        <span style="color: #64748b; font-size: 10px;">Click to open</span>
+      </div>
+      <div style="color: #f8fafc; font-size: 13px; word-break: break-word; line-height: 1.4;">
+        ${contentHtml}
+      </div>
+    `;
+
+    toastEl.style.opacity = "1";
+    toastEl.style.display = "flex";
+
+    simpleToastTimeout = setTimeout(() => {
+      if (toastEl) {
+        toastEl.style.opacity = "0";
+        setTimeout(() => {
+          if (toastEl && toastEl.style.opacity === "0") {
+            toastEl.remove();
+          }
+        }, 200);
+      }
+    }, 2000);
+  }
 
   // Subscribe to reactive document updates
   docStore.subscribe((doc) => {
@@ -462,10 +558,18 @@ export function setupChatPanel(): void {
     }
 
     const newCount = doc.chatHistory.length;
-    if (newCount > lastMessageCount && panel.classList.contains("minimized") && lastMessageCount > 0) {
+    const isChatHidden = panel.classList.contains("minimized") || panel.style.display === "none";
+    if (newCount > lastMessageCount && isChatHidden && lastMessageCount > 0) {
       unreadCount += newCount - lastMessageCount;
       badgeEl.style.display = "inline-block";
       badgeEl.textContent = String(unreadCount);
+
+      if ((window as any).vttSimpleMode) {
+        const latestMsg = doc.chatHistory[doc.chatHistory.length - 1];
+        if (latestMsg) {
+          showSimpleModeChatToast(latestMsg);
+        }
+      }
     }
     lastMessageCount = newCount;
     renderQuickRolls();

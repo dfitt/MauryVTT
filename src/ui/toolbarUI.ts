@@ -47,7 +47,7 @@ export function setupToolbarUI(engine: CanvasEngine): void {
   tools.forEach((tool) => {
     const btn = document.createElement("button");
     btn.className = `tool-btn ${engine.activeTool === tool.id ? "active" : ""}`;
-    btn.title = tool.title;
+    btn.setAttribute("data-tooltip", tool.title);
     btn.innerHTML = tool.icon;
     btn.setAttribute("data-tool-id", tool.id);
 
@@ -183,7 +183,7 @@ export function setupToolbarUI(engine: CanvasEngine): void {
   // Upload Image Button
   const uploadBtn = document.createElement("button");
   uploadBtn.className = "tool-btn";
-  uploadBtn.title = "Add Image";
+  uploadBtn.setAttribute("data-tooltip", "Add Image");
   uploadBtn.innerHTML = "🖼️";
 
   const fileInput = document.createElement("input");
@@ -290,7 +290,7 @@ export function setupToolbarUI(engine: CanvasEngine): void {
   // Add Map Button
   const addMapBtn = document.createElement("button");
   addMapBtn.className = "tool-btn";
-  addMapBtn.title = "Add Map";
+  addMapBtn.setAttribute("data-tooltip", "Add Map");
   addMapBtn.innerHTML = "🗺️";
 
   const mapFileInput = document.createElement("input");
@@ -368,7 +368,7 @@ export function setupToolbarUI(engine: CanvasEngine): void {
   // Upload Token Button
   const uploadTokenBtn = document.createElement("button");
   uploadTokenBtn.className = "tool-btn";
-  uploadTokenBtn.title = "Add Token (any image works)";
+  uploadTokenBtn.setAttribute("data-tooltip", "Add Token (any image works)");
   uploadTokenBtn.innerHTML = "♟️";
 
   const tokenInput = document.createElement("input");
@@ -478,7 +478,7 @@ export function setupToolbarUI(engine: CanvasEngine): void {
   // Simple Mode Toggle Button in Advanced Mode
   const simpleModeBtn = document.createElement("button");
   simpleModeBtn.className = "tool-btn";
-  simpleModeBtn.title = "Switch to Simple Mode (Pan, Zoom & Move Tokens Only)";
+  simpleModeBtn.setAttribute("data-tooltip", "Switch to Simple Mode (Pan, Zoom & Move Tokens Only)");
   simpleModeBtn.innerHTML = "📱";
   bar.appendChild(simpleModeBtn);
 
@@ -529,16 +529,20 @@ export function setupToolbarUI(engine: CanvasEngine): void {
   simpleModeBtn.addEventListener("click", () => applySimpleMode(true));
   simpleBar.querySelector<HTMLButtonElement>("#btn-toggle-advanced")!.addEventListener("click", () => applySimpleMode(false));
   simpleBar.querySelector<HTMLButtonElement>("#btn-simple-chat")!.addEventListener("click", () => {
-    const chatWindow = document.querySelector<HTMLElement>(".chat-window");
-    if (chatWindow) {
-      chatWindow.classList.remove("minimized");
-      chatWindow.style.display = "flex";
-      const tBtn = chatWindow.querySelector<HTMLButtonElement>("#btn-toggle-chat");
-      if (tBtn) tBtn.textContent = "▼";
-      const badgeEl = chatWindow.querySelector<HTMLElement>("#chat-unread-badge");
-      if (badgeEl) badgeEl.style.display = "none";
-      const container = chatWindow.querySelector<HTMLElement>("#chat-messages-container");
-      if (container) container.scrollTop = container.scrollHeight;
+    if (typeof (window as any).toggleVttChat === "function") {
+      (window as any).toggleVttChat();
+    } else {
+      const chatWindow = document.querySelector<HTMLElement>(".chat-window");
+      if (chatWindow) {
+        const isHidden = chatWindow.classList.contains("minimized") || chatWindow.style.display === "none";
+        if (isHidden) {
+          chatWindow.classList.remove("minimized");
+          chatWindow.style.display = "flex";
+        } else {
+          chatWindow.classList.add("minimized");
+          chatWindow.style.display = "none";
+        }
+      }
     }
   });
 
