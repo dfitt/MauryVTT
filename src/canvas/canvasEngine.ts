@@ -887,20 +887,23 @@ export class CanvasEngine {
         ctx.strokeRect(-halfW - 4, -halfH - 4, imgEnt.size.width + 8, imgEnt.size.height + 8);
         ctx.setLineDash([]);
 
-        // 4 Corner resize handle squares
-        const hs = Math.max(8, 10 / this.zoom);
-        const corners = [
-          { x: -halfW - hs / 2, y: -halfH - hs / 2 },
-          { x: halfW - hs / 2, y: -halfH - hs / 2 },
-          { x: halfW - hs / 2, y: halfH - hs / 2 },
-          { x: -halfW - hs / 2, y: halfH - hs / 2 }
-        ];
-        for (const c of corners) {
-          ctx.fillStyle = "#38bdf8";
-          ctx.fillRect(c.x, c.y, hs, hs);
-          ctx.strokeStyle = "#ffffff";
-          ctx.lineWidth = 1.5 / this.zoom;
-          ctx.strokeRect(c.x, c.y, hs, hs);
+        // 4 Corner resize handle squares (hide when in simple mode for tokens)
+        const isSimpleToken = (window as any).vttSimpleMode && ent.type === "token";
+        if (!isSimpleToken) {
+          const hs = Math.max(8, 10 / this.zoom);
+          const corners = [
+            { x: -halfW - hs / 2, y: -halfH - hs / 2 },
+            { x: halfW - hs / 2, y: -halfH - hs / 2 },
+            { x: halfW - hs / 2, y: halfH - hs / 2 },
+            { x: -halfW - hs / 2, y: halfH - hs / 2 }
+          ];
+          for (const c of corners) {
+            ctx.fillStyle = "#38bdf8";
+            ctx.fillRect(c.x, c.y, hs, hs);
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 1.5 / this.zoom;
+            ctx.strokeRect(c.x, c.y, hs, hs);
+          }
         }
       }
     }

@@ -24,7 +24,8 @@ export function bindSelectTool(engine: CanvasEngine): void {
     // 1. Check if user clicked a corner resize handle on the currently selected entity
     if (engine.selectedEntityId) {
       const current = doc.entities[engine.selectedEntityId];
-      if (current && !current.locked && (current.type === "image" || current.type === "token")) {
+      const isSimpleToken = (window as any).vttSimpleMode && current && current.type === "token";
+      if (current && !current.locked && (current.type === "image" || current.type === "token") && !isSimpleToken) {
         const imgEnt = current as ImageEntity | TokenEntity;
         const halfW = imgEnt.size.width / 2;
         const halfH = imgEnt.size.height / 2;

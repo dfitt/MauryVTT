@@ -24,6 +24,16 @@ export function setupHeaderUI(): void {
 
   document.body.appendChild(header);
 
+  if (window.innerWidth <= 768) {
+    header.classList.add("header-collapsed");
+  }
+
+  const brandIconEl = header.querySelector<HTMLElement>(".brand-icon")!;
+  brandIconEl.title = "Click to collapse / expand top bar";
+  brandIconEl.addEventListener("click", () => {
+    header.classList.toggle("header-collapsed");
+  });
+
   const badgeEl = header.querySelector<HTMLElement>("#room-code-badge")!;
   const roomTxtEl = header.querySelector<HTMLElement>("#room-id-txt")!;
   const copyBtn = header.querySelector<HTMLButtonElement>("#copy-room-btn")!;

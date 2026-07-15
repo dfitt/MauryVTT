@@ -60,7 +60,9 @@ html, body {
   position: absolute;
   top: 16px;
   left: 20px;
-  right: 20px;
+  right: auto;
+  width: calc(100vw - 40px);
+  max-width: calc(100vw - 40px);
   height: 58px;
   display: flex;
   align-items: center;
@@ -72,6 +74,39 @@ html, body {
   border-radius: 16px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   z-index: 10;
+  transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1), padding 0.35s cubic-bezier(0.16, 1, 0.3, 1), background 0.35s ease;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.top-header.header-collapsed {
+  width: 58px !important;
+  max-width: 58px !important;
+  padding: 0 10px !important;
+  justify-content: flex-start !important;
+}
+
+.top-header.header-collapsed .brand-title,
+.top-header.header-collapsed #room-code-badge,
+.top-header.header-collapsed #btn-resync,
+.top-header.header-collapsed .connected-users-list,
+.top-header.header-collapsed .header-actions {
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  transition: opacity 0.15s ease;
+}
+
+.top-header:not(.header-collapsed) .brand-title,
+.top-header:not(.header-collapsed) #room-code-badge,
+.top-header:not(.header-collapsed) #btn-resync,
+.top-header:not(.header-collapsed) .connected-users-list,
+.top-header:not(.header-collapsed) .header-actions {
+  opacity: 1;
+  transition: opacity 0.3s ease 0.15s;
 }
 
 .brand-section {
@@ -122,6 +157,13 @@ html, body {
   font-size: 18px;
   color: #0b111e;
   box-shadow: 0 0 16px rgba(0, 242, 254, 0.4);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.brand-icon:hover {
+  transform: scale(1.08);
 }
 
 .brand-title {
@@ -223,8 +265,8 @@ html, body {
 }
 
 body.simple-mode-active .top-header,
-body.simple-mode-active .chat-window,
-body.simple-mode-active #vtt-chat-panel,
+body.simple-mode-active .chat-window.minimized,
+body.simple-mode-active #vtt-chat-panel.minimized,
 body.simple-mode-active .bottom-toolbar,
 body.simple-mode-active #selection-toolbar {
   display: none !important;
@@ -798,12 +840,23 @@ body.simple-mode-active #selection-toolbar {
   .top-header {
     top: 8px;
     left: 8px;
-    right: 8px;
+    right: auto;
+    width: calc(100vw - 16px);
+    max-width: calc(100vw - 16px);
     height: auto;
     min-height: 48px;
     padding: 6px 10px;
     flex-wrap: wrap;
     gap: 8px;
+  }
+
+  .top-header.header-collapsed {
+    width: 48px !important;
+    max-width: 48px !important;
+    height: 48px !important;
+    min-height: 48px !important;
+    padding: 0 6px !important;
+    border-radius: 14px !important;
   }
 
   .brand-title {

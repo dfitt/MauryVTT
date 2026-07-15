@@ -365,17 +365,6 @@ export function setupToolbarUI(engine: CanvasEngine): void {
   divider3.className = "tool-divider";
   bar.appendChild(divider3);
 
-  const chatToggleBtn = document.createElement("button");
-  chatToggleBtn.className = "tool-btn";
-  chatToggleBtn.title = "Toggle Chat & Dice Roller Window";
-  chatToggleBtn.innerHTML = "💬";
-  chatToggleBtn.addEventListener("click", () => {
-    if (typeof (window as any).toggleVttChat === "function") {
-      (window as any).toggleVttChat();
-    }
-  });
-  bar.appendChild(chatToggleBtn);
-
   // Simple Mode Toggle Button in Advanced Mode
   const simpleModeBtn = document.createElement("button");
   simpleModeBtn.className = "tool-btn";
@@ -406,7 +395,10 @@ export function setupToolbarUI(engine: CanvasEngine): void {
 
     if (enabled) {
       if (topHeader) topHeader.style.display = "none";
-      if (chatWindow) chatWindow.style.display = "none";
+      if (chatWindow) {
+        chatWindow.classList.add("minimized");
+        chatWindow.style.display = "none";
+      }
       if (selectionToolbar) selectionToolbar.style.display = "none";
       bar.style.display = "none";
       simpleBar.style.display = "flex";
@@ -429,10 +421,14 @@ export function setupToolbarUI(engine: CanvasEngine): void {
   simpleBar.querySelector<HTMLButtonElement>("#btn-simple-chat")!.addEventListener("click", () => {
     const chatWindow = document.querySelector<HTMLElement>(".chat-window");
     if (chatWindow) {
+      chatWindow.classList.remove("minimized");
       chatWindow.style.display = "flex";
-      if (typeof (window as any).toggleVttChat === "function" && chatWindow.classList.contains("minimized")) {
-        (window as any).toggleVttChat();
-      }
+      const tBtn = chatWindow.querySelector<HTMLButtonElement>("#btn-toggle-chat");
+      if (tBtn) tBtn.textContent = "▼";
+      const badgeEl = chatWindow.querySelector<HTMLElement>("#chat-unread-badge");
+      if (badgeEl) badgeEl.style.display = "none";
+      const container = chatWindow.querySelector<HTMLElement>("#chat-messages-container");
+      if (container) container.scrollTop = container.scrollHeight;
     }
   });
 
