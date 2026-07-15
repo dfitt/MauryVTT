@@ -28,7 +28,9 @@ export function getEffectIdForIcon(icon?: string): string | null {
   if (icon.includes("🪕") || icon.includes("circle cx=\"26\" cy=\"42\" r=\"16\" fill=\"#92400e\"") || icon.includes("🎸") || icon.includes("🪈")) return "lute_music";
   if (icon.includes("⚡")) return "lightning_strikes";
   if (icon.includes("☁️") || icon.includes("☣️") || icon.includes("🧪") || icon.includes("toxic_cloud")) return "toxic_cloud";
-  if (icon.includes("🪓")) return "massive_axe";
+  if (icon.includes("🪓") || icon.includes("M14 50 L50 14") || icon.includes("massive_axe")) return "massive_axe";
+  if (icon.includes("🛡️") || icon.includes("arcane_shield")) return "arcane_shield";
+  if (icon.includes("❄️") || icon.includes("🧊") || icon.includes("ice_spike")) return "ice_spike";
   return null;
 }
 
@@ -520,11 +522,10 @@ export const EFFECT_REGISTRY: Record<string, VttEffectDefinition> = {
       <style>
         @keyframes vttAxeSlam {
           0% { transform: translate(60%, -140%) rotate(-75deg) scale(1.4); opacity: 0; }
-          18% { opacity: 1; }
-          40% { transform: translate(0%, 8%) rotate(15deg) scale(1.5); opacity: 1; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.85)); }
-          48% { transform: translate(0%, 14%) rotate(18deg) scale(1.5); }
-          65% { transform: translate(0%, 8%) rotate(15deg) scale(1.5); opacity: 1; }
-          100% { transform: translate(0%, 8%) rotate(15deg) scale(1.2); opacity: 0; }
+          15% { opacity: 1; }
+          35% { transform: translate(0%, 10%) rotate(15deg) scale(1.55); opacity: 1; filter: drop-shadow(0 4px 14px rgba(0,0,0,0.9)); }
+          75% { transform: translate(0%, 10%) rotate(15deg) scale(1.55); opacity: 1; filter: drop-shadow(0 4px 14px rgba(0,0,0,0.9)); }
+          100% { transform: translate(0%, 10%) rotate(15deg) scale(1.2); opacity: 0; }
         }
         @keyframes vttAxeShock {
           0% { transform: scaleX(0.1) scaleY(0.4); opacity: 1; }
@@ -534,28 +535,117 @@ export const EFFECT_REGISTRY: Record<string, VttEffectDefinition> = {
       </style>
       <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
         <!-- Ground Slam Shockwave -->
-        <div style="position: absolute; width: 90px; height: 36px; border: 4px solid #f59e0b; border-radius: 50%; box-shadow: 0 0 16px #78350f; animation: vttAxeShock 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards; animation-delay: 0.3s; opacity: 0;"></div>
-        <!-- Massive Axe SVG -->
-        <svg viewBox="0 0 64 64" width="92" height="92" style="position: absolute; animation: vttAxeSlam 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;">
-          <!-- Haft / Handle -->
-          <path d="M12 52 L52 12" stroke="#78350f" stroke-width="4" stroke-linecap="round" />
+        <div style="position: absolute; width: 90px; height: 36px; border: 4px solid #f59e0b; border-radius: 50%; box-shadow: 0 0 16px #78350f; animation: vttAxeShock 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards; animation-delay: 0.28s; opacity: 0;"></div>
+        <!-- Double-Sided Barbarian Battleaxe SVG -->
+        <svg viewBox="0 0 64 64" width="96" height="96" style="position: absolute; animation: vttAxeSlam 0.82s cubic-bezier(0.25, 1, 0.5, 1) forwards;">
+          <!-- Central Haft / Handle -->
+          <path d="M12 52 L52 12" stroke="#78350f" stroke-width="4.5" stroke-linecap="round" />
           <path d="M14 50 L50 14" stroke="#92400e" stroke-width="2" stroke-linecap="round" />
-          <!-- Axe Head -->
-          <path d="M38 10 L54 26 C60 16 60 8 54 2 C48 -4 40 -4 38 10 Z" fill="#94a3b8" stroke="#475569" stroke-width="1.5" />
-          <path d="M42 14 L50 22 C54 16 54 10 50 6 C46 2 42 6 42 14 Z" fill="#e2e8f0" />
-          <!-- Spike on Back -->
-          <path d="M42 22 L28 36 L24 32 L38 18 Z" fill="#64748b" />
+          <!-- Right Symmetrical Barbarian Crescent Blade -->
+          <path d="M38 12 L56 22 C62 14 62 6 56 0 C50 -6 42 -6 38 12 Z" fill="#94a3b8" stroke="#475569" stroke-width="1.5" />
+          <path d="M42 16 L50 24 C54 18 54 12 50 8 C46 4 42 8 42 16 Z" fill="#e2e8f0" />
+          <!-- Left Symmetrical Barbarian Crescent Blade -->
+          <path d="M26 24 L44 42 C52 48 52 56 44 62 C36 68 28 68 26 52 Z" fill="#94a3b8" stroke="#475569" stroke-width="1.5" />
+          <path d="M30 28 L38 36 C42 40 42 46 38 50 C34 54 30 50 30 42 Z" fill="#e2e8f0" />
+          <!-- Central Haft Binding -->
+          <circle cx="32" cy="32" r="4.5" fill="#f59e0b" stroke="#78350f" stroke-width="1" />
         </svg>
       </div>
     `,
     particles: {
-      count: 22,
+      count: 24,
       colors: ["#94a3b8", "#64748b", "#cbd5e1", "#78350f", "#f59e0b"],
       speedRange: [60, 160],
       sizeRangePx: [3, 6],
       gravity: 220,
       shape: "splinter",
       lifeMs: 550
+    }
+  },
+
+  arcane_shield: {
+    id: "arcane_shield",
+    durationMs: 850,
+    renderSvg: () => `
+      <style>
+        @keyframes vttShieldDeploy {
+          0% { transform: scale(0.2); opacity: 0; filter: blur(4px); }
+          25% { transform: scale(1.3); opacity: 1; filter: drop-shadow(0 0 16px #38bdf8); }
+          65% { transform: scale(1.15); opacity: 0.9; }
+          100% { transform: scale(1.6); opacity: 0; filter: blur(8px); }
+        }
+        @keyframes vttShieldImpact {
+          0% { transform: scale(0.1); opacity: 0; }
+          30% { transform: scale(0.8); opacity: 1; }
+          60% { transform: scale(1.4); opacity: 0.7; }
+          100% { transform: scale(2.0); opacity: 0; }
+        }
+      </style>
+      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <!-- Deflected Energy Ring -->
+        <div style="position: absolute; width: 78px; height: 78px; border: 3px solid #818cf8; border-radius: 50%; box-shadow: 0 0 20px #38bdf8; animation: vttShieldImpact 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;"></div>
+        <!-- Hexagonal Arcane Barrier -->
+        <svg viewBox="0 0 100 100" width="88" height="88" style="position: absolute; animation: vttShieldDeploy 0.82s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
+          <!-- Runic Outer Shield Shield Crest -->
+          <polygon points="50,6 88,28 88,72 50,94 12,72 12,28" fill="rgba(56, 189, 248, 0.25)" stroke="#38bdf8" stroke-width="3" />
+          <polygon points="50,16 80,34 80,66 50,84 20,66 20,34" fill="none" stroke="#818cf8" stroke-width="1.5" stroke-dasharray="6 4" />
+          <circle cx="50" cy="50" r="18" fill="rgba(99, 102, 241, 0.3)" stroke="#c084fc" stroke-width="2" />
+          <circle cx="50" cy="50" r="6" fill="#ffffff" />
+        </svg>
+      </div>
+    `,
+    particles: {
+      count: 26,
+      colors: ["#38bdf8", "#818cf8", "#a855f7", "#ffffff", "#e0e7ff"],
+      speedRange: [40, 110],
+      sizeRangePx: [2, 5],
+      gravity: 0,
+      shape: "sparkle",
+      lifeMs: 700
+    }
+  },
+
+  ice_spike: {
+    id: "ice_spike",
+    durationMs: 850,
+    renderSvg: () => `
+      <style>
+        @keyframes vttIceStalagmite {
+          0% { transform: translateY(60%) scaleY(0.1) scaleX(0.5); opacity: 0; }
+          22% { transform: translateY(-8%) scaleY(1.3) scaleX(1.2); opacity: 1; filter: drop-shadow(0 0 16px #38bdf8); }
+          50% { transform: translateY(0%) scaleY(1.1) scaleX(1.0); opacity: 1; }
+          75% { transform: translateY(0%) scaleY(1.1) scaleX(1.0); opacity: 0.9; }
+          100% { transform: translateY(-15%) scaleY(1.3) scaleX(1.2); opacity: 0; filter: blur(6px); }
+        }
+        @keyframes vttFrostMist {
+          0% { transform: scale(0.2); opacity: 0.9; }
+          50% { transform: scale(1.8); opacity: 0.6; filter: blur(6px); }
+          100% { transform: scale(2.6); opacity: 0; filter: blur(12px); }
+        }
+      </style>
+      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <!-- Freezing Mist Ring -->
+        <div style="position: absolute; width: 90px; height: 40px; background: radial-gradient(ellipse at center, #bae6fd 10%, #38bdf8 60%, transparent 100%); animation: vttFrostMist 0.85s ease-out forwards;"></div>
+        <!-- Crystalline Glacial Spike -->
+        <svg viewBox="0 0 64 64" width="86" height="86" style="position: absolute; animation: vttIceStalagmite 0.82s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
+          <!-- Main Central Spike -->
+          <polygon points="32,4 44,56 20,56" fill="#e0f2fe" stroke="#38bdf8" stroke-width="2" />
+          <polygon points="32,4 32,56 20,56" fill="#7dd3fc" />
+          <!-- Left Flanking Shard -->
+          <polygon points="18,24 26,56 12,56" fill="#bae6fd" stroke="#0284c7" stroke-width="1.5" />
+          <!-- Right Flanking Shard -->
+          <polygon points="46,24 52,56 38,56" fill="#e0f2fe" stroke="#0284c7" stroke-width="1.5" />
+        </svg>
+      </div>
+    `,
+    particles: {
+      count: 30,
+      colors: ["#e0f2fe", "#bae6fd", "#38bdf8", "#ffffff", "#7dd3fc"],
+      speedRange: [50, 150],
+      sizeRangePx: [2, 5],
+      gravity: 140, // Falling frost shards
+      shape: "splinter",
+      lifeMs: 750
     }
   }
 };
