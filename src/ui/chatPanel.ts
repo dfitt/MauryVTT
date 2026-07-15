@@ -2,6 +2,19 @@ import { docStore } from "../state/documentStore.js";
 import { sessionManager } from "../network/sessionManager.js";
 import { ChatMessage } from "../types/vtt.js";
 
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
+  let c = hex.replace(/^#/, "");
+  if (c.length === 3) {
+    c = c[0] + c[0] + c[1] + c[1] + c[2] + c[2];
+  }
+  const num = parseInt(c, 16) || 0x38bdf8;
+  return {
+    r: (num >> 16) & 255,
+    g: (num >> 8) & 255,
+    b: num & 255
+  };
+}
+
 export function setupChatPanel(): void {
   const panel = document.createElement("div");
   panel.className = "chat-window";
@@ -141,7 +154,7 @@ export function setupChatPanel(): void {
     if (!quickRollsContainerEl) return;
     const doc = docStore.getDocument();
     const username = sessionManager.myUsername || "Me";
-    const list = (doc.quickRolls?.[username] || []).slice(0, 4);
+    const list = (doc.quickRolls?.[username] || []).slice(0, 6);
 
     if (list.length === 0 || formatBuilderExpression() !== "") {
       quickRollsContainerEl.style.display = "none";
@@ -211,6 +224,27 @@ export function setupChatPanel(): void {
   }
 
   panel.querySelectorAll<HTMLButtonElement>(".dice-icon-btn").forEach((btn) => {
+    btn.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const type = btn.getAttribute("data-dice");
+      if (!type || !type.startsWith("d")) return;
+      const rollRes = parseAndRollDice("1" + type);
+      if (!rollRes) return;
+      const newMsg: ChatMessage = {
+        id: "msg-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6),
+        timestamp: Date.now(),
+        senderPeerId: sessionManager.myPeerId || "local",
+        senderUsername: sessionManager.myUsername || "Me",
+        content: rollRes,
+        type: "roll"
+      };
+      sessionManager.dispatchOperation({
+        opType: "APPEND_CHAT_MESSAGE",
+        message: newMsg
+      });
+    });
+
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
       const type = btn.getAttribute("data-dice");
@@ -270,6 +304,9 @@ export function setupChatPanel(): void {
     let total = 0;
     const breakdowns: string[] = [];
     let valid = false;
+    let hasD20 = false;
+    let hasNat20 = false;
+    let hasNat1 = false;
 
     while ((match = tokenRegex.exec(rawExpr)) !== null) {
       const signStr = match[1];
@@ -282,6 +319,7 @@ export function setupChatPanel(): void {
         const count = diceMatch[1] === "" ? 1 : Math.min(parseInt(diceMatch[1], 10), 50);
         const sides = parseInt(diceMatch[2], 10);
         if (sides <= 0 || count <= 0) continue;
+        if (sides === 20) hasD20 = true;
 
         const rolls: number[] = [];
         let sum = 0;
@@ -289,6 +327,8 @@ export function setupChatPanel(): void {
           const r = Math.floor(Math.random() * sides) + 1;
           rolls.push(r);
           sum += r;
+          if (sides === 20 && r === 20) hasNat20 = true;
+          if (sides === 20 && r === 1) hasNat1 = true;
         }
         total += sign * sum;
         const prefix = breakdowns.length === 0 ? (sign === -1 ? "-" : "") : (sign === -1 ? " - " : " + ");
@@ -305,7 +345,15 @@ export function setupChatPanel(): void {
     }
 
     if (!valid) return null;
-    return `🎲 ${rawExpr}: ${breakdowns.join("")} = <span style="color: #ffffff; font-weight: 800; font-size: 1.15em; text-shadow: 0 0 6px rgba(255, 255, 255, 0.35);">${total}</span>`;
+    let rollIcon = "🎲";
+    if (hasD20) {
+      if (hasNat20) {
+        rollIcon = '<strong style="color: #4ade80; font-weight: 900; letter-spacing: 0.5px;">CRIT!</strong>';
+      } else if (hasNat1) {
+        rollIcon = '<strong style="color: #f87171; font-weight: 900; letter-spacing: 0.5px;">NOPE</strong>';
+      }
+    }
+    return `${rollIcon} ${rawExpr}: ${breakdowns.join("")} = <span style="color: #ffffff; font-weight: 800; font-size: 1.15em; text-shadow: 0 0 6px rgba(255, 255, 255, 0.35);">${total}</span>`;
   }
 
   inputEl.addEventListener("keydown", (e) => {
@@ -421,7 +469,7 @@ export function setupChatPanel(): void {
     // Smart DOM reconciliation so active roll animations are never destroyed midway by document updates
     doc.chatHistory.forEach((msg) => {
       const existingEl = container.querySelector(`[data-msg-id="${msg.id}"]`) as HTMLElement | null;
-      const hasReactions = (msg.thumbsUp || 0) > 0 || (msg.thumbsDown || 0) > 0;
+      const hasReactions = (msg.thumbsUp || 0) > 0 || (msg.thumbsDown || 0) > 0 || (msg.laugh || 0) > 0 || (msg.celebrate || 0) > 0;
 
       if (existingEl) {
         // Update reactions on existing elements without touching actively animating or completed message text
@@ -430,8 +478,12 @@ export function setupChatPanel(): void {
           reactionsEl.style.display = hasReactions ? "flex" : "none";
           const upBtn = reactionsEl.querySelector('[data-reaction="up"] span');
           const downBtn = reactionsEl.querySelector('[data-reaction="down"] span');
+          const laughBtn = reactionsEl.querySelector('[data-reaction="laugh"] span');
+          const celebBtn = reactionsEl.querySelector('[data-reaction="celebrate"] span');
           if (upBtn) upBtn.textContent = String(msg.thumbsUp || 0);
           if (downBtn) downBtn.textContent = String(msg.thumbsDown || 0);
+          if (laughBtn) laughBtn.textContent = String(msg.laugh || 0);
+          if (celebBtn) celebBtn.textContent = String(msg.celebrate || 0);
         }
 
         // Guarantee that if the roll animation is already completed or not active, the afterSpan total is never stuck hidden
@@ -463,6 +515,16 @@ export function setupChatPanel(): void {
       msgEl.style.cursor = "pointer";
       msgEl.title = "Click message to show/hide reactions";
 
+      const senderUser = doc.users[msg.senderPeerId];
+      const userColor = senderUser?.color || (msg.senderPeerId === (sessionManager.myPeerId || "local") ? sessionManager.myColor : "#38bdf8") || "#38bdf8";
+
+      if (msg.type === "roll") {
+        const { r, g, b } = hexToRgb(userColor);
+        msgEl.style.background = `rgba(${r}, ${g}, ${b}, 0.15)`;
+        msgEl.style.borderColor = `rgba(${r}, ${g}, ${b}, 0.4)`;
+        msgEl.style.color = userColor;
+      }
+
       let displayContent = msg.content;
       if (msg.type === "roll") {
         displayContent = displayContent
@@ -479,7 +541,6 @@ export function setupChatPanel(): void {
 
       let formattedText = displayContent;
       if (isNewRoll) {
-        // Find the equation's equals sign without matching the "=" inside HTML attributes (like style="color...")
         const eqMatch = displayContent.match(/(\s*=\s*)<span/i);
         const eqIdx = eqMatch && eqMatch.index !== undefined ? eqMatch.index : displayContent.indexOf("=");
         const beforeEquals = displayContent.substring(0, eqIdx);
@@ -489,7 +550,7 @@ export function setupChatPanel(): void {
       }
 
       msgEl.innerHTML = `
-        <div class="msg-author" style="color: #38bdf8">${msg.senderUsername}${msg.rollLabel ? ` - <span style="color: #cbd5e1; font-weight: normal;">${msg.rollLabel}</span>` : ""}</div>
+        <div class="msg-author" style="color: ${userColor}">${msg.senderUsername}${msg.rollLabel ? ` - <span style="color: #cbd5e1; font-weight: normal;">${msg.rollLabel}</span>` : ""}</div>
         <div class="msg-text">${formattedText}</div>
         <div class="chat-reactions" style="display: ${hasReactions ? "flex" : "none"};">
           <button class="chat-reaction-btn" data-reaction="up" data-id="${msg.id}" title="Thumbs Up">
@@ -497,6 +558,12 @@ export function setupChatPanel(): void {
           </button>
           <button class="chat-reaction-btn" data-reaction="down" data-id="${msg.id}" title="Thumbs Down">
             👎 <span>${msg.thumbsDown || 0}</span>
+          </button>
+          <button class="chat-reaction-btn" data-reaction="laugh" data-id="${msg.id}" title="Laugh / LOL">
+            😂 <span>${msg.laugh || 0}</span>
+          </button>
+          <button class="chat-reaction-btn" data-reaction="celebrate" data-id="${msg.id}" title="Celebrate">
+            🎉 <span>${msg.celebrate || 0}</span>
           </button>
         </div>
       `;
@@ -557,7 +624,11 @@ export function setupChatPanel(): void {
             return `[${nums.join(", ")}]`;
           });
 
-          beforeSpan.innerHTML = randomized;
+          let displaySpinning = randomized;
+          if (displaySpinning.includes("CRIT!") || displaySpinning.includes("NOPE")) {
+            displaySpinning = displaySpinning.replace(/<strong[^>]*>.*?CRIT!.*?<\/strong>|<strong[^>]*>.*?NOPE.*?<\/strong>/i, "🎲");
+          }
+          beforeSpan.innerHTML = displaySpinning;
         }, 50);
 
         activeRollIntervals.set(msg.id, interval);
@@ -579,7 +650,13 @@ export function setupChatPanel(): void {
 
       const currentUp = msg.thumbsUp || 0;
       const currentDown = msg.thumbsDown || 0;
-      const patch = reaction === "up" ? { thumbsUp: currentUp + 1 } : { thumbsDown: currentDown + 1 };
+      const currentLaugh = msg.laugh || 0;
+      const currentCeleb = msg.celebrate || 0;
+      let patch: Partial<ChatMessage> = {};
+      if (reaction === "up") patch = { thumbsUp: currentUp + 1 };
+      else if (reaction === "down") patch = { thumbsDown: currentDown + 1 };
+      else if (reaction === "laugh") patch = { laugh: currentLaugh + 1 };
+      else if (reaction === "celebrate") patch = { celebrate: currentCeleb + 1 };
 
       sessionManager.dispatchOperation({
         opType: "UPDATE_CHAT_MESSAGE",

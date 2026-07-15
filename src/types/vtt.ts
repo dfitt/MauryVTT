@@ -128,6 +128,8 @@ export interface ChatMessage {
   rollLabel?: string;
   thumbsUp?: number;
   thumbsDown?: number;
+  laugh?: number;
+  celebrate?: number;
 }
 
 // ==========================================

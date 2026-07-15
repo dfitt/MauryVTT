@@ -183,7 +183,7 @@ export function setupToolbarUI(engine: CanvasEngine): void {
   // Upload Image Button
   const uploadBtn = document.createElement("button");
   uploadBtn.className = "tool-btn";
-  uploadBtn.title = "Upload Image / Token (Resized to <=1024px & Exact Aspect Ratio Preserved)";
+  uploadBtn.title = "Add Image";
   uploadBtn.innerHTML = "🖼️";
 
   const fileInput = document.createElement("input");
@@ -290,7 +290,7 @@ export function setupToolbarUI(engine: CanvasEngine): void {
   // Add Map Button
   const addMapBtn = document.createElement("button");
   addMapBtn.className = "tool-btn";
-  addMapBtn.title = "Add Map (Max size 4096px, placed on Map layer behind grid at world origin)";
+  addMapBtn.title = "Add Map";
   addMapBtn.innerHTML = "🗺️";
 
   const mapFileInput = document.createElement("input");
@@ -539,6 +539,20 @@ export function setupToolbarUI(engine: CanvasEngine): void {
       if (badgeEl) badgeEl.style.display = "none";
       const container = chatWindow.querySelector<HTMLElement>("#chat-messages-container");
       if (container) container.scrollTop = container.scrollHeight;
+    }
+  });
+
+  document.body.addEventListener("click", (e) => {
+    if (!isMobilePhone()) return;
+    const target = (e.target as HTMLElement)?.closest("button, .tool-btn, .btn-glass, .toolbar-color-swatch, .brand-icon");
+    if (target) {
+      if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+        try {
+          navigator.vibrate(12);
+        } catch (err) {
+          // Ignore if unsupported
+        }
+      }
     }
   });
 
