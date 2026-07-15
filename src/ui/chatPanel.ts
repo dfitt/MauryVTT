@@ -63,6 +63,11 @@ export function setupChatPanel(): void {
           <button class="btn-glass roll-icon-swatch" data-icon="🏹" title="Bow and Arrow" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🏹</button>
           <button class="btn-glass roll-icon-swatch" data-icon="🔥" title="Fireball" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🔥</button>
           <button class="btn-glass roll-icon-swatch" data-icon="✨" title="Charming Pink Sparkles" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">✨</button>
+          <button class="btn-glass roll-icon-swatch" data-icon="🗡️" title="Dagger" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🗡️</button>
+          <button class="btn-glass roll-icon-swatch" data-icon="☀️" title="Holy Symbol (Healing)" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">☀️</button>
+          <button class="btn-glass roll-icon-swatch" data-icon="📿" title="Turn Undead" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">📿</button>
+          <button class="btn-glass roll-icon-swatch" data-icon="🪕" title="Lute (Music)" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🪕</button>
+          <button class="btn-glass roll-icon-swatch" data-icon="⚡" title="Lightning Strikes" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">⚡</button>
         </div>
       </div>
     </div>

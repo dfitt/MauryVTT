@@ -131,6 +131,7 @@ export class EffectEngine {
       birthTime: number;
       rotation: number;
       rotSpeed: number;
+      noteChar?: string;
     }
 
     const particles: Particle[] = [];
@@ -148,6 +149,7 @@ export class EffectEngine {
       const color = config.colors[Math.floor(Math.random() * config.colors.length)];
       const lifeMs = config.lifeMs * (0.7 + Math.random() * 0.6);
 
+      const noteChars = ["♪", "♫", "♬", "♩"];
       particles.push({
         x: centerX + (Math.random() - 0.5) * 20,
         y: centerY + (Math.random() - 0.5) * 20,
@@ -159,7 +161,8 @@ export class EffectEngine {
         maxLifeMs: lifeMs,
         birthTime: now + Math.random() * 80,
         rotation: Math.random() * Math.PI * 2,
-        rotSpeed: (Math.random() - 0.5) * 12
+        rotSpeed: (Math.random() - 0.5) * 12,
+        noteChar: config.shape === "note" ? noteChars[Math.floor(Math.random() * noteChars.length)] : undefined
       });
     }
 
@@ -224,6 +227,15 @@ export class EffectEngine {
           ctx.translate(p.x, p.y);
           ctx.rotate(p.rotation);
           ctx.fillRect(-p.size, -p.size / 3, p.size * 2, p.size / 1.5);
+        } else if (config.shape === "note") {
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.rotation * 0.3);
+          ctx.font = `bold ${Math.max(12, p.size * 3)}px sans-serif`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.shadowColor = p.color;
+          ctx.shadowBlur = 6;
+          ctx.fillText(p.noteChar || "♪", 0, 0);
         }
 
         ctx.restore();

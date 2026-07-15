@@ -4,7 +4,7 @@ export interface ParticleConfig {
   speedRange: [number, number]; // px per second
   sizeRangePx: [number, number];
   gravity: number; // px per second^2 (negative for rising, positive for falling)
-  shape: "circle" | "sparkle" | "ember" | "splinter";
+  shape: "circle" | "sparkle" | "ember" | "splinter" | "note";
   spreadAngleRange?: [number, number]; // radians from 0 to 2*PI
   lifeMs: number;
 }
@@ -22,33 +22,54 @@ export function getEffectIdForIcon(icon?: string): string | null {
   if (icon.includes("🏹")) return "arrow_hit";
   if (icon.includes("🔥")) return "fireball_explosion";
   if (icon.includes("✨") || icon.includes("💖")) return "pink_sparkles";
+  if (icon.includes("🗡️")) return "dagger_twirl";
+  if (icon.includes("☀️") || icon.includes("✝️")) return "holy_healing";
+  if (icon.includes("📿") || icon.includes("🧿") || icon.includes("⚰️")) return "turn_undead";
+  if (icon.includes("🪕") || icon.includes("🎸") || icon.includes("🪈")) return "lute_music";
+  if (icon.includes("⚡")) return "lightning_strikes";
   return null;
 }
 
 export const EFFECT_REGISTRY: Record<string, VttEffectDefinition> = {
   sword_slash: {
     id: "sword_slash",
-    durationMs: 800,
+    durationMs: 850,
     renderSvg: () => `
       <style>
-        @keyframes vttSwordSlash {
-          0% { transform: translate(120%, -120%) rotate(-45deg) scale(0.8); opacity: 0; }
-          30% { transform: translate(0%, 0%) rotate(-135deg) scale(1.3); opacity: 1; }
-          70% { transform: translate(-120%, 120%) rotate(-180deg) scale(1.1); opacity: 0.8; }
-          100% { transform: translate(-150%, 150%) rotate(-200deg) scale(0.5); opacity: 0; }
+        @keyframes vttSwordSlash1 {
+          0% { transform: translate(140%, -140%) rotate(-45deg) scale(0.9); opacity: 0; }
+          25% { transform: translate(-10%, 10%) rotate(-135deg) scale(1.3); opacity: 1; }
+          45% { transform: translate(-150%, 150%) rotate(-180deg) scale(1.0); opacity: 0; }
+          100% { transform: translate(-150%, 150%) opacity: 0; }
         }
-        @keyframes vttSlashCutLine {
+        @keyframes vttSwordSlash2 {
+          0% { transform: translate(-140%, -140%) rotate(45deg) scale(0.9); opacity: 0; }
+          45% { transform: translate(-140%, -140%) rotate(45deg) scale(0.9); opacity: 0; }
+          70% { transform: translate(10%, 10%) rotate(135deg) scale(1.3); opacity: 1; }
+          90% { transform: translate(150%, 150%) rotate(180deg) scale(1.0); opacity: 0; }
+          100% { transform: translate(150%, 150%) opacity: 0; }
+        }
+        @keyframes vttSlashCutLine1 {
           0% { transform: scaleX(0) rotate(-45deg); opacity: 0; }
-          35% { transform: scaleX(1.4) rotate(-45deg); opacity: 1; }
-          80% { transform: scaleX(1.8) rotate(-45deg); opacity: 0; }
-          100% { transform: scaleX(2) rotate(-45deg); opacity: 0; }
+          28% { transform: scaleX(1.6) rotate(-45deg); opacity: 1; }
+          50% { transform: scaleX(2) rotate(-45deg); opacity: 0; }
+          100% { opacity: 0; }
+        }
+        @keyframes vttSlashCutLine2 {
+          0% { transform: scaleX(0) rotate(45deg); opacity: 0; }
+          48% { transform: scaleX(0) rotate(45deg); opacity: 0; }
+          72% { transform: scaleX(1.6) rotate(45deg); opacity: 1; }
+          95% { transform: scaleX(2) rotate(45deg); opacity: 0; }
+          100% { opacity: 0; }
         }
       </style>
       <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
-        <!-- Diagonal Glowing Cut Line -->
-        <div style="position: absolute; width: 180%; height: 4px; background: linear-gradient(90deg, transparent, #ffffff, #38bdf8, transparent); box-shadow: 0 0 12px #38bdf8, 0 0 24px #ffffff; animation: vttSlashCutLine 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;"></div>
-        <!-- Sweeping Sword SVG -->
-        <svg viewBox="0 0 64 64" width="84" height="84" style="animation: vttSwordSlash 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards; filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.8));">
+        <!-- Glowing Cut Line 1 (Right to Left) -->
+        <div style="position: absolute; width: 180%; height: 3px; background: linear-gradient(90deg, transparent, #ffffff, #38bdf8, transparent); box-shadow: 0 0 12px #38bdf8; animation: vttSlashCutLine1 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;"></div>
+        <!-- Glowing Cut Line 2 (Left to Right) -->
+        <div style="position: absolute; width: 180%; height: 3px; background: linear-gradient(90deg, transparent, #ffffff, #ef4444, transparent); box-shadow: 0 0 12px #ef4444; animation: vttSlashCutLine2 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;"></div>
+        <!-- Sword Slash 1 (Right to Left) -->
+        <svg viewBox="0 0 64 64" width="84" height="84" style="position: absolute; animation: vttSwordSlash1 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.8));">
           <path d="M54 10 L14 50 L10 54 L6 50 L10 46 L50 6 Z" fill="url(#swordGrad)" stroke="#ffffff" stroke-width="1.5" />
           <path d="M14 50 L6 58 L10 62 L18 54 Z" fill="#64748b" />
           <circle cx="8" cy="60" r="3" fill="#fbbf24" />
@@ -60,17 +81,30 @@ export const EFFECT_REGISTRY: Record<string, VttEffectDefinition> = {
             </linearGradient>
           </defs>
         </svg>
+        <!-- Sword Slash 2 (Left to Right) -->
+        <svg viewBox="0 0 64 64" width="84" height="84" style="position: absolute; animation: vttSwordSlash2 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards; filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.8));">
+          <path d="M54 10 L14 50 L10 54 L6 50 L10 46 L50 6 Z" fill="url(#swordGrad2)" stroke="#ffffff" stroke-width="1.5" />
+          <path d="M14 50 L6 58 L10 62 L18 54 Z" fill="#64748b" />
+          <circle cx="8" cy="60" r="3" fill="#fbbf24" />
+          <defs>
+            <linearGradient id="swordGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#ffffff" />
+              <stop offset="50%" stop-color="#ef4444" />
+              <stop offset="100%" stop-color="#991b1b" />
+            </linearGradient>
+          </defs>
+        </svg>
       </div>
     `,
     particles: {
-      count: 18,
-      colors: ["#ffffff", "#38bdf8", "#7dd3fc", "#e0f2fe"],
-      speedRange: [70, 160],
-      sizeRangePx: [2, 5],
-      gravity: 140,
+      count: 12,
+      colors: ["#ef4444", "#dc2626", "#b91c1c", "#ffffff", "#fca5a5"],
+      speedRange: [40, 110],
+      sizeRangePx: [2, 4],
+      gravity: 80,
       shape: "sparkle",
-      spreadAngleRange: [Math.PI * 0.1, Math.PI * 0.9],
-      lifeMs: 550
+      spreadAngleRange: [0, Math.PI * 2],
+      lifeMs: 600
     }
   },
 
@@ -206,6 +240,225 @@ export const EFFECT_REGISTRY: Record<string, VttEffectDefinition> = {
       gravity: -35, // Soft floating upward fountain
       shape: "sparkle",
       lifeMs: 900
+    }
+  },
+
+  dagger_twirl: {
+    id: "dagger_twirl",
+    durationMs: 700,
+    renderSvg: () => `
+      <style>
+        @keyframes vttDaggerTwirl {
+          0% { transform: translate(-160%, 0%) rotate(0deg) scale(1.1); opacity: 0; }
+          15% { opacity: 1; }
+          50% { transform: translate(0%, 0%) rotate(360deg) scale(1.1); opacity: 1; }
+          85% { opacity: 1; }
+          100% { transform: translate(160%, 0%) rotate(720deg) scale(1.1); opacity: 0; }
+        }
+      </style>
+      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <svg viewBox="0 0 64 64" width="68" height="68" style="animation: vttDaggerTwirl 0.68s cubic-bezier(0.25, 1, 0.5, 1) forwards; filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.7));">
+          <path d="M52 12 L26 38 L22 34 L48 8 Z" fill="#e2e8f0" stroke="#64748b" stroke-width="1.5" />
+          <path d="M22 34 L16 40 L24 48 L30 42 Z" fill="#334155" />
+          <path d="M16 40 L8 48 L16 56 L24 48 Z" fill="#78350f" />
+          <circle cx="12" cy="52" r="3" fill="#fbbf24" />
+        </svg>
+      </div>
+    `,
+    particles: {
+      count: 10,
+      colors: ["#94a3b8", "#cbd5e1", "#ffffff", "#f1f5f9"],
+      speedRange: [50, 130],
+      sizeRangePx: [2, 4],
+      gravity: 120,
+      shape: "sparkle",
+      lifeMs: 480
+    }
+  },
+
+  holy_healing: {
+    id: "holy_healing",
+    durationMs: 900,
+    renderSvg: () => `
+      <style>
+        @keyframes vttHolyCore {
+          0% { transform: scale(0.2); opacity: 0; filter: blur(4px); }
+          25% { transform: scale(1.2); opacity: 1; filter: blur(0px) drop-shadow(0 0 16px #facc15); }
+          50% { transform: scale(1.0); opacity: 1; filter: blur(0px) drop-shadow(0 0 24px #4ade80); }
+          80% { transform: scale(1.1); opacity: 0.8; }
+          100% { transform: scale(1.4); opacity: 0; filter: blur(6px); }
+        }
+        @keyframes vttHealingAura {
+          0% { transform: scale(0.2); opacity: 1; border-width: 6px; }
+          60% { transform: scale(2.2); opacity: 0.7; border-width: 3px; }
+          100% { transform: scale(3.0); opacity: 0; border-width: 1px; }
+        }
+      </style>
+      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <div style="position: absolute; width: 70px; height: 70px; border: 4px solid #4ade80; border-radius: 50%; box-shadow: 0 0 20px #facc15, inset 0 0 20px #86efac; animation: vttHealingAura 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;"></div>
+        <svg viewBox="0 0 100 100" width="88" height="88" style="animation: vttHolyCore 0.88s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
+          <!-- Holy Sun & Cross Symbol -->
+          <circle cx="50" cy="50" r="28" fill="#fef08a" opacity="0.3" />
+          <path d="M44 20 L56 20 L56 44 L80 44 L80 56 L56 56 L56 80 L44 80 L44 56 L20 56 L20 44 L44 44 Z" fill="#facc15" stroke="#ffffff" stroke-width="2" />
+        </svg>
+      </div>
+    `,
+    particles: {
+      count: 26,
+      colors: ["#facc15", "#4ade80", "#86efac", "#ffffff", "#fef08a"],
+      speedRange: [30, 90],
+      sizeRangePx: [2, 6],
+      gravity: -55, // Gentle rising healing sparkles
+      shape: "sparkle",
+      lifeMs: 750
+    }
+  },
+
+  turn_undead: {
+    id: "turn_undead",
+    durationMs: 950,
+    renderSvg: () => `
+      <style>
+        @keyframes vttDarknessLayer {
+          0% { transform: scale(1); opacity: 0.9; }
+          30% { transform: scale(1.1); opacity: 0.9; filter: blur(2px); }
+          60% { transform: scale(1.6); opacity: 0.3; filter: blur(8px); }
+          100% { transform: scale(2.2); opacity: 0; filter: blur(14px); }
+        }
+        @keyframes vttHolyLightWipe {
+          0% { transform: scale(0.1); opacity: 0; }
+          25% { transform: scale(0.4); opacity: 1; }
+          65% { transform: scale(2.8); opacity: 0.8; }
+          100% { transform: scale(3.5); opacity: 0; }
+        }
+        @keyframes vttHolySymbolPulse {
+          0% { transform: scale(0.5); opacity: 0; }
+          25% { transform: scale(1.3); opacity: 1; filter: drop-shadow(0 0 20px #facc15); }
+          70% { transform: scale(1.1); opacity: 0.9; }
+          100% { transform: scale(1.6); opacity: 0; }
+        }
+      </style>
+      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <!-- Darkness Mist Layer -->
+        <div style="position: absolute; width: 140px; height: 140px; background: radial-gradient(circle, #0f172a 0%, #1e293b 50%, transparent 100%); border-radius: 50%; animation: vttDarknessLayer 0.9s ease-out forwards;"></div>
+        <!-- Holy Light Wipe Wave -->
+        <div style="position: absolute; width: 80px; height: 80px; background: radial-gradient(circle, #ffffff 10%, #facc15 60%, transparent 100%); border-radius: 50%; animation: vttHolyLightWipe 0.88s cubic-bezier(0.16, 1, 0.3, 1) forwards;"></div>
+        <!-- Dark Symbol igniting into Holy Light -->
+        <svg viewBox="0 0 100 100" width="80" height="80" style="position: absolute; animation: vttHolySymbolPulse 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
+          <circle cx="50" cy="50" r="32" fill="none" stroke="#facc15" stroke-width="4" stroke-dasharray="8 6" />
+          <path d="M45 25 L55 25 L55 45 L75 45 L75 55 L55 55 L55 75 L45 75 L45 55 L25 55 L25 45 L45 45 Z" fill="#ffffff" stroke="#eab308" stroke-width="2" />
+        </svg>
+      </div>
+    `,
+    particles: {
+      count: 32,
+      colors: ["#fef08a", "#facc15", "#ffffff", "#eab308"],
+      speedRange: [50, 140],
+      sizeRangePx: [3, 6],
+      gravity: -65, // Rising holy ash
+      shape: "sparkle",
+      lifeMs: 800
+    }
+  },
+
+  lute_music: {
+    id: "lute_music",
+    durationMs: 950,
+    renderSvg: () => `
+      <style>
+        @keyframes vttLuteStrum {
+          0% { transform: scale(0.6) rotate(-15deg); opacity: 0; }
+          20% { transform: scale(1.1) rotate(12deg); opacity: 1; filter: drop-shadow(0 0 12px #fbbf24); }
+          45% { transform: scale(1.0) rotate(-8deg); opacity: 1; }
+          70% { transform: scale(1.05) rotate(6deg); opacity: 0.9; }
+          100% { transform: scale(0.8) rotate(0deg); opacity: 0; }
+        }
+      </style>
+      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <svg viewBox="0 0 64 64" width="84" height="84" style="animation: vttLuteStrum 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
+          <!-- Body -->
+          <circle cx="26" cy="42" r="16" fill="#b45309" stroke="#78350f" stroke-width="2" />
+          <circle cx="26" cy="42" r="6" fill="#451a03" />
+          <!-- Neck & Head -->
+          <path d="M36 32 L54 14 L58 18 L40 36 Z" fill="#d97706" />
+          <path d="M52 12 L58 18 L62 14 L56 8 Z" fill="#78350f" />
+          <!-- Strings -->
+          <line x1="22" y1="46" x2="56" y2="12" stroke="#fef08a" stroke-width="1" />
+          <line x1="26" y1="48" x2="58" y2="16" stroke="#fef08a" stroke-width="1" />
+        </svg>
+      </div>
+    `,
+    particles: {
+      count: 24,
+      colors: ["#facc15", "#38bdf8", "#f472b6", "#a855f7", "#4ade80"],
+      speedRange: [30, 85],
+      sizeRangePx: [4, 8],
+      gravity: -50, // Drifting upward notes
+      shape: "note",
+      lifeMs: 850
+    }
+  },
+
+  lightning_strikes: {
+    id: "lightning_strikes",
+    durationMs: 800,
+    renderSvg: () => `
+      <style>
+        @keyframes vttLightningFlash {
+          0% { opacity: 0; }
+          12% { opacity: 0.45; background: #38bdf8; }
+          18% { opacity: 0; }
+          40% { opacity: 0.65; background: #ffffff; }
+          48% { opacity: 0; }
+          72% { opacity: 0.5; background: #00f2fe; }
+          82% { opacity: 0; }
+          100% { opacity: 0; }
+        }
+        @keyframes vttBoltStrike1 {
+          0% { opacity: 0; transform: translateY(-40px) scaleY(0.5); }
+          10% { opacity: 1; transform: translateY(0) scaleY(1.1); filter: drop-shadow(0 0 12px #38bdf8); }
+          22% { opacity: 0; transform: translateY(10px) scaleY(1); }
+          100% { opacity: 0; }
+        }
+        @keyframes vttBoltStrike2 {
+          0% { opacity: 0; }
+          36% { opacity: 0; transform: translateX(25px) translateY(-30px) scale(0.8) rotate(10deg); }
+          42% { opacity: 1; transform: translateX(20px) translateY(0) scale(1.2) rotate(10deg); filter: drop-shadow(0 0 16px #ffffff); }
+          54% { opacity: 0; }
+          100% { opacity: 0; }
+        }
+        @keyframes vttBoltStrike3 {
+          0% { opacity: 0; }
+          66% { opacity: 0; transform: translateX(-25px) translateY(-30px) scale(0.9) rotate(-12deg); }
+          74% { opacity: 1; transform: translateX(-20px) translateY(0) scale(1.1) rotate(-12deg); filter: drop-shadow(0 0 14px #00f2fe); }
+          86% { opacity: 0; }
+          100% { opacity: 0; }
+        }
+      </style>
+      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <div style="position: absolute; width: 100%; height: 100%; animation: vttLightningFlash 0.78s cubic-bezier(0.16, 1, 0.3, 1) forwards;"></div>
+        <!-- Bolt 1 -->
+        <svg viewBox="0 0 64 64" width="70" height="70" style="position: absolute; animation: vttBoltStrike1 0.75s forwards;">
+          <path d="M34 2 L18 34 L32 34 L26 62 L48 26 L34 26 Z" fill="#38bdf8" stroke="#ffffff" stroke-width="1.5" />
+        </svg>
+        <!-- Bolt 2 -->
+        <svg viewBox="0 0 64 64" width="76" height="76" style="position: absolute; animation: vttBoltStrike2 0.78s forwards;">
+          <path d="M34 2 L18 34 L32 34 L26 62 L48 26 L34 26 Z" fill="#ffffff" stroke="#00f2fe" stroke-width="2" />
+        </svg>
+        <!-- Bolt 3 -->
+        <svg viewBox="0 0 64 64" width="68" height="68" style="position: absolute; animation: vttBoltStrike3 0.78s forwards;">
+          <path d="M34 2 L18 34 L32 34 L26 62 L48 26 L34 26 Z" fill="#00f2fe" stroke="#ffffff" stroke-width="1.5" />
+        </svg>
+      </div>
+    `,
+    particles: {
+      count: 28,
+      colors: ["#38bdf8", "#00f2fe", "#ffffff", "#7dd3fc"],
+      speedRange: [80, 200],
+      sizeRangePx: [2, 5],
+      gravity: 160,
+      shape: "sparkle",
+      lifeMs: 500
     }
   }
 };
