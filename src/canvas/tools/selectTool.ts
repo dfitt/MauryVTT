@@ -15,6 +15,10 @@ export function bindSelectTool(engine: CanvasEngine): void {
   let anchorCorner = { x: 0, y: 0 };
   let resizeDir = { x: 1, y: 1 };
 
+  // Double-tap / double-click tracking for Simple Mode pinging
+  let lastSimpleTapTime = 0;
+  let lastSimpleTapPos = { x: 0, y: 0 };
+
   engine.onMouseDown((_e, worldX, worldY) => {
     if (engine.activeTool !== "select") return;
 
@@ -104,21 +108,30 @@ export function bindSelectTool(engine: CanvasEngine): void {
       }
     } else {
       if ((window as any).vttSimpleMode) {
-        const pingId = "ping-" + Math.random().toString(36).substring(2, 7);
-        const ttlMs = 2000;
-        const pingPayload = {
-          type: "PING" as const,
-          pingId,
-          peerId: sessionManager.myPeerId || "local",
-          username: sessionManager.myUsername || "Me",
-          color: sessionManager.myColor || "#eab308",
-          x: worldX,
-          y: worldY,
-          pingStyle: "ripple" as const,
-          ttlMs
-        };
-        engine.handleEphemeralPayload(pingPayload);
-        sessionManager.sendEphemeral(pingPayload);
+        const now = Date.now();
+        const dist = Math.hypot(worldX - lastSimpleTapPos.x, worldY - lastSimpleTapPos.y);
+        const maxDist = Math.max(30, 40 / engine.zoom);
+        if (now - lastSimpleTapTime < 450 && dist <= maxDist) {
+          const pingId = "ping-" + Math.random().toString(36).substring(2, 7);
+          const ttlMs = 2000;
+          const pingPayload = {
+            type: "PING" as const,
+            pingId,
+            peerId: sessionManager.myPeerId || "local",
+            username: sessionManager.myUsername || "Me",
+            color: sessionManager.myColor || "#eab308",
+            x: worldX,
+            y: worldY,
+            pingStyle: "ripple" as const,
+            ttlMs
+          };
+          engine.handleEphemeralPayload(pingPayload);
+          sessionManager.sendEphemeral(pingPayload);
+          lastSimpleTapTime = 0;
+        } else {
+          lastSimpleTapTime = now;
+          lastSimpleTapPos = { x: worldX, y: worldY };
+        }
       }
       engine.selectedEntityId = null;
       draggingEntity = null;

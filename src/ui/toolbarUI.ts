@@ -523,6 +523,8 @@ export function setupToolbarUI(engine: CanvasEngine): void {
   `;
   document.body.appendChild(simpleBar);
 
+  let preSimpleChatWasMinimized = false;
+
   const applySimpleMode = (enabled: boolean) => {
     (window as any).vttSimpleMode = enabled;
     document.body.classList.toggle("simple-mode-active", enabled);
@@ -534,6 +536,9 @@ export function setupToolbarUI(engine: CanvasEngine): void {
     if (enabled) {
       if (topHeader) topHeader.style.display = "none";
       if (chatWindow) {
+        if (!isMobilePhone()) {
+          preSimpleChatWasMinimized = chatWindow.classList.contains("minimized") || chatWindow.style.display === "none";
+        }
         chatWindow.classList.add("minimized");
         chatWindow.style.display = "none";
       }
@@ -546,7 +551,22 @@ export function setupToolbarUI(engine: CanvasEngine): void {
       engine.selectedEntityId = null;
     } else {
       if (topHeader) topHeader.style.display = "flex";
-      if (chatWindow) chatWindow.style.display = "flex";
+      if (chatWindow) {
+        if (isMobilePhone()) {
+          chatWindow.style.display = "flex";
+        } else {
+          if (preSimpleChatWasMinimized) {
+            chatWindow.classList.add("minimized");
+          } else {
+            chatWindow.classList.remove("minimized");
+          }
+          chatWindow.style.display = "flex";
+          const toggleBtn = chatWindow.querySelector<HTMLButtonElement>("#btn-toggle-chat");
+          if (toggleBtn) {
+            toggleBtn.textContent = chatWindow.classList.contains("minimized") ? "▲" : "▼";
+          }
+        }
+      }
       bar.style.display = "flex";
       simpleBar.style.display = "none";
     }

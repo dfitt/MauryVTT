@@ -8,6 +8,7 @@ export interface GridCellData {
 export interface QuickRoll {
   label: string;
   expr: string;
+  icon?: string;
 }
 
 export interface VTTDocument {
@@ -126,6 +127,7 @@ export interface ChatMessage {
   content: string;
   type: "text" | "system" | "action" | "roll";
   rollLabel?: string;
+  rollIcon?: string;
   thumbsUp?: number;
   thumbsDown?: number;
   laugh?: number;
