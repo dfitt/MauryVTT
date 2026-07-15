@@ -56,13 +56,13 @@ export function setupChatPanel(): void {
           <button class="btn-glass" id="dice-builder-icon-btn" data-tooltip="Choose Icon for this Roll & QuickRoll" style="padding: 6px 10px; font-size: 1.1em; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 6px;">🎲</button>
           <button class="btn-glass btn-primary" id="dice-builder-roll-btn" style="flex: 1; padding: 6px;">Roll</button>
           <button class="btn-glass" id="dice-builder-clear-btn" style="flex: 1; padding: 6px;">Clear</button>
-          <div id="dice-builder-icon-popover" class="toolbar-color-popover" style="display: none; position: absolute; top: calc(100% + 6px); left: 0; right: 0; background: rgba(15, 23, 42, 0.98); backdrop-filter: blur(14px); border: 1px solid rgba(56, 189, 248, 0.55); border-radius: 10px; padding: 8px; z-index: 5000; box-shadow: 0 8px 28px rgba(0, 0, 0, 0.7); flex-direction: row; justify-content: center; flex-wrap: wrap; gap: 8px;">
-            <button class="btn-glass roll-icon-swatch active" data-icon="🎲" title="Dice" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🎲</button>
-            <button class="btn-glass roll-icon-swatch" data-icon="⚔️" title="Sword" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">⚔️</button>
-            <button class="btn-glass roll-icon-swatch" data-icon="🏹" title="Bow and Arrow" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🏹</button>
-            <button class="btn-glass roll-icon-swatch" data-icon="🔥" title="Fireball" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🔥</button>
-            <button class="btn-glass roll-icon-swatch" data-icon="✨" title="Charming Pink Sparkles" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">✨</button>
-          </div>
+        </div>
+        <div id="dice-builder-icon-popover" style="display: none; width: 100%; box-sizing: border-box; background: rgba(15, 23, 42, 0.98); border: 1px solid rgba(56, 189, 248, 0.6); border-radius: 8px; padding: 8px; flex-direction: row; justify-content: center; flex-wrap: wrap; gap: 8px; box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.5);">
+          <button class="btn-glass roll-icon-swatch active" data-icon="🎲" title="Dice" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🎲</button>
+          <button class="btn-glass roll-icon-swatch" data-icon="⚔️" title="Sword" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">⚔️</button>
+          <button class="btn-glass roll-icon-swatch" data-icon="🏹" title="Bow and Arrow" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🏹</button>
+          <button class="btn-glass roll-icon-swatch" data-icon="🔥" title="Fireball" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🔥</button>
+          <button class="btn-glass roll-icon-swatch" data-icon="✨" title="Charming Pink Sparkles" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">✨</button>
         </div>
       </div>
     </div>
@@ -813,6 +813,13 @@ export function setupChatPanel(): void {
 
         console.log("[DiceAnimation] Starting 1-second rapid rolling animation for message:", msg.id, "Sides:", diceSides);
 
+        if (msg.rollIcon) {
+          const effectId = getEffectIdForIcon(msg.rollIcon);
+          if (effectId) {
+            EffectEngine.playOverElement(msgEl, effectId);
+          }
+        }
+
         let frame = 0;
         const totalFrames = 20;
         const interval = setInterval(() => {
@@ -829,13 +836,6 @@ export function setupChatPanel(): void {
             afterSpan.style.opacity = "1";
             void afterSpan.offsetWidth;
             afterSpan.classList.add("roll-punch-anim");
-
-            if (msg.rollIcon) {
-              const effectId = getEffectIdForIcon(msg.rollIcon);
-              if (effectId) {
-                EffectEngine.playOverElement(msgEl, effectId);
-              }
-            }
 
             container.scrollTop = container.scrollHeight;
             console.log("[DiceAnimation] Finished animation for message:", msg.id, "- afterSpan diagnostics -> innerHTML:", afterSpan.innerHTML, "display:", afterSpan.style.display, "opacity:", afterSpan.style.opacity, "rect:", afterSpan.getBoundingClientRect());
