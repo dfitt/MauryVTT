@@ -71,14 +71,17 @@ export function setupChatPanel(): void {
           <button class="btn-glass roll-icon-swatch" data-icon="<span style='display:inline-block; color:#22c55e; filter:drop-shadow(0 0 4px rgba(34,197,94,0.85));'>☁️</span>" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;"><span style="display:inline-block; color:#22c55e; filter:drop-shadow(0 0 4px rgba(34,197,94,0.85));">☁️</span></button>
           <button class="btn-glass roll-icon-swatch" data-icon="🛡️" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🛡️</button>
           <button class="btn-glass roll-icon-swatch" data-icon="❄️" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">❄️</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="👻" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">👻</button>
           <button class="btn-glass roll-icon-swatch" data-icon="👁️" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">👁️</button>
           <button class="btn-glass roll-icon-swatch" data-icon="💀" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">💀</button>
           <button class="btn-glass roll-icon-swatch" data-icon="🚫" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🚫</button>
           <button class="btn-glass roll-icon-swatch" data-icon="🌿" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🌿</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="🔨" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🔨</button>
           <button class="btn-glass roll-icon-swatch" data-icon="🧠" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🧠</button>
           <button class="btn-glass roll-icon-swatch" data-icon="💫" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">💫</button>
+          <button class="btn-glass roll-icon-swatch" data-icon="💢" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">💢</button>
+          <button class="btn-glass roll-icon-swatch" data-icon="🌀" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🌀</button>
+          <button class="btn-glass roll-icon-swatch" data-icon="🐉" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🐉</button>
+          <button class="btn-glass roll-icon-swatch" data-icon="⏳" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">⏳</button>
+          <button class="btn-glass roll-icon-swatch" data-icon="🧪" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🧪</button>
         </div>
       </div>
     </div>

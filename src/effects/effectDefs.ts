@@ -30,14 +30,17 @@ export function getEffectIdForIcon(icon?: string): string | null {
   if (icon.includes("☁️") || icon.includes("☣️") || icon.includes("🧪") || icon.includes("toxic_cloud")) return "toxic_cloud";
   if (icon.includes("🛡️") || icon.includes("arcane_shield")) return "arcane_shield";
   if (icon.includes("❄️") || icon.includes("🧊") || icon.includes("ice_spike")) return "ice_spike";
-  if (icon.includes("👻") || icon.includes("stealth_vanish")) return "stealth_vanish";
   if (icon.includes("👁️") || icon.includes("eldritch_blast")) return "eldritch_blast";
   if (icon.includes("💀") || icon.includes("necrotic_drain")) return "necrotic_drain";
   if (icon.includes("🚫") || icon.includes("counterspell")) return "counterspell";
   if (icon.includes("🌿") || icon.includes("nature_entangle")) return "nature_entangle";
-  if (icon.includes("🔨") || icon.includes("hammer_smash")) return "hammer_smash";
   if (icon.includes("🧠") || icon.includes("psychic_blast")) return "psychic_blast";
   if (icon.includes("💫") || icon.includes("💥") || icon.includes("divine_smite")) return "divine_smite";
+  if (icon.includes("💢") || icon.includes("💪") || icon.includes("barbarian_rage")) return "barbarian_rage";
+  if (icon.includes("🌀") || icon.includes("wild_magic")) return "wild_magic";
+  if (icon.includes("🐉") || icon.includes("🐲") || icon.includes("dragon_breath")) return "dragon_breath";
+  if (icon.includes("⏳") || icon.includes("time_warp")) return "time_warp";
+  if (icon.includes("🧪") || icon.includes("acid_splash")) return "acid_splash";
   return null;
 }
 
@@ -609,43 +612,7 @@ export const EFFECT_REGISTRY: Record<string, VttEffectDefinition> = {
     }
   },
 
-  stealth_vanish: {
-    id: "stealth_vanish",
-    durationMs: 850,
-    renderSvg: () => `
-      <style>
-        @keyframes vttStealthGhost {
-          0% { transform: scale(0.6); opacity: 0; filter: blur(0px); }
-          25% { transform: scale(1.1); opacity: 0.9; filter: drop-shadow(0 0 16px #818cf8); }
-          60% { transform: scale(1.5); opacity: 0.5; filter: blur(6px); }
-          100% { transform: scale(2.2); opacity: 0; filter: blur(14px); }
-        }
-        @keyframes vttShadowRing {
-          0% { transform: scale(0.2); opacity: 0.8; }
-          100% { transform: scale(2.8); opacity: 0; }
-        }
-      </style>
-      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
-        <!-- Shadow Ripple Ring -->
-        <div style="position: absolute; width: 80px; height: 80px; border: 3px solid #64748b; border-radius: 50%; box-shadow: 0 0 14px #1e293b; animation: vttShadowRing 0.8s ease-out forwards;"></div>
-        <!-- Shadowy Phantom Silhouette -->
-        <svg viewBox="0 0 64 64" width="80" height="80" style="position: absolute; animation: vttStealthGhost 0.82s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
-          <path d="M32 6 C18 6 12 18 12 30 L12 56 L20 48 L28 56 L36 48 L44 56 L52 48 L52 30 C52 18 46 6 32 6 Z" fill="#334155" stroke="#818cf8" stroke-width="1.5" />
-          <circle cx="24" cy="24" r="3" fill="#c084fc" />
-          <circle cx="40" cy="24" r="3" fill="#c084fc" />
-        </svg>
-      </div>
-    `,
-    particles: {
-      count: 24,
-      colors: ["#334155", "#64748b", "#a855f7", "#cbd5e1"],
-      speedRange: [30, 90],
-      sizeRangePx: [3, 7],
-      gravity: -30,
-      shape: "circle",
-      lifeMs: 700
-    }
-  },
+
 
   eldritch_blast: {
     id: "eldritch_blast",
@@ -809,48 +776,7 @@ export const EFFECT_REGISTRY: Record<string, VttEffectDefinition> = {
     }
   },
 
-  hammer_smash: {
-    id: "hammer_smash",
-    durationMs: 850,
-    renderSvg: () => `
-      <style>
-        @keyframes vttHammerSwing {
-          0% { transform: translate(50%, -140%) rotate(-65deg) scale(1.3); opacity: 0; }
-          20% { opacity: 1; }
-          40% { transform: translate(0%, 6%) rotate(12deg) scale(1.5); opacity: 1; filter: drop-shadow(0 4px 14px rgba(0,0,0,0.85)); }
-          50% { transform: translate(0%, 12%) rotate(15deg) scale(1.5); }
-          70% { transform: translate(0%, 6%) rotate(12deg) scale(1.5); opacity: 1; }
-          100% { transform: translate(0%, 6%) rotate(12deg) scale(1.2); opacity: 0; }
-        }
-        @keyframes vttHammerShock {
-          0% { transform: scaleX(0.1) scaleY(0.4); opacity: 1; }
-          40% { transform: scaleX(2.4) scaleY(1.3); opacity: 0.9; }
-          100% { transform: scaleX(3.5) scaleY(1.6); opacity: 0; }
-        }
-      </style>
-      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
-        <!-- Anvil Shockwave Ring -->
-        <div style="position: absolute; width: 90px; height: 36px; border: 4px solid #fbbf24; border-radius: 50%; box-shadow: 0 0 16px #f59e0b; animation: vttHammerShock 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards; animation-delay: 0.3s; opacity: 0;"></div>
-        <!-- Warhammer SVG -->
-        <svg viewBox="0 0 64 64" width="92" height="92" style="position: absolute; animation: vttHammerSwing 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;">
-          <!-- Haft -->
-          <path d="M12 52 L50 14" stroke="#78350f" stroke-width="4.5" stroke-linecap="round" />
-          <!-- Heavy Hammer Head -->
-          <rect x="34" y="6" width="22" height="14" rx="2" transform="rotate(45 45 13)" fill="#94a3b8" stroke="#475569" stroke-width="2" />
-          <rect x="38" y="10" width="14" height="6" rx="1" transform="rotate(45 45 13)" fill="#e2e8f0" />
-        </svg>
-      </div>
-    `,
-    particles: {
-      count: 28,
-      colors: ["#f59e0b", "#fbbf24", "#ffffff", "#94a3b8"],
-      speedRange: [70, 180],
-      sizeRangePx: [2, 5],
-      gravity: 190,
-      shape: "sparkle",
-      lifeMs: 650
-    }
-  },
+
 
   psychic_blast: {
     id: "psychic_blast",
@@ -932,6 +858,209 @@ export const EFFECT_REGISTRY: Record<string, VttEffectDefinition> = {
       sizeRangePx: [2, 6],
       gravity: 110,
       shape: "sparkle",
+      lifeMs: 700
+    }
+  },
+
+  barbarian_rage: {
+    id: "barbarian_rage",
+    durationMs: 850,
+    renderSvg: () => `
+      <style>
+        @keyframes vttRageAura {
+          0% { transform: scale(0.3); opacity: 0; filter: blur(4px); }
+          30% { transform: scale(1.45); opacity: 1; filter: drop-shadow(0 0 22px #ef4444); }
+          70% { transform: scale(1.25); opacity: 0.85; }
+          100% { transform: scale(1.8); opacity: 0; filter: blur(10px); }
+        }
+        @keyframes vttClawSlash {
+          0% { transform: scale(1.6) translate(-20px, -20px); opacity: 0; }
+          25% { transform: scale(1.1) translate(0px, 0px); opacity: 1; filter: drop-shadow(0 0 16px #f97316); }
+          65% { transform: scale(1.0) translate(5px, 5px); opacity: 0.9; }
+          100% { transform: scale(0.8) translate(15px, 15px); opacity: 0; }
+        }
+      </style>
+      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <!-- Boiling Primal Fury Aura Ring -->
+        <div style="position: absolute; width: 86px; height: 86px; border: 4px solid #ef4444; border-radius: 50%; box-shadow: 0 0 24px #dc2626; animation: vttRageAura 0.82s cubic-bezier(0.16, 1, 0.3, 1) forwards;"></div>
+        <!-- Raging Primal Claw Slashes -->
+        <svg viewBox="0 0 64 64" width="86" height="86" style="position: absolute; animation: vttClawSlash 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
+          <path d="M12 18 C26 28 38 42 46 54" stroke="#ef4444" stroke-width="5" stroke-linecap="round" />
+          <path d="M22 10 C36 20 48 34 56 46" stroke="#f97316" stroke-width="6" stroke-linecap="round" />
+          <path d="M8 28 C20 38 32 50 40 58" stroke="#ef4444" stroke-width="4" stroke-linecap="round" />
+        </svg>
+      </div>
+    `,
+    particles: {
+      count: 32,
+      colors: ["#ef4444", "#f97316", "#dc2626", "#fbbf24"],
+      speedRange: [80, 200],
+      sizeRangePx: [3, 6],
+      gravity: -100, // Boiling rage embers rising up
+      shape: "sparkle",
+      lifeMs: 700
+    }
+  },
+
+  wild_magic: {
+    id: "wild_magic",
+    durationMs: 900,
+    renderSvg: () => `
+      <style>
+        @keyframes vttChaosVortex {
+          0% { transform: scale(0.2) rotate(0deg); opacity: 0; filter: blur(4px); }
+          30% { transform: scale(1.4) rotate(180deg); opacity: 1; filter: drop-shadow(0 0 20px #ec4899); }
+          70% { transform: scale(1.2) rotate(360deg); opacity: 0.9; }
+          100% { transform: scale(0.1) rotate(540deg); opacity: 0; filter: blur(8px); }
+        }
+        @keyframes vttChaosPulse {
+          0% { transform: scale(0.1); opacity: 1; }
+          50% { transform: scale(2.2); opacity: 0.7; }
+          100% { transform: scale(3.4); opacity: 0; }
+        }
+      </style>
+      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <!-- Prismatic Rainbow Pulse Ring -->
+        <div style="position: absolute; width: 80px; height: 80px; border: 3px dashed #38bdf8; border-radius: 50%; box-shadow: 0 0 18px #facc15; animation: vttChaosPulse 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;"></div>
+        <!-- Prismatic Spiral Vortex -->
+        <svg viewBox="0 0 64 64" width="86" height="86" style="position: absolute; animation: vttChaosVortex 0.88s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
+          <path d="M32 6 C46 6 58 18 58 32 C58 46 46 58 32 58 C18 58 6 46 6 32" fill="none" stroke="#ec4899" stroke-width="4" stroke-linecap="round" />
+          <path d="M32 14 C42 14 50 22 50 32 C50 42 42 50 32 50 C22 50 14 42 14 32" fill="none" stroke="#facc15" stroke-width="3" stroke-linecap="round" />
+          <path d="M32 22 C38 22 42 26 42 32 C42 38 38 42 32 42 C26 42 22 38 22 32" fill="none" stroke="#38bdf8" stroke-width="3" stroke-linecap="round" />
+          <circle cx="32" cy="32" r="6" fill="#4ade80" />
+        </svg>
+      </div>
+    `,
+    particles: {
+      count: 36,
+      colors: ["#ec4899", "#38bdf8", "#facc15", "#a855f7", "#4ade80", "#ff5722"],
+      speedRange: [60, 180],
+      sizeRangePx: [3, 6],
+      gravity: 40,
+      shape: "circle",
+      lifeMs: 800
+    }
+  },
+
+  dragon_breath: {
+    id: "dragon_breath",
+    durationMs: 850,
+    renderSvg: () => `
+      <style>
+        @keyframes vttDragonHead {
+          0% { transform: scale(0.4) translate(-30px, 10px) rotate(-15deg); opacity: 0; }
+          25% { transform: scale(1.1) translate(-10px, 0px) rotate(0deg); opacity: 1; filter: drop-shadow(0 0 18px #f59e0b); }
+          70% { transform: scale(1.05) translate(-10px, 0px) rotate(5deg); opacity: 0.9; }
+          100% { transform: scale(1.3) translate(-20px, -10px) rotate(15deg); opacity: 0; }
+        }
+        @keyframes vttBreathCone {
+          0% { transform: scaleX(0) scaleY(0.1); opacity: 0; }
+          30% { transform: scaleX(1.8) scaleY(1.4); opacity: 1; filter: drop-shadow(0 0 24px #ef4444); }
+          75% { transform: scaleX(2.2) scaleY(1.6); opacity: 0.85; }
+          100% { transform: scaleX(2.6) scaleY(2.0); opacity: 0; }
+        }
+      </style>
+      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <!-- Blazing Elemental Breath Cone -->
+        <div style="position: absolute; left: 35%; width: 110px; height: 70px; background: radial-gradient(ellipse at left, #ffffff 10%, #fbbf24 40%, #ef4444 80%, transparent 100%); transform-origin: left center; animation: vttBreathCone 0.78s cubic-bezier(0.16, 1, 0.3, 1) forwards;"></div>
+        <!-- Golden Draconic Emblem -->
+        <svg viewBox="0 0 64 64" width="80" height="80" style="position: absolute; animation: vttDragonHead 0.82s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
+          <path d="M12 36 L28 20 L48 24 L56 34 L44 42 L32 38 L20 48 Z" fill="#78350f" stroke="#f59e0b" stroke-width="2" />
+          <path d="M28 20 L36 8 L44 22 Z" fill="#f59e0b" />
+          <circle cx="44" cy="28" r="3" fill="#ef4444" stroke="#ffffff" stroke-width="1" />
+        </svg>
+      </div>
+    `,
+    particles: {
+      count: 34,
+      colors: ["#f59e0b", "#ef4444", "#fbbf24", "#ffffff"],
+      speedRange: [90, 220],
+      sizeRangePx: [2, 6],
+      gravity: 20,
+      shape: "sparkle",
+      lifeMs: 650
+    }
+  },
+
+  time_warp: {
+    id: "time_warp",
+    durationMs: 900,
+    renderSvg: () => `
+      <style>
+        @keyframes vttHourglass {
+          0% { transform: scale(0.3) rotate(0deg); opacity: 0; }
+          25% { transform: scale(1.3) rotate(180deg); opacity: 1; filter: drop-shadow(0 0 20px #facc15); }
+          65% { transform: scale(1.15) rotate(360deg); opacity: 0.9; }
+          100% { transform: scale(1.6) rotate(540deg); opacity: 0; filter: blur(8px); }
+        }
+        @keyframes vttTimeRing {
+          0% { transform: scale(0.2); opacity: 1; border-width: 4px; }
+          50% { transform: scale(2.2); opacity: 0.7; border-width: 2px; }
+          100% { transform: scale(3.2); opacity: 0; border-width: 1px; }
+        }
+      </style>
+      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <!-- Chronurgy Time Rings -->
+        <div style="position: absolute; width: 80px; height: 80px; border: 3px solid #facc15; border-radius: 50%; box-shadow: 0 0 16px #38bdf8; animation: vttTimeRing 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;"></div>
+        <div style="position: absolute; width: 80px; height: 80px; border: 2px dashed #38bdf8; border-radius: 50%; animation: vttTimeRing 0.88s cubic-bezier(0.16, 1, 0.3, 1) forwards; animation-delay: 0.12s; opacity: 0;"></div>
+        <!-- Golden Chronometer Hourglass -->
+        <svg viewBox="0 0 64 64" width="82" height="82" style="position: absolute; animation: vttHourglass 0.88s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
+          <polygon points="18,10 46,10 32,32" fill="rgba(56, 189, 248, 0.4)" stroke="#facc15" stroke-width="2.5" />
+          <polygon points="18,54 46,54 32,32" fill="rgba(250, 204, 21, 0.5)" stroke="#facc15" stroke-width="2.5" />
+          <line x1="14" y1="10" x2="50" y2="10" stroke="#fbbf24" stroke-width="4" stroke-linecap="round" />
+          <line x1="14" y1="54" x2="50" y2="54" stroke="#fbbf24" stroke-width="4" stroke-linecap="round" />
+          <circle cx="32" cy="32" r="3" fill="#ffffff" />
+        </svg>
+      </div>
+    `,
+    particles: {
+      count: 26,
+      colors: ["#facc15", "#fbbf24", "#38bdf8", "#ffffff"],
+      speedRange: [20, 70],
+      sizeRangePx: [2, 5],
+      gravity: 0, // Suspended in time
+      shape: "sparkle",
+      lifeMs: 850
+    }
+  },
+
+  acid_splash: {
+    id: "acid_splash",
+    durationMs: 850,
+    renderSvg: () => `
+      <style>
+        @keyframes vttAcidGlob {
+          0% { transform: translateY(-100%) scale(0.3); opacity: 0; }
+          25% { transform: translateY(0%) scale(1.4, 0.8); opacity: 1; filter: drop-shadow(0 0 18px #84cc16); }
+          45% { transform: translateY(-12%) scale(0.9, 1.2); }
+          65% { transform: translateY(0%) scale(1.1, 0.9); opacity: 0.9; }
+          100% { transform: translateY(6%) scale(1.6, 0.4); opacity: 0; filter: blur(6px); }
+        }
+        @keyframes vttCorrodeBubbles {
+          0% { transform: scale(0.2); opacity: 0; }
+          30% { transform: scale(1.5); opacity: 1; }
+          100% { transform: scale(2.4); opacity: 0; }
+        }
+      </style>
+      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <!-- Caustic Splatter Ring -->
+        <div style="position: absolute; width: 84px; height: 40px; border: 4px solid #84cc16; border-radius: 50%; box-shadow: 0 0 16px #22c55e; animation: vttCorrodeBubbles 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; animation-delay: 0.15s; opacity: 0;"></div>
+        <!-- Slime Acid Glob -->
+        <svg viewBox="0 0 64 64" width="84" height="84" style="position: absolute; animation: vttAcidGlob 0.82s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
+          <path d="M32 12 C20 12 12 26 12 38 C12 50 20 56 32 56 C44 56 52 50 52 38 C52 26 44 12 32 12 Z" fill="#84cc16" stroke="#22c55e" stroke-width="2" />
+          <circle cx="26" cy="30" r="5" fill="#bef264" />
+          <circle cx="40" cy="36" r="4" fill="#15803d" />
+          <circle cx="30" cy="44" r="3" fill="#bef264" />
+        </svg>
+      </div>
+    `,
+    particles: {
+      count: 30,
+      colors: ["#84cc16", "#bef264", "#4ade80", "#15803d"],
+      speedRange: [60, 160],
+      sizeRangePx: [3, 7],
+      gravity: 180, // Dripping caustic acid droplets
+      shape: "circle",
       lifeMs: 700
     }
   }
