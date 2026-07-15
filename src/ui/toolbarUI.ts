@@ -12,6 +12,9 @@ const PALETTE_COLORS = [
   "#10b981", // Emerald
   "#a855f7", // Violet
   "#f97316", // Orange
+  "#ec4899", // Pink
+  "#84cc16", // Lime
+  "#6366f1", // Indigo
   "#f8fafc", // White
   "#000000", // Black
   "fog"      // Fog of War (special color)

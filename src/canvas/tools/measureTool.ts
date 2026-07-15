@@ -34,7 +34,8 @@ export function bindMeasureTool(engine: CanvasEngine): void {
 
     const doc = docStore.getDocument();
     const gridPx = doc.canvasSettings.gridSizePx || 50;
-    const feet = Math.round((distPx / gridPx) * 5);
+    const rawFeet = (distPx / gridPx) * 5;
+    const feet = Math.round(rawFeet / 5) * 5;
     const unitLabel = `${feet} ft`;
 
     engine.localMeasurement.endPoint = { x: worldX, y: worldY };

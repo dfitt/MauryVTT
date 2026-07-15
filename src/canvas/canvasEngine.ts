@@ -74,6 +74,7 @@ export class CanvasEngine {
   private activeMeasurements: Map<string, ActiveMeasurement> = new Map();
   private tokenHoverScales: Map<string, number> = new Map();
   private pingPunchScales: Map<string, number> = new Map();
+  private pingPunchTweens: Map<string, { peakScale: number; startTime: number; durationMs: number }> = new Map();
   public draggingEntityId: string | null = null;
   private renderPositions: Map<string, { x: number; y: number }> = new Map();
 
@@ -504,6 +505,7 @@ export class CanvasEngine {
             payload.y <= tok.position.y + halfH
           ) {
             this.pingPunchScales.set(tok.id, 4.0);
+            this.pingPunchTweens.set(tok.id, { peakScale: 4.0, startTime: Date.now(), durationMs: 500 });
             hitToken = true;
           }
         }
@@ -521,6 +523,7 @@ export class CanvasEngine {
               payload.y <= img.position.y + halfH
             ) {
               this.pingPunchScales.set(img.id, 1.25);
+              this.pingPunchTweens.set(img.id, { peakScale: 1.25, startTime: Date.now(), durationMs: 500 });
             }
           }
         }
@@ -576,6 +579,7 @@ export class CanvasEngine {
     }
 
     const doc = docStore.getDocument();
+    const now = Date.now();
     const ctx = this.ctx;
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
@@ -585,12 +589,17 @@ export class CanvasEngine {
 
     this.updateTokenHoverScales(doc);
 
-    for (const [id, currentPunch] of this.pingPunchScales.entries()) {
-      let nextPunch = currentPunch + (1.0 - currentPunch) * 0.12;
-      if (Math.abs(1.0 - nextPunch) < 0.005) {
+    for (const [id, tween] of this.pingPunchTweens.entries()) {
+      const elapsed = now - tween.startTime;
+      if (elapsed >= tween.durationMs) {
+        this.pingPunchTweens.delete(id);
         this.pingPunchScales.delete(id);
       } else {
-        this.pingPunchScales.set(id, nextPunch);
+        const progress = elapsed / tween.durationMs;
+        // Cosine easing: starts at peak scale and smoothly eases back down to 1.0 over exactly 500ms
+        const ease = (1 - Math.cos(progress * Math.PI)) / 2;
+        const currentScale = tween.peakScale - (tween.peakScale - 1.0) * ease;
+        this.pingPunchScales.set(id, currentScale);
       }
     }
 
@@ -692,7 +701,6 @@ export class CanvasEngine {
       this.drawMeasurement(ctx, this.localMeasurement);
     }
 
-    const now = Date.now();
     for (const [id, ping] of this.activePings.entries()) {
       const elapsed = now - ping.createdAt;
       if (elapsed > ping.ttlMs) {
@@ -942,12 +950,12 @@ export class CanvasEngine {
 
       // Draw lock indicator badge
       if (ent.locked) {
-        ctx.font = `${Math.max(14, 16 / this.zoom)}px Outfit, sans-serif`;
+        ctx.font = `${Math.max(7, 8 / this.zoom)}px Outfit, sans-serif`;
         ctx.fillStyle = "rgba(15, 23, 42, 0.9)";
-        ctx.fillRect(halfW - 24 / this.zoom, -halfH, 24 / this.zoom, 24 / this.zoom);
+        ctx.fillRect(halfW - 12 / this.zoom, -halfH, 12 / this.zoom, 12 / this.zoom);
         ctx.fillStyle = "#f43f5e";
         ctx.textAlign = "center";
-        ctx.fillText("🔒", halfW - 12 / this.zoom, -halfH + 17 / this.zoom);
+        ctx.fillText("🔒", halfW - 6 / this.zoom, -halfH + 9 / this.zoom);
       }
 
       // Draw Selection bounding box and 4 Corner Resize Handles

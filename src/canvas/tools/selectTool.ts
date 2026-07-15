@@ -103,6 +103,23 @@ export function bindSelectTool(engine: CanvasEngine): void {
         engine.draggingEntityId = null;
       }
     } else {
+      if ((window as any).vttSimpleMode) {
+        const pingId = "ping-" + Math.random().toString(36).substring(2, 7);
+        const ttlMs = 2000;
+        const pingPayload = {
+          type: "PING" as const,
+          pingId,
+          peerId: sessionManager.myPeerId || "local",
+          username: sessionManager.myUsername || "Me",
+          color: sessionManager.myColor || "#eab308",
+          x: worldX,
+          y: worldY,
+          pingStyle: "ripple" as const,
+          ttlMs
+        };
+        engine.handleEphemeralPayload(pingPayload);
+        sessionManager.sendEphemeral(pingPayload);
+      }
       engine.selectedEntityId = null;
       draggingEntity = null;
       engine.draggingEntityId = null;

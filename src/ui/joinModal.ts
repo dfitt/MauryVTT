@@ -6,7 +6,10 @@ const SWATCH_COLORS = [
   "#eab308", // Yellow
   "#10b981", // Emerald
   "#a855f7", // Violet
-  "#f97316"  // Orange
+  "#f97316", // Orange
+  "#ec4899", // Pink
+  "#84cc16", // Lime
+  "#6366f1"  // Indigo
 ];
 
 function getRoomCodeFromUrl(): string {
