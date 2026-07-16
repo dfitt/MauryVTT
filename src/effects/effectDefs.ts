@@ -38,9 +38,9 @@ export function getEffectIdForIcon(icon?: string): string | null {
   if (icon.includes("💫") || icon.includes("💥") || icon.includes("divine_smite")) return "divine_smite";
   if (icon.includes("💢") || icon.includes("💪") || icon.includes("barbarian_rage")) return "barbarian_rage";
   if (icon.includes("🌀") || icon.includes("wild_magic")) return "wild_magic";
-  if (icon.includes("🐉") || icon.includes("🐲") || icon.includes("dragon_breath")) return "dragon_breath";
   if (icon.includes("⏳") || icon.includes("time_warp")) return "time_warp";
-  if (icon.includes("🧪") || icon.includes("acid_splash")) return "acid_splash";
+  if (icon.includes("🕊️") || icon.includes("🙏") || icon.includes("guidance_bless")) return "guidance_bless";
+  if (icon.includes("🎯") || icon.includes("hunters_mark")) return "hunters_mark";
   return null;
 }
 
@@ -942,45 +942,7 @@ export const EFFECT_REGISTRY: Record<string, VttEffectDefinition> = {
     }
   },
 
-  dragon_breath: {
-    id: "dragon_breath",
-    durationMs: 850,
-    renderSvg: () => `
-      <style>
-        @keyframes vttDragonHead {
-          0% { transform: scale(0.4) translate(-30px, 10px) rotate(-15deg); opacity: 0; }
-          25% { transform: scale(1.1) translate(-10px, 0px) rotate(0deg); opacity: 1; filter: drop-shadow(0 0 18px #f59e0b); }
-          70% { transform: scale(1.05) translate(-10px, 0px) rotate(5deg); opacity: 0.9; }
-          100% { transform: scale(1.3) translate(-20px, -10px) rotate(15deg); opacity: 0; }
-        }
-        @keyframes vttBreathCone {
-          0% { transform: scaleX(0) scaleY(0.1); opacity: 0; }
-          30% { transform: scaleX(1.8) scaleY(1.4); opacity: 1; filter: drop-shadow(0 0 24px #ef4444); }
-          75% { transform: scaleX(2.2) scaleY(1.6); opacity: 0.85; }
-          100% { transform: scaleX(2.6) scaleY(2.0); opacity: 0; }
-        }
-      </style>
-      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
-        <!-- Blazing Elemental Breath Cone -->
-        <div style="position: absolute; left: 35%; width: 110px; height: 70px; background: radial-gradient(ellipse at left, #ffffff 10%, #fbbf24 40%, #ef4444 80%, transparent 100%); transform-origin: left center; animation: vttBreathCone 0.78s cubic-bezier(0.16, 1, 0.3, 1) forwards;"></div>
-        <!-- Golden Draconic Emblem -->
-        <svg viewBox="0 0 64 64" width="80" height="80" style="position: absolute; animation: vttDragonHead 0.82s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
-          <path d="M12 36 L28 20 L48 24 L56 34 L44 42 L32 38 L20 48 Z" fill="#78350f" stroke="#f59e0b" stroke-width="2" />
-          <path d="M28 20 L36 8 L44 22 Z" fill="#f59e0b" />
-          <circle cx="44" cy="28" r="3" fill="#ef4444" stroke="#ffffff" stroke-width="1" />
-        </svg>
-      </div>
-    `,
-    particles: {
-      count: 34,
-      colors: ["#f59e0b", "#ef4444", "#fbbf24", "#ffffff"],
-      speedRange: [90, 220],
-      sizeRangePx: [2, 6],
-      gravity: 20,
-      shape: "sparkle",
-      lifeMs: 650
-    }
-  },
+
 
   time_warp: {
     id: "time_warp",
@@ -1024,44 +986,85 @@ export const EFFECT_REGISTRY: Record<string, VttEffectDefinition> = {
     }
   },
 
-  acid_splash: {
-    id: "acid_splash",
-    durationMs: 850,
+  guidance_bless: {
+    id: "guidance_bless",
+    durationMs: 900,
     renderSvg: () => `
       <style>
-        @keyframes vttAcidGlob {
-          0% { transform: translateY(-100%) scale(0.3); opacity: 0; }
-          25% { transform: translateY(0%) scale(1.4, 0.8); opacity: 1; filter: drop-shadow(0 0 18px #84cc16); }
-          45% { transform: translateY(-12%) scale(0.9, 1.2); }
-          65% { transform: translateY(0%) scale(1.1, 0.9); opacity: 0.9; }
-          100% { transform: translateY(6%) scale(1.6, 0.4); opacity: 0; filter: blur(6px); }
+        @keyframes vttHolyDove {
+          0% { transform: translateY(-30px) scale(0.4); opacity: 0; }
+          25% { transform: translateY(0px) scale(1.2); opacity: 1; filter: drop-shadow(0 0 18px #fef08a); }
+          65% { transform: translateY(4px) scale(1.1); opacity: 0.95; }
+          100% { transform: translateY(-15px) scale(1.4); opacity: 0; filter: blur(6px); }
         }
-        @keyframes vttCorrodeBubbles {
-          0% { transform: scale(0.2); opacity: 0; }
-          30% { transform: scale(1.5); opacity: 1; }
-          100% { transform: scale(2.4); opacity: 0; }
+        @keyframes vttBlessHalo {
+          0% { transform: scale(0.2); opacity: 1; }
+          50% { transform: scale(2.0); opacity: 0.8; }
+          100% { transform: scale(3.2); opacity: 0; }
         }
       </style>
       <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
-        <!-- Caustic Splatter Ring -->
-        <div style="position: absolute; width: 84px; height: 40px; border: 4px solid #84cc16; border-radius: 50%; box-shadow: 0 0 16px #22c55e; animation: vttCorrodeBubbles 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; animation-delay: 0.15s; opacity: 0;"></div>
-        <!-- Slime Acid Glob -->
-        <svg viewBox="0 0 64 64" width="84" height="84" style="position: absolute; animation: vttAcidGlob 0.82s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
-          <path d="M32 12 C20 12 12 26 12 38 C12 50 20 56 32 56 C44 56 52 50 52 38 C52 26 44 12 32 12 Z" fill="#84cc16" stroke="#22c55e" stroke-width="2" />
-          <circle cx="26" cy="30" r="5" fill="#bef264" />
-          <circle cx="40" cy="36" r="4" fill="#15803d" />
-          <circle cx="30" cy="44" r="3" fill="#bef264" />
+        <!-- Expanding Benediction Halos -->
+        <div style="position: absolute; width: 76px; height: 76px; border: 3px solid #fef08a; border-radius: 50%; box-shadow: 0 0 16px #facc15; animation: vttBlessHalo 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;"></div>
+        <div style="position: absolute; width: 76px; height: 76px; border: 2px dashed #38bdf8; border-radius: 50%; animation: vttBlessHalo 0.88s cubic-bezier(0.16, 1, 0.3, 1) forwards; animation-delay: 0.15s; opacity: 0;"></div>
+        <!-- Holy Guidance Dove / Wings -->
+        <svg viewBox="0 0 64 64" width="84" height="84" style="position: absolute; animation: vttHolyDove 0.88s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
+          <path d="M32 14 C24 14 10 22 6 34 C14 30 22 32 30 24 C30 38 24 46 32 54 C40 46 34 38 34 24 C42 32 50 30 58 34 C54 22 40 14 32 14 Z" fill="#ffffff" stroke="#facc15" stroke-width="2" />
+          <circle cx="32" cy="18" r="4" fill="#fef08a" stroke="#f59e0b" stroke-width="1.5" />
         </svg>
       </div>
     `,
     particles: {
       count: 30,
-      colors: ["#84cc16", "#bef264", "#4ade80", "#15803d"],
-      speedRange: [60, 160],
-      sizeRangePx: [3, 7],
-      gravity: 180, // Dripping caustic acid droplets
-      shape: "circle",
-      lifeMs: 700
+      colors: ["#fef08a", "#facc15", "#38bdf8", "#ffffff"],
+      speedRange: [30, 90],
+      sizeRangePx: [2, 6],
+      gravity: 30, // Gentle benediction fall
+      shape: "sparkle",
+      lifeMs: 800
+    }
+  },
+
+  hunters_mark: {
+    id: "hunters_mark",
+    durationMs: 800,
+    renderSvg: () => `
+      <style>
+        @keyframes vttSniperReticle {
+          0% { transform: scale(2.4) rotate(-45deg); opacity: 0; }
+          25% { transform: scale(1.0) rotate(0deg); opacity: 1; filter: drop-shadow(0 0 18px #ef4444); }
+          65% { transform: scale(0.95) rotate(0deg); opacity: 0.95; }
+          100% { transform: scale(1.3) rotate(15deg); opacity: 0; filter: blur(4px); }
+        }
+        @keyframes vttLockFlash {
+          0% { transform: scale(0.1); opacity: 1; }
+          30% { transform: scale(1.8); opacity: 0.8; }
+          100% { transform: scale(2.6); opacity: 0; }
+        }
+      </style>
+      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <!-- Target Lock Shock Ring -->
+        <div style="position: absolute; width: 70px; height: 70px; border: 3px solid #ef4444; border-radius: 50%; box-shadow: 0 0 16px #facc15; animation: vttLockFlash 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards; animation-delay: 0.1s; opacity: 0;"></div>
+        <!-- Hunter's Mark Sniper Crosshair -->
+        <svg viewBox="0 0 64 64" width="86" height="86" style="position: absolute; animation: vttSniperReticle 0.78s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
+          <circle cx="32" cy="32" r="22" fill="none" stroke="#ef4444" stroke-width="3" stroke-dasharray="10 6" />
+          <circle cx="32" cy="32" r="14" fill="none" stroke="#38bdf8" stroke-width="2" />
+          <circle cx="32" cy="32" r="4" fill="#facc15" />
+          <line x1="32" y1="2" x2="32" y2="16" stroke="#ef4444" stroke-width="3" stroke-linecap="round" />
+          <line x1="32" y1="48" x2="32" y2="62" stroke="#ef4444" stroke-width="3" stroke-linecap="round" />
+          <line x1="2" y1="32" x2="16" y2="32" stroke="#ef4444" stroke-width="3" stroke-linecap="round" />
+          <line x1="48" y1="32" x2="62" y2="32" stroke="#ef4444" stroke-width="3" stroke-linecap="round" />
+        </svg>
+      </div>
+    `,
+    particles: {
+      count: 32,
+      colors: ["#ef4444", "#facc15", "#38bdf8", "#ffffff"],
+      speedRange: [80, 200],
+      sizeRangePx: [2, 5],
+      gravity: 0,
+      shape: "sparkle",
+      lifeMs: 650
     }
   }
 };
