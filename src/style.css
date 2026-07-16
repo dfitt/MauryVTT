@@ -282,9 +282,12 @@ html, body {
 body.simple-mode-active .top-header,
 body.simple-mode-active .chat-window.minimized,
 body.simple-mode-active #vtt-chat-panel.minimized,
-body.simple-mode-active .bottom-toolbar,
-body.simple-mode-active #selection-toolbar {
+body.simple-mode-active .bottom-toolbar {
   display: none !important;
+}
+
+body.simple-mode-active #selection-toolbar {
+  bottom: 74px;
 }
 
 /* =========================================

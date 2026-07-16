@@ -719,7 +719,6 @@ export function setupToolbarUI(engine: CanvasEngine): void {
         chatWindow.classList.add("minimized");
         chatWindow.style.display = "none";
       }
-      if (selectionToolbar) selectionToolbar.style.display = "none";
       bar.style.display = "none";
       simpleBar.style.display = "flex";
 
