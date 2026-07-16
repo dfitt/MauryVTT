@@ -1,0 +1,134 @@
+{
+  "version": "1.0.0",
+  "bundleName": "Test Expansion Pack (8 VFX)",
+  "effects": [
+    {
+      "id": "plasma_torpedo",
+      "name": "Plasma Torpedo",
+      "iconSvg": "<svg viewBox=\"0 0 64 64\" width=\"1.25em\" height=\"1.25em\" data-vtt-icon=\"plasma_torpedo\" style=\"vertical-align:-0.25em; display:inline-block; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.85));\"><circle cx=\"32\" cy=\"32\" r=\"22\" fill=\"#0891b2\" stroke=\"#22d3ee\" stroke-width=\"2\"/><circle cx=\"32\" cy=\"32\" r=\"14\" fill=\"#c084fc\" opacity=\"0.8\"/><circle cx=\"32\" cy=\"32\" r=\"6\" fill=\"#ffffff\"/><line x1=\"16\" y1=\"32\" x2=\"48\" y2=\"32\" stroke=\"#a5f3fc\" stroke-width=\"2\" opacity=\"0.7\"/><line x1=\"32\" y1=\"16\" x2=\"32\" y2=\"48\" stroke=\"#a5f3fc\" stroke-width=\"2\" opacity=\"0.7\"/></svg>",
+      "durationMs": 1800,
+      "effectSvg": "<g><circle cx=\"32\" cy=\"32\" r=\"28\" fill=\"#06b6d4\" opacity=\"0.4\"><animate attributeName=\"r\" values=\"6;28;34;6\" dur=\"1.8s\" repeatCount=\"1\"/><animate attributeName=\"opacity\" values=\"0.8;0.4;0.1;0\" dur=\"1.8s\" repeatCount=\"1\"/></circle><circle cx=\"32\" cy=\"32\" r=\"18\" fill=\"none\" stroke=\"#a855f7\" stroke-width=\"4\"><animate attributeName=\"r\" values=\"4;18;26;30\" dur=\"1.8s\" repeatCount=\"1\"/><animate attributeName=\"opacity\" values=\"1;0.8;0.2;0\" dur=\"1.8s\" repeatCount=\"1\"/></circle><path d=\"M12 32 L52 32 M32 12 L32 52\" stroke=\"#67e8f9\" stroke-width=\"3\" stroke-linecap=\"round\"><animate attributeName=\"opacity\" values=\"1;0.5;0\" dur=\"1.8s\" repeatCount=\"1\"/></path><circle cx=\"32\" cy=\"32\" r=\"8\" fill=\"#ffffff\"><animate attributeName=\"r\" values=\"12;8;4;0\" dur=\"1.8s\" repeatCount=\"1\"/></circle></g>",
+      "particles": {
+        "count": 40,
+        "colors": ["#22d3ee", "#c084fc", "#ffffff"],
+        "speedRange": [80, 240],
+        "sizeRangePx": [3, 8],
+        "gravity": 0,
+        "shape": "sparkle",
+        "lifeMs": 1400
+      }
+    },
+    {
+      "id": "vampiric_bite",
+      "name": "Vampiric Bite",
+      "iconSvg": "<svg viewBox=\"0 0 64 64\" width=\"1.25em\" height=\"1.25em\" data-vtt-icon=\"vampiric_bite\" style=\"vertical-align:-0.25em; display:inline-block; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.85));\"><path d=\"M14 18 C24 12, 40 12, 50 18 L46 36 L38 24 C36 28, 28 28, 26 24 L18 36 Z\" fill=\"#f8fafc\" stroke=\"#991b1b\" stroke-width=\"2\"/><path d=\"M26 36 Q26 48 24 54 Q22 48 22 36 Z M40 36 Q40 48 42 54 Q44 48 44 36 Z\" fill=\"#dc2626\"/><circle cx=\"32\" cy=\"44\" r=\"4\" fill=\"#ef4444\" opacity=\"0.8\"/></svg>",
+      "durationMs": 1600,
+      "effectSvg": "<g><path d=\"M10 12 C24 6, 40 6, 54 12 L48 40 L38 26 C36 30, 28 30, 26 26 L16 40 Z\" fill=\"#ffffff\" stroke=\"#7f1d1d\" stroke-width=\"3\"><animateTransform attributeName=\"transform\" type=\"translate\" values=\"0,-25; 0,6; 0,6; 0,-30\" dur=\"1.6s\" repeatCount=\"1\"/><animate attributeName=\"opacity\" values=\"0;1;1;0\" dur=\"1.6s\" repeatCount=\"1\"/></path><path d=\"M24 40 Q24 56 22 62 Q20 56 20 40 Z M42 40 Q42 56 44 62 Q46 56 46 40 Z\" fill=\"#dc2626\"><animate attributeName=\"opacity\" values=\"0;0;1;1;0\" dur=\"1.6s\" repeatCount=\"1\"/></path><circle cx=\"32\" cy=\"36\" r=\"20\" fill=\"#991b1b\" opacity=\"0\"><animate attributeName=\"opacity\" values=\"0;0.5;0\" dur=\"1.6s\" repeatCount=\"1\"/><animate attributeName=\"r\" values=\"5;25;35\" dur=\"1.6s\" repeatCount=\"1\"/></circle></g>",
+      "particles": {
+        "count": 35,
+        "colors": ["#991b1b", "#ef4444", "#450a0a"],
+        "speedRange": [40, 140],
+        "sizeRangePx": [4, 9],
+        "gravity": 120,
+        "shape": "ember",
+        "lifeMs": 1200
+      }
+    },
+    {
+      "id": "quantum_singularity",
+      "name": "Quantum Singularity",
+      "iconSvg": "<svg viewBox=\"0 0 64 64\" width=\"1.25em\" height=\"1.25em\" data-vtt-icon=\"quantum_singularity\" style=\"vertical-align:-0.25em; display:inline-block; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.85));\"><circle cx=\"32\" cy=\"32\" r=\"22\" fill=\"#1e1b4b\" stroke=\"#a855f7\" stroke-width=\"2.5\"/><circle cx=\"32\" cy=\"32\" r=\"12\" fill=\"#000000\" stroke=\"#ec4899\" stroke-width=\"1.5\"/><ellipse cx=\"32\" cy=\"32\" rx=\"24\" ry=\"8\" fill=\"none\" stroke=\"#c084fc\" stroke-width=\"1.5\" transform=\"rotate(-30 32 32)\"/><circle cx=\"32\" cy=\"32\" r=\"4\" fill=\"#f3e8ff\"/></svg>",
+      "durationMs": 2200,
+      "effectSvg": "<g><circle cx=\"32\" cy=\"32\" r=\"26\" fill=\"#312e81\" opacity=\"0.6\"><animate attributeName=\"r\" values=\"30;18;8;2;28\" dur=\"2.2s\" repeatCount=\"1\"/><animate attributeName=\"opacity\" values=\"0.3;0.8;1;0\" dur=\"2.2s\" repeatCount=\"1\"/></circle><ellipse cx=\"32\" cy=\"32\" rx=\"28\" ry=\"10\" fill=\"none\" stroke=\"#e879f9\" stroke-width=\"3\"><animateTransform attributeName=\"transform\" type=\"rotate\" values=\"0 32 32; 360 32 32\" dur=\"2.2s\" repeatCount=\"1\"/><animate attributeName=\"opacity\" values=\"1;0.7;0\" dur=\"2.2s\" repeatCount=\"1\"/></ellipse><ellipse cx=\"32\" cy=\"32\" rx=\"28\" ry=\"10\" fill=\"none\" stroke=\"#38bdf8\" stroke-width=\"2\"><animateTransform attributeName=\"transform\" type=\"rotate\" values=\"60 32 32; -300 32 32\" dur=\"2.2s\" repeatCount=\"1\"/></ellipse><circle cx=\"32\" cy=\"32\" r=\"10\" fill=\"#000000\" stroke=\"#ffffff\" stroke-width=\"2\"><animate attributeName=\"r\" values=\"4;14;18;0\" dur=\"2.2s\" repeatCount=\"1\"/></circle></g>",
+      "particles": {
+        "count": 50,
+        "colors": ["#a855f7", "#ec4899", "#38bdf8", "#ffffff"],
+        "speedRange": [60, 200],
+        "sizeRangePx": [2, 6],
+        "gravity": -20,
+        "shape": "sparkle",
+        "lifeMs": 1800
+      }
+    },
+    {
+      "id": "golden_aegis",
+      "name": "Golden Aegis",
+      "iconSvg": "<svg viewBox=\"0 0 64 64\" width=\"1.25em\" height=\"1.25em\" data-vtt-icon=\"golden_aegis\" style=\"vertical-align:-0.25em; display:inline-block; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.85));\"><polygon points=\"32,6 54,16 54,34 C54,48 32,58 32,58 C32,58 10,48 10,34 L10,16 Z\" fill=\"#78350f\" stroke=\"#f59e0b\" stroke-width=\"2.5\"/><polygon points=\"32,12 48,20 48,34 C48,44 32,52 32,52 C32,52 16,44 16,34 L16,20 Z\" fill=\"#f59e0b\" opacity=\"0.8\"/><path d=\"M32 18 L32 44 M22 26 L42 26\" stroke=\"#ffffff\" stroke-width=\"3.5\" stroke-linecap=\"round\"/></svg>",
+      "durationMs": 1900,
+      "effectSvg": "<g><polygon points=\"32,4 56,16 56,36 C56,50 32,60 32,60 C32,60 8,50 8,36 L8,16 Z\" fill=\"#fbbf24\" opacity=\"0.3\"><animate attributeName=\"opacity\" values=\"0;0.5;0.3;0\" dur=\"1.9s\" repeatCount=\"1\"/><animateTransform attributeName=\"transform\" type=\"scale\" values=\"0.7;1.05;1;0.9\" origin=\"32 32\" dur=\"1.9s\" repeatCount=\"1\"/></polygon><polygon points=\"32,10 50,20 50,36 C50,46 32,54 32,54 C32,54 14,46 14,36 L14,20 Z\" fill=\"none\" stroke=\"#fde047\" stroke-width=\"3\"><animate attributeName=\"stroke-width\" values=\"1;4;2;0\" dur=\"1.9s\" repeatCount=\"1\"/></polygon><path d=\"M32 16 L32 46 M18 26 L46 26\" stroke=\"#ffffff\" stroke-width=\"4\" stroke-linecap=\"round\"><animate attributeName=\"opacity\" values=\"0;1;1;0\" dur=\"1.9s\" repeatCount=\"1\"/></path><circle cx=\"32\" cy=\"32\" r=\"26\" fill=\"none\" stroke=\"#f59e0b\" stroke-width=\"1.5\" stroke-dasharray=\"6 4\"><animateTransform attributeName=\"transform\" type=\"rotate\" values=\"0 32 32; 180 32 32\" dur=\"1.9s\" repeatCount=\"1\"/></circle></g>",
+      "particles": {
+        "count": 45,
+        "colors": ["#fbbf24", "#fef08a", "#ffffff"],
+        "speedRange": [30, 120],
+        "sizeRangePx": [3, 7],
+        "gravity": -60,
+        "shape": "sparkle",
+        "lifeMs": 1500
+      }
+    },
+    {
+      "id": "chain_lightning_arc",
+      "name": "Chain Lightning Arc",
+      "iconSvg": "<svg viewBox=\"0 0 64 64\" width=\"1.25em\" height=\"1.25em\" data-vtt-icon=\"chain_lightning_arc\" style=\"vertical-align:-0.25em; display:inline-block; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.85));\"><circle cx=\"32\" cy=\"32\" r=\"24\" fill=\"#0c4a6e\" stroke=\"#38bdf8\" stroke-width=\"2\"/><polyline points=\"36,8 20,32 34,32 26,56 46,28 32,28 42,8\" fill=\"#facc15\" stroke=\"#ffffff\" stroke-width=\"1.5\" stroke-linejoin=\"round\"/></svg>",
+      "durationMs": 1500,
+      "effectSvg": "<g><polyline points=\"38,4 16,32 34,32 24,60 50,28 32,28 44,4\" fill=\"none\" stroke=\"#38bdf8\" stroke-width=\"8\" opacity=\"0.5\" stroke-linejoin=\"round\"><animate attributeName=\"opacity\" values=\"0;0.8;0.2;0.9;0\" dur=\"1.5s\" repeatCount=\"1\"/></polyline><polyline points=\"38,4 16,32 34,32 24,60 50,28 32,28 44,4\" fill=\"#fef08a\" stroke=\"#ffffff\" stroke-width=\"3\" stroke-linejoin=\"round\"><animate attributeName=\"opacity\" values=\"0;1;0.4;1;0\" dur=\"1.5s\" repeatCount=\"1\"/></polyline><circle cx=\"24\" cy=\"60\" r=\"8\" fill=\"#38bdf8\" opacity=\"0.7\"><animate attributeName=\"r\" values=\"2;12;0\" dur=\"1.5s\" repeatCount=\"1\"/></circle><circle cx=\"50\" cy=\"28\" r=\"6\" fill=\"#facc15\"><animate attributeName=\"r\" values=\"1;8;0\" dur=\"1.5s\" repeatCount=\"1\"/></circle></g>",
+      "particles": {
+        "count": 40,
+        "colors": ["#38bdf8", "#fde047", "#ffffff"],
+        "speedRange": [100, 300],
+        "sizeRangePx": [2, 6],
+        "gravity": 0,
+        "shape": "splinter",
+        "lifeMs": 1000
+      }
+    },
+    {
+      "id": "acid_splash_pool",
+      "name": "Caustic Acid Splash",
+      "iconSvg": "<svg viewBox=\"0 0 64 64\" width=\"1.25em\" height=\"1.25em\" data-vtt-icon=\"acid_splash_pool\" style=\"vertical-align:-0.25em; display:inline-block; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.85));\"><circle cx=\"32\" cy=\"32\" r=\"22\" fill=\"#14532d\" stroke=\"#4ade80\" stroke-width=\"2\"/><path d=\"M20 42 Q32 34 44 42 C48 52 16 52 20 42 Z\" fill=\"#22c55e\"/><circle cx=\"26\" cy=\"32\" r=\"4\" fill=\"#86efac\"/><circle cx=\"38\" cy=\"26\" r=\"3\" fill=\"#86efac\"/><circle cx=\"30\" cy=\"20\" r=\"2.5\" fill=\"#bbf7d0\"/></svg>",
+      "durationMs": 1700,
+      "effectSvg": "<g><ellipse cx=\"32\" cy=\"48\" rx=\"24\" ry=\"10\" fill=\"#16a34a\" opacity=\"0.7\"><animate attributeName=\"rx\" values=\"4;24;26;22\" dur=\"1.7s\" repeatCount=\"1\"/><animate attributeName=\"opacity\" values=\"0.9;0.7;0.2;0\" dur=\"1.7s\" repeatCount=\"1\"/></ellipse><path d=\"M16 46 C24 20, 40 20, 48 46 Z\" fill=\"#4ade80\" opacity=\"0.8\"><animate attributeName=\"opacity\" values=\"0;0.8;0.3;0\" dur=\"1.7s\" repeatCount=\"1\"/><animateTransform attributeName=\"transform\" type=\"scale\" values=\"0.5;1.1;1\" origin=\"32 46\" dur=\"1.7s\" repeatCount=\"1\"/></path><circle cx=\"24\" cy=\"30\" r=\"5\" fill=\"#bbf7d0\"><animate attributeName=\"cy\" values=\"44;24;16\" dur=\"1.7s\" repeatCount=\"1\"/><animate attributeName=\"opacity\" values=\"1;1;0\" dur=\"1.7s\" repeatCount=\"1\"/></circle><circle cx=\"40\" cy=\"34\" r=\"4\" fill=\"#bbf7d0\"><animate attributeName=\"cy\" values=\"46;28;20\" dur=\"1.7s\" repeatCount=\"1\"/><animate attributeName=\"opacity\" values=\"1;0.8;0\" dur=\"1.7s\" repeatCount=\"1\"/></circle><circle cx=\"32\" cy=\"22\" r=\"6\" fill=\"#ffffff\"><animate attributeName=\"cy\" values=\"40;18;10\" dur=\"1.7s\" repeatCount=\"1\"/><animate attributeName=\"opacity\" values=\"1;1;0\" dur=\"1.7s\" repeatCount=\"1\"/></circle></g>",
+      "particles": {
+        "count": 35,
+        "colors": ["#22c55e", "#4ade80", "#bbf7d0"],
+        "speedRange": [50, 160],
+        "sizeRangePx": [4, 8],
+        "gravity": 140,
+        "shape": "circle",
+        "lifeMs": 1300
+      }
+    },
+    {
+      "id": "sonic_boom_wave",
+      "name": "Sonic Boom Shockwave",
+      "iconSvg": "<svg viewBox=\"0 0 64 64\" width=\"1.25em\" height=\"1.25em\" data-vtt-icon=\"sonic_boom_wave\" style=\"vertical-align:-0.25em; display:inline-block; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.85));\"><circle cx=\"32\" cy=\"32\" r=\"24\" fill=\"#0f172a\" stroke=\"#38bdf8\" stroke-width=\"2\"/><circle cx=\"32\" cy=\"32\" r=\"18\" fill=\"none\" stroke=\"#7dd3fc\" stroke-width=\"2\" stroke-dasharray=\"6 3\"/><circle cx=\"32\" cy=\"32\" r=\"10\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.5\"/><circle cx=\"32\" cy=\"32\" r=\"4\" fill=\"#38bdf8\"/></svg>",
+      "durationMs": 1600,
+      "effectSvg": "<g><circle cx=\"32\" cy=\"32\" r=\"28\" fill=\"none\" stroke=\"#38bdf8\" stroke-width=\"6\"><animate attributeName=\"r\" values=\"4;28;30\" dur=\"1.6s\" repeatCount=\"1\"/><animate attributeName=\"opacity\" values=\"1;0.6;0\" dur=\"1.6s\" repeatCount=\"1\"/><animate attributeName=\"stroke-width\" values=\"8;3;0\" dur=\"1.6s\" repeatCount=\"1\"/></circle><circle cx=\"32\" cy=\"32\" r=\"20\" fill=\"none\" stroke=\"#7dd3fc\" stroke-width=\"4\" stroke-dasharray=\"8 4\"><animate attributeName=\"r\" values=\"2;20;26\" dur=\"1.6s\" repeatCount=\"1\"/><animate attributeName=\"opacity\" values=\"0;1;0\" dur=\"1.6s\" repeatCount=\"1\"/></circle><circle cx=\"32\" cy=\"32\" r=\"12\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"3\"><animate attributeName=\"r\" values=\"1;12;22\" dur=\"1.6s\" repeatCount=\"1\"/><animate attributeName=\"opacity\" values=\"0;0.9;0\" dur=\"1.6s\" repeatCount=\"1\"/></circle><circle cx=\"32\" cy=\"32\" r=\"6\" fill=\"#e0f2fe\"><animate attributeName=\"r\" values=\"10;6;0\" dur=\"1.6s\" repeatCount=\"1\"/></circle></g>",
+      "particles": {
+        "count": 45,
+        "colors": ["#38bdf8", "#7dd3fc", "#ffffff"],
+        "speedRange": [120, 280],
+        "sizeRangePx": [2, 6],
+        "gravity": 0,
+        "shape": "circle",
+        "lifeMs": 1100
+      }
+    },
+    {
+      "id": "phoenix_rebirth",
+      "name": "Phoenix Rebirth Flame",
+      "iconSvg": "<svg viewBox=\"0 0 64 64\" width=\"1.25em\" height=\"1.25em\" data-vtt-icon=\"phoenix_rebirth\" style=\"vertical-align:-0.25em; display:inline-block; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.85));\"><circle cx=\"32\" cy=\"32\" r=\"24\" fill=\"#7c2d12\" stroke=\"#f97316\" stroke-width=\"2\"/><path d=\"M32 12 C38 22, 54 20, 52 34 C50 44, 38 52, 32 46 C26 52, 14 44, 12 34 C10 20, 26 22, 32 12 Z\" fill=\"#f59e0b\" stroke=\"#fde047\" stroke-width=\"1.5\"/><circle cx=\"32\" cy=\"24\" r=\"4\" fill=\"#ffffff\"/></svg>",
+      "durationMs": 2100,
+      "effectSvg": "<g><path d=\"M32 8 C40 20, 58 18, 56 36 C54 48, 40 56, 32 48 C24 56, 10 48, 8 36 C6 18, 24 20, 32 8 Z\" fill=\"#ea580c\" opacity=\"0.7\"><animate attributeName=\"opacity\" values=\"0;0.8;0.3;0\" dur=\"2.1s\" repeatCount=\"1\"/><animateTransform attributeName=\"transform\" type=\"scale\" values=\"0.6;1.1;0.95;1\" origin=\"32 36\" dur=\"2.1s\" repeatCount=\"1\"/></path><path d=\"M32 16 C38 26, 50 24, 48 38 C46 46, 36 52, 32 46 C28 52, 18 46, 16 38 C14 24, 26 26, 32 16 Z\" fill=\"#fbbf24\"><animate attributeName=\"opacity\" values=\"0;1;0.8;0\" dur=\"2.1s\" repeatCount=\"1\"/></path><path d=\"M32 24 C36 30, 42 30, 40 38 C38 44, 34 46, 32 42 C30 46, 26 44, 24 38 C22 30, 28 30, 32 24 Z\" fill=\"#ffffff\"><animate attributeName=\"opacity\" values=\"0;1;1;0\" dur=\"2.1s\" repeatCount=\"1\"/></path><circle cx=\"32\" cy=\"30\" r=\"5\" fill=\"#fef08a\"><animate attributeName=\"r\" values=\"2;6;8;0\" dur=\"2.1s\" repeatCount=\"1\"/></circle></g>",
+      "particles": {
+        "count": 50,
+        "colors": ["#ea580c", "#f59e0b", "#fde047", "#ffffff"],
+        "speedRange": [50, 180],
+        "sizeRangePx": [3, 8],
+        "gravity": -80,
+        "shape": "ember",
+        "lifeMs": 1700
+      }
+    }
+  ]
+}
