@@ -69,6 +69,7 @@ export class CanvasEngine {
   private selectionListeners: Set<(id: string | null) => void> = new Set();
   private toolOptionsListeners: Set<() => void> = new Set();
   private panViewListeners: Set<() => void> = new Set();
+  private accumulatedUserPanDistance: number = 0;
 
   // Hover cursor state for tool previews
   public hoverWorldPos: { x: number; y: number } | null = null;
@@ -287,7 +288,10 @@ export class CanvasEngine {
           moved = true;
           e.preventDefault();
         }
-        if (moved) this.notifyPanView();
+        if (moved) {
+          this.accumulatedUserPanDistance += panStep;
+          if (this.accumulatedUserPanDistance >= 15) this.notifyPanView();
+        }
       }
     });
     window.addEventListener("keyup", (e) => {
@@ -321,7 +325,11 @@ export class CanvasEngine {
         this.panY += dy;
         lastMouseX = e.clientX;
         lastMouseY = e.clientY;
-        if (Math.abs(dx) > 0 || Math.abs(dy) > 0) this.notifyPanView();
+        const dist = Math.hypot(dx, dy);
+        if (dist > 0) {
+          this.accumulatedUserPanDistance += dist;
+          if (this.accumulatedUserPanDistance >= 15) this.notifyPanView();
+        }
         return;
       }
 
@@ -403,7 +411,6 @@ export class CanvasEngine {
 
       this.panX += (worldAfter.x - worldBefore.x) * this.zoom;
       this.panY += (worldAfter.y - worldBefore.y) * this.zoom;
-      this.notifyPanView();
     });
 
     // Mobile touch support: Two-finger pan & pinch zoom + 1-finger Pan Tool
@@ -483,8 +490,12 @@ export class CanvasEngine {
           this.panY += (worldAfter.y - worldBefore.y) * this.zoom;
           initialPinchDist = dist;
         }
-        if (Math.abs(dx) > 0 || Math.abs(dy) > 0 || Math.abs(dist - initialPinchDist) > 2) {
-          this.notifyPanView();
+        const panDist = Math.hypot(dx, dy);
+        if (panDist > 0) {
+          this.accumulatedUserPanDistance += panDist;
+          if (this.accumulatedUserPanDistance >= 15) {
+            this.notifyPanView();
+          }
         }
         return;
       }
@@ -502,7 +513,11 @@ export class CanvasEngine {
           this.panY += dy;
           lastTouchX = touch.clientX;
           lastTouchY = touch.clientY;
-          if (Math.abs(dx) > 0 || Math.abs(dy) > 0) this.notifyPanView();
+          const panDist = Math.hypot(dx, dy);
+          if (panDist > 0) {
+            this.accumulatedUserPanDistance += panDist;
+            if (this.accumulatedUserPanDistance >= 15) this.notifyPanView();
+          }
           return;
         }
 
