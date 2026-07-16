@@ -23,7 +23,18 @@ export function bindSelectTool(engine: CanvasEngine): void {
     if (engine.activeTool !== "select") return;
 
     const doc = docStore.getDocument();
-    const entities = Object.values(doc.entities).sort((a, b) => b.zIndex - a.zIndex);
+    const entities = Object.values(doc.entities).sort((a, b) => {
+      const getRank = (e: CanvasEntity) => {
+        if (e.type === "token") return 1;
+        if (e.type === "image" && !Boolean((e as any).isMap)) return 2;
+        if (e.type === "image" && Boolean((e as any).isMap)) return 3;
+        return 4;
+      };
+      const rankA = getRank(a);
+      const rankB = getRank(b);
+      if (rankA !== rankB) return rankA - rankB;
+      return b.zIndex - a.zIndex;
+    });
 
     // 1. Check if user clicked a corner resize handle on the currently selected entity
     if (engine.selectedEntityId) {

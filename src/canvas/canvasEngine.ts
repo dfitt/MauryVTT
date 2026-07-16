@@ -607,29 +607,38 @@ export class CanvasEngine {
     ctx.translate(this.panX, this.panY);
     ctx.scale(this.zoom, this.zoom);
 
-    const entities = Object.values(doc.entities).sort((a, b) => {
-      const typeA = a.type === "token" ? 1 : 0;
-      const typeB = b.type === "token" ? 1 : 0;
-      if (typeA !== typeB) return typeA - typeB;
-      return a.zIndex - b.zIndex;
-    });
+    const entities = Object.values(doc.entities).sort((a, b) => a.zIndex - b.zIndex);
 
     const mapEntities = entities.filter((ent) => ent.type === "image" && Boolean((ent as any).isMap));
-    const regularEntities = entities.filter((ent) => !(ent.type === "image" && Boolean((ent as any).isMap)));
+    const regularImages = entities.filter((ent) => ent.type === "image" && !Boolean((ent as any).isMap));
+    const tokens = entities.filter((ent) => ent.type === "token");
+    const drawings = entities.filter((ent) => ent.type === "line");
 
     // 1. Draw Map background entities behind the grid
     for (const ent of mapEntities) {
       this.drawEntity(ctx, ent);
     }
 
-    // 2. Draw Grid over Map background images
+    // 2. Draw Grid lines over Map background images
     if (doc.canvasSettings.gridEnabled) {
       this.drawGrid(ctx, doc.canvasSettings);
     }
+
+    // 3. Draw Regular Images over the Grid
+    for (const ent of regularImages) {
+      this.drawEntity(ctx, ent);
+    }
+
+    // 4. Draw Tokens over all images (including map & regular images)
+    for (const ent of tokens) {
+      this.drawEntity(ctx, ent);
+    }
+
+    // 5. Draw Fills over all images and tokens
     this.drawGridCells(ctx, doc);
 
-    // 3. Draw regular entities (images, tokens, etc.) over the Grid
-    for (const ent of regularEntities) {
+    // 6. Draw Drawings over all images and tokens
+    for (const ent of drawings) {
       this.drawEntity(ctx, ent);
     }
 
