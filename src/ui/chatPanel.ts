@@ -57,49 +57,13 @@ export function setupChatPanel(): void {
           <button class="btn-glass btn-primary" id="dice-builder-roll-btn" style="flex: 1; padding: 6px;">Roll</button>
           <button class="btn-glass" id="dice-builder-clear-btn" style="flex: 1; padding: 6px;">Clear</button>
         </div>
-        <div id="dice-builder-icon-popover" style="display: none; width: 100%; box-sizing: border-box; background: rgba(15, 23, 42, 0.98); border: 1px solid rgba(56, 189, 248, 0.6); border-radius: 8px; padding: 8px; flex-direction: row; justify-content: center; flex-wrap: wrap; gap: 8px; box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.5);">
-          <button class="btn-glass roll-icon-swatch active" data-icon="🎲" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🎲</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="⚔️" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">⚔️</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="🏹" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🏹</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="🔥" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🔥</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="✨" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">✨</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="🗡️" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🗡️</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="✝️" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">✝️</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="<span style='display:inline-block; transform:rotate(180deg); filter:invert(1);'>✝️</span>" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;"><span style="display:inline-block; transform:rotate(180deg); filter:invert(1);">✝️</span></button>
-          <button class="btn-glass roll-icon-swatch" data-icon='<svg viewBox="0 0 64 64" width="1.1em" height="1.1em" style="vertical-align:middle; display:inline-block;"><circle cx="26" cy="42" r="16" fill="#92400e" stroke="#78350f" stroke-width="2"/><circle cx="26" cy="42" r="6" fill="#451a03"/><path d="M36 32 L54 14 L58 18 L40 36 Z" fill="#d97706"/><path d="M52 12 L58 18 L62 14 L56 8 Z" fill="#78350f"/><line x1="22" y1="46" x2="56" y2="12" stroke="#fef08a" stroke-width="1"/><line x1="26" y1="48" x2="58" y2="16" stroke="#fef08a" stroke-width="1"/></svg>' style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;"><svg viewBox="0 0 64 64" width="1.1em" height="1.1em" style="vertical-align:middle; display:inline-block;"><circle cx="26" cy="42" r="16" fill="#92400e" stroke="#78350f" stroke-width="2"/><circle cx="26" cy="42" r="6" fill="#451a03"/><path d="M36 32 L54 14 L58 18 L40 36 Z" fill="#d97706"/><path d="M52 12 L58 18 L62 14 L56 8 Z" fill="#78350f"/><line x1="22" y1="46" x2="56" y2="12" stroke="#fef08a" stroke-width="1"/><line x1="26" y1="48" x2="58" y2="16" stroke="#fef08a" stroke-width="1"/></svg></button>
-          <button class="btn-glass roll-icon-swatch" data-icon="⚡" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">⚡</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="<span style='display:inline-block; color:#22c55e; filter:drop-shadow(0 0 4px rgba(34,197,94,0.85));'>☁️</span>" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;"><span style="display:inline-block; color:#22c55e; filter:drop-shadow(0 0 4px rgba(34,197,94,0.85));">☁️</span></button>
-          <button class="btn-glass roll-icon-swatch" data-icon="🛡️" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🛡️</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="❄️" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">❄️</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="👁️" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">👁️</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="💀" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">💀</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="🚫" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🚫</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="🌿" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🌿</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="🧠" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🧠</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="💫" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">💫</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="💢" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">💢</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="🌀" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🌀</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="⏳" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">⏳</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="🕊️" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🕊️</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="🎯" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🎯</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="🍄" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🍄</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="🔮" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🔮</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="🏮" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🏮</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="🕸️" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🕸️</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="🍷" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🍷</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="🐺" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🐺</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="🦋" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🦋</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="🪵" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🪵</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="🐐" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🐐</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="🐈" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🐈</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="🔔" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🔔</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="🦉" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🦉</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="🔨" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🔨</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="🪓" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🪓</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="🔱" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🔱</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="⛓️" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">⛓️</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="🪃" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🪃</button>
-          <button class="btn-glass roll-icon-swatch" data-icon="🤺" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🤺</button>
+        <div id="dice-builder-icon-popover" style="display: none; width: 100%; box-sizing: border-box; background: rgba(15, 23, 42, 0.98); border: 1px solid rgba(56, 189, 248, 0.6); border-radius: 8px; padding: 8px; flex-direction: column; gap: 8px; box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.5);">
+          <div id="popover-nav-header" style="display: flex; align-items: center; justify-content: space-between; width: 100%; border-bottom: 1px solid rgba(56, 189, 248, 0.2); padding-bottom: 4px;">
+            <button id="popover-prev-btn" class="btn-glass" style="padding: 2px 10px; font-size: 0.9em; cursor: pointer; border-radius: 4px;" title="Previous Page">◀</button>
+            <span id="popover-page-txt" style="font-size: 0.8em; color: #94a3b8; font-weight: 600;">Page 1</span>
+            <button id="popover-next-btn" class="btn-glass" style="padding: 2px 10px; font-size: 0.9em; cursor: pointer; border-radius: 4px;" title="Next Page">▶</button>
+          </div>
+          <div id="popover-icon-grid" style="display: flex; flex-direction: row; justify-content: center; flex-wrap: wrap; gap: 8px;"></div>
         </div>
       </div>
     </div>
@@ -171,28 +135,87 @@ export function setupChatPanel(): void {
   const iconPopoverEl = panel.querySelector<HTMLElement>("#dice-builder-icon-popover")!;
   let selectedRollIcon = "🎲";
 
+  const ALL_ROLL_ICONS = [
+    "🎲", "⚔️", "🏹", "🔥", "✨", "🗡️", "✝️",
+    `<span style='display:inline-block; transform:rotate(180deg); filter:invert(1);'>✝️</span>`,
+    `<svg viewBox="0 0 64 64" width="1.1em" height="1.1em" style="vertical-align:middle; display:inline-block;"><circle cx="26" cy="42" r="16" fill="#92400e" stroke="#78350f" stroke-width="2"/><circle cx="26" cy="42" r="6" fill="#451a03"/><path d="M36 32 L54 14 L58 18 L40 36 Z" fill="#d97706"/><path d="M52 12 L58 18 L62 14 L56 8 Z" fill="#78350f"/><line x1="22" y1="46" x2="56" y2="12" stroke="#fef08a" stroke-width="1"/><line x1="26" y1="48" x2="58" y2="16" stroke="#fef08a" stroke-width="1"/></svg>`,
+    "⚡",
+    `<span style='display:inline-block; color:#22c55e; filter:drop-shadow(0 0 4px rgba(34,197,94,0.85));'>☁️</span>`,
+    "🛡️", "❄️", "👁️", "💀", "🚫", "🌿", "🧠", "💫", "💢", "🌀", "⏳", "🕊️", "🎯", "🍄", "🔮", "🏮", "🕸️", "🍷", "🐺", "🦋", "🪵", "🐐", "🐈", "🔔", "🦉", "🪃", "🤺",
+    "🪨", "🏆", "🌊", "👑", "⭕", "🧙", "🐉", "🏰"
+  ];
+
+  let currentIconPage = 0;
+  const ICONS_PER_PAGE = 20;
+
+  function renderPopoverPage(): void {
+    const gridEl = iconPopoverEl.querySelector<HTMLElement>("#popover-icon-grid");
+    const prevBtn = iconPopoverEl.querySelector<HTMLButtonElement>("#popover-prev-btn");
+    const nextBtn = iconPopoverEl.querySelector<HTMLButtonElement>("#popover-next-btn");
+    const pageTxt = iconPopoverEl.querySelector<HTMLElement>("#popover-page-txt");
+    if (!gridEl || !prevBtn || !nextBtn || !pageTxt) return;
+
+    const totalPages = Math.ceil(ALL_ROLL_ICONS.length / ICONS_PER_PAGE);
+    if (currentIconPage < 0) currentIconPage = 0;
+    if (currentIconPage >= totalPages) currentIconPage = Math.max(0, totalPages - 1);
+
+    pageTxt.textContent = `Page ${currentIconPage + 1} / ${totalPages}`;
+    prevBtn.disabled = currentIconPage === 0;
+    prevBtn.style.opacity = currentIconPage === 0 ? "0.4" : "1";
+    nextBtn.disabled = currentIconPage === totalPages - 1;
+    nextBtn.style.opacity = currentIconPage === totalPages - 1 ? "0.4" : "1";
+
+    const startIdx = currentIconPage * ICONS_PER_PAGE;
+    const pageIcons = ALL_ROLL_ICONS.slice(startIdx, startIdx + ICONS_PER_PAGE);
+
+    gridEl.innerHTML = pageIcons.map((iconHtml) => {
+      const isActive = selectedRollIcon === iconHtml;
+      return `<button class="btn-glass roll-icon-swatch ${isActive ? "active" : ""}" data-icon="${encodeURIComponent(iconHtml)}" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">${iconHtml}</button>`;
+    }).join("");
+
+    gridEl.querySelectorAll<HTMLButtonElement>(".roll-icon-swatch").forEach((swatch) => {
+      swatch.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const chosen = decodeURIComponent(swatch.getAttribute("data-icon") || "🎲");
+        selectedRollIcon = chosen;
+        iconBtnEl.innerHTML = chosen;
+        iconPopoverEl.style.display = "none";
+        renderPopoverPage();
+      });
+    });
+  }
+
+  iconPopoverEl.querySelector<HTMLButtonElement>("#popover-prev-btn")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (currentIconPage > 0) {
+      currentIconPage--;
+      renderPopoverPage();
+    }
+  });
+
+  iconPopoverEl.querySelector<HTMLButtonElement>("#popover-next-btn")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const totalPages = Math.ceil(ALL_ROLL_ICONS.length / ICONS_PER_PAGE);
+    if (currentIconPage < totalPages - 1) {
+      currentIconPage++;
+      renderPopoverPage();
+    }
+  });
+
   iconBtnEl.addEventListener("click", (e) => {
     e.stopPropagation();
-    iconPopoverEl.style.display = iconPopoverEl.style.display === "none" ? "flex" : "none";
+    if (iconPopoverEl.style.display === "none") {
+      iconPopoverEl.style.display = "flex";
+      renderPopoverPage();
+    } else {
+      iconPopoverEl.style.display = "none";
+    }
   });
 
   document.addEventListener("click", (e) => {
     if (!iconBtnEl.contains(e.target as Node) && !iconPopoverEl.contains(e.target as Node)) {
       iconPopoverEl.style.display = "none";
     }
-  });
-
-  iconPopoverEl.querySelectorAll<HTMLButtonElement>(".roll-icon-swatch").forEach((swatch) => {
-    swatch.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const chosen = swatch.getAttribute("data-icon") || "🎲";
-      selectedRollIcon = chosen;
-      iconBtnEl.innerHTML = chosen;
-      iconPopoverEl.style.display = "none";
-      iconPopoverEl.querySelectorAll(".roll-icon-swatch").forEach((s) => {
-        s.classList.toggle("active", s.getAttribute("data-icon") === chosen);
-      });
-    });
   });
 
   function formatBuilderExpression(): string {
@@ -300,9 +323,7 @@ export function setupChatPanel(): void {
         iconBtnEl.innerHTML = "🎲";
         if (iconPopoverEl) {
           iconPopoverEl.style.display = "none";
-          iconPopoverEl.querySelectorAll(".roll-icon-swatch").forEach((s) => {
-            s.classList.toggle("active", s.getAttribute("data-icon") === "🎲");
-          });
+          renderPopoverPage();
         }
       }
       detailsEl.style.display = "flex";
@@ -320,9 +341,7 @@ export function setupChatPanel(): void {
     iconBtnEl.innerHTML = "🎲";
     if (iconPopoverEl) {
       iconPopoverEl.style.display = "none";
-      iconPopoverEl.querySelectorAll(".roll-icon-swatch").forEach((s) => {
-        s.classList.toggle("active", s.getAttribute("data-icon") === "🎲");
-      });
+      renderPopoverPage();
     }
     updateBuilderUI();
   }
@@ -752,6 +771,25 @@ export function setupChatPanel(): void {
             afterSpan.style.opacity = "1";
           }
         }
+
+        if (msg.type === "roll" && msg.rollIcon && msg.rollIcon !== "🎲") {
+          const effId = getEffectIdForIcon(msg.rollIcon);
+          if (effId && !existingEl.querySelector(".play-roll-anim-btn")) {
+            existingEl.style.position = "relative";
+            existingEl.style.paddingRight = "32px";
+            const replayBtn = document.createElement("button");
+            replayBtn.className = "play-roll-anim-btn";
+            replayBtn.setAttribute("data-effect-id", effId);
+            replayBtn.title = "Replay Animation";
+            replayBtn.style.cssText = "position: absolute; bottom: 4px; right: 6px; background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 4px; color: #38bdf8; font-size: 11px; padding: 2px 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10; transition: all 0.15s ease;";
+            replayBtn.textContent = "▶";
+            replayBtn.addEventListener("click", (e) => {
+              e.stopPropagation();
+              EffectEngine.playOverElement(existingEl, effId);
+            });
+            existingEl.appendChild(replayBtn);
+          }
+        }
         return;
       }
 
@@ -821,10 +859,28 @@ export function setupChatPanel(): void {
             🎉 <span>${msg.celebrate || 0}</span>
           </button>
         </div>
+        ${msg.type === "roll" && msg.rollIcon && msg.rollIcon !== "🎲" && getEffectIdForIcon(msg.rollIcon) ? `
+          <button class="play-roll-anim-btn" data-effect-id="${getEffectIdForIcon(msg.rollIcon)}" title="Replay Animation" style="position: absolute; bottom: 4px; right: 6px; background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 4px; color: #38bdf8; font-size: 11px; padding: 2px 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10; transition: all 0.15s ease;">▶</button>
+        ` : ""}
       `;
 
       container.appendChild(msgEl);
       container.scrollTop = container.scrollHeight;
+
+      if (msg.type === "roll" && msg.rollIcon && msg.rollIcon !== "🎲" && getEffectIdForIcon(msg.rollIcon)) {
+        msgEl.style.position = "relative";
+        msgEl.style.paddingRight = "32px";
+        const replayBtn = msgEl.querySelector<HTMLButtonElement>(".play-roll-anim-btn");
+        if (replayBtn) {
+          replayBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const effId = replayBtn.getAttribute("data-effect-id");
+            if (effId) {
+              EffectEngine.playOverElement(msgEl, effId);
+            }
+          });
+        }
+      }
 
       if (isNewRoll) {
         animatedRollMsgIds.add(msg.id);

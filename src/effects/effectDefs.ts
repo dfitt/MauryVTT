@@ -52,13 +52,16 @@ export function getEffectIdForIcon(icon?: string): string | null {
   if (icon.includes("🐐") || icon.includes("breggle_charge")) return "breggle_charge";
   if (icon.includes("🐈") || icon.includes("🐾") || icon.includes("grimalkin_shadow")) return "grimalkin_shadow";
   if (icon.includes("🔔") || icon.includes("woodland_shrine")) return "woodland_shrine";
-  if (icon.includes("🦉") || icon.includes("drune_wicker")) return "drune_wicker";
-  if (icon.includes("🔨") || icon.includes("warhammer_crush")) return "warhammer_crush";
-  if (icon.includes("🪓") || icon.includes("greataxe_cleave")) return "greataxe_cleave";
-  if (icon.includes("🔱") || icon.includes("spear_thrust")) return "spear_thrust";
-  if (icon.includes("⛓️") || icon.includes("flail_strike")) return "flail_strike";
   if (icon.includes("🪃") || icon.includes("thrown_boomerang")) return "thrown_boomerang";
   if (icon.includes("🤺") || icon.includes("rapier_flurry")) return "rapier_flurry";
+  if (icon.includes("🪨") || icon.includes("sword_in_stone")) return "sword_in_stone";
+  if (icon.includes("🏆") || icon.includes("holy_grail")) return "holy_grail";
+  if (icon.includes("🌊") || icon.includes("lady_of_lake")) return "lady_of_lake";
+  if (icon.includes("👑") || icon.includes("camelot_crown")) return "camelot_crown";
+  if (icon.includes("⭕") || icon.includes("round_table")) return "round_table";
+  if (icon.includes("🧙") || icon.includes("merlins_magic")) return "merlins_magic";
+  if (icon.includes("🐉") || icon.includes("pendragon_banner")) return "pendragon_banner";
+  if (icon.includes("🏰") || icon.includes("camelot_castle")) return "camelot_castle";
   return null;
 }
 
@@ -1596,178 +1599,6 @@ export const EFFECT_REGISTRY: Record<string, VttEffectDefinition> = {
     }
   },
 
-  warhammer_crush: {
-    id: "warhammer_crush",
-    durationMs: 820,
-    renderSvg: () => `
-      <style>
-        @keyframes vttHammerSmash {
-          0% { transform: scale(0.4) rotate(-55deg) translate(-20px, -30px); opacity: 0; transform-origin: bottom right; }
-          25% { transform: scale(1.3) rotate(15deg) translate(0px, 10px); opacity: 1; filter: drop-shadow(0 0 20px #fbbf24); }
-          50% { transform: scale(1.15) rotate(5deg) translate(0px, 5px); opacity: 0.95; }
-          100% { transform: scale(1.4) rotate(20deg) translate(5px, 15px); opacity: 0; filter: blur(6px); }
-        }
-        @keyframes vttCrushRing {
-          0% { transform: scale(0.2); opacity: 1; border-width: 6px; }
-          60% { transform: scale(2.5); opacity: 0.8; border-width: 2px; }
-          100% { transform: scale(3.6); opacity: 0; border-width: 1px; }
-        }
-      </style>
-      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
-        <!-- Bludgeoning Ground Tremor Ring -->
-        <div style="position: absolute; width: 80px; height: 80px; border: 4px solid #fbbf24; border-radius: 50%; box-shadow: 0 0 18px #f59e0b; animation: vttCrushRing 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards; animation-delay: 0.15s; opacity: 0;"></div>
-        <!-- Heavy Warhammer Head & Handle -->
-        <svg viewBox="0 0 64 64" width="86" height="86" style="position: absolute; animation: vttHammerSmash 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
-          <!-- Handle -->
-          <path d="M14 50 L46 18" stroke="#78350f" stroke-width="6" stroke-linecap="round" />
-          <!-- Heavy Steel/Bronze Head -->
-          <polygon points="36,12 52,28 44,36 28,20" fill="#64748b" stroke="#f59e0b" stroke-width="2" />
-          <rect x="42" y="10" width="10" height="12" rx="2" transform="rotate(45 47 16)" fill="#475569" stroke="#fbbf24" stroke-width="1.5" />
-          <circle cx="38" cy="24" r="3" fill="#facc15" />
-        </svg>
-      </div>
-    `,
-    particles: {
-      count: 34,
-      colors: ["#fbbf24", "#64748b", "#cbd5e1", "#f59e0b"],
-      speedRange: [80, 210],
-      sizeRangePx: [2, 6],
-      gravity: 120, // Stone and iron debris falling hard
-      shape: "splinter",
-      lifeMs: 700
-    }
-  },
-
-  greataxe_cleave: {
-    id: "greataxe_cleave",
-    durationMs: 800,
-    renderSvg: () => `
-      <style>
-        @keyframes vttAxeCleave {
-          0% { transform: scale(0.5) rotate(-65deg) translate(-30px, -30px); opacity: 0; }
-          25% { transform: scale(1.3) rotate(35deg) translate(10px, 10px); opacity: 1; filter: drop-shadow(0 0 20px #ef4444); }
-          60% { transform: scale(1.1) rotate(45deg) translate(15px, 15px); opacity: 0.95; }
-          100% { transform: scale(1.4) rotate(60deg) translate(25px, 25px); opacity: 0; filter: blur(6px); }
-        }
-        @keyframes vttCleaveArc {
-          0% { transform: scale(0.3) rotate(-45deg); opacity: 1; }
-          50% { transform: scale(2.2) rotate(15deg); opacity: 0.8; }
-          100% { transform: scale(3.2) rotate(45deg); opacity: 0; }
-        }
-      </style>
-      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
-        <!-- Crimson Slashing Arc -->
-        <svg viewBox="0 0 100 100" width="120" height="120" style="position: absolute; animation: vttCleaveArc 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
-          <path d="M15 85 Q 50 20 85 85" fill="none" stroke="#ef4444" stroke-width="6" stroke-linecap="round" filter="drop-shadow(0 0 12px #ef4444)" />
-        </svg>
-        <!-- Bearded Greataxe -->
-        <svg viewBox="0 0 64 64" width="88" height="88" style="position: absolute; animation: vttAxeCleave 0.78s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
-          <path d="M12 52 L48 16" stroke="#78350f" stroke-width="6" stroke-linecap="round" />
-          <path d="M34 14 C48 8 58 18 52 32 L36 24 Z" fill="#991b1b" stroke="#ef4444" stroke-width="2" />
-          <path d="M36 24 L52 32 C48 38 42 38 36 32 Z" fill="#cbd5e1" stroke="#ffffff" stroke-width="1.5" />
-          <circle cx="42" cy="22" r="3" fill="#facc15" />
-        </svg>
-      </div>
-    `,
-    particles: {
-      count: 34,
-      colors: ["#ef4444", "#f87171", "#e2e8f0", "#991b1b"],
-      speedRange: [90, 220],
-      sizeRangePx: [2, 6],
-      gravity: 80, // Slashing sparks falling
-      shape: "splinter",
-      lifeMs: 650
-    }
-  },
-
-  spear_thrust: {
-    id: "spear_thrust",
-    durationMs: 780,
-    renderSvg: () => `
-      <style>
-        @keyframes vttTridentLunge {
-          0% { transform: translate(-45px, 45px) scale(0.6) rotate(-45deg); opacity: 0; }
-          25% { transform: translate(12px, -12px) scale(1.3) rotate(-45deg); opacity: 1; filter: drop-shadow(0 0 20px #38bdf8); }
-          60% { transform: translate(6px, -6px) scale(1.15) rotate(-45deg); opacity: 0.95; }
-          100% { transform: translate(25px, -25px) scale(1.4) rotate(-45deg); opacity: 0; filter: blur(6px); }
-        }
-        @keyframes vttPiercingRipple {
-          0% { transform: scale(0.2); opacity: 1; border-width: 5px; }
-          60% { transform: scale(2.4); opacity: 0.8; border-width: 2px; }
-          100% { transform: scale(3.4); opacity: 0; border-width: 1px; }
-        }
-      </style>
-      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
-        <!-- Piercing Shock Ripples -->
-        <div style="position: absolute; width: 76px; height: 76px; border: 3px solid #38bdf8; border-radius: 50%; box-shadow: 0 0 16px #0284c7; animation: vttPiercingRipple 0.72s cubic-bezier(0.16, 1, 0.3, 1) forwards; animation-delay: 0.12s; opacity: 0;"></div>
-        <!-- Trident / Spear Piercing Head -->
-        <svg viewBox="0 0 64 64" width="88" height="88" style="position: absolute; animation: vttTridentLunge 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
-          <!-- Shaft -->
-          <path d="M10 54 L44 20" stroke="#78350f" stroke-width="5" stroke-linecap="round" />
-          <!-- Trident Prongs -->
-          <path d="M38 26 L54 10 L48 32 M32 20 L54 10 L42 14" fill="none" stroke="#e2e8f0" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
-          <polygon points="56,8 46,14 50,18" fill="#38bdf8" stroke="#ffffff" stroke-width="1.5" />
-        </svg>
-      </div>
-    `,
-    particles: {
-      count: 32,
-      colors: ["#38bdf8", "#e0f2fe", "#ffffff", "#0284c7"],
-      speedRange: [100, 240],
-      sizeRangePx: [2, 5],
-      gravity: 30, // Piercing kinetic sparks
-      shape: "splinter",
-      lifeMs: 650
-    }
-  },
-
-  flail_strike: {
-    id: "flail_strike",
-    durationMs: 820,
-    renderSvg: () => `
-      <style>
-        @keyframes vttFlailSwing {
-          0% { transform: scale(0.4) rotate(-180deg); opacity: 0; }
-          30% { transform: scale(1.3) rotate(360deg); opacity: 1; filter: drop-shadow(0 0 20px #f59e0b); }
-          65% { transform: scale(1.1) rotate(420deg); opacity: 0.95; }
-          100% { transform: scale(1.4) rotate(540deg); opacity: 0; filter: blur(6px); }
-        }
-        @keyframes vttFlailFlash {
-          0% { transform: scale(0.1); opacity: 1; }
-          50% { transform: scale(2.2); opacity: 0.8; }
-          100% { transform: scale(3.3); opacity: 0; }
-        }
-      </style>
-      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
-        <!-- Kinetic Impact Ring -->
-        <div style="position: absolute; width: 78px; height: 78px; border: 4px solid #f59e0b; border-radius: 50%; box-shadow: 0 0 16px #fbbf24; animation: vttFlailFlash 0.78s cubic-bezier(0.16, 1, 0.3, 1) forwards; animation-delay: 0.15s; opacity: 0;"></div>
-        <!-- Spiked Chain Ball Flail -->
-        <svg viewBox="0 0 64 64" width="86" height="86" style="position: absolute; animation: vttFlailSwing 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
-          <!-- Handle -->
-          <path d="M12 52 L26 38" stroke="#78350f" stroke-width="6" stroke-linecap="round" />
-          <!-- Chain Links -->
-          <path d="M26 38 C32 30 38 28 44 24" fill="none" stroke="#94a3b8" stroke-width="3" stroke-dasharray="5 3" />
-          <!-- Spiked Morningstar Ball -->
-          <circle cx="46" cy="20" r="10" fill="#475569" stroke="#f59e0b" stroke-width="2" />
-          <!-- Spikes -->
-          <polygon points="46,6 43,12 49,12" fill="#cbd5e1" />
-          <polygon points="46,34 43,28 49,28" fill="#cbd5e1" />
-          <polygon points="32,20 38,17 38,23" fill="#cbd5e1" />
-          <polygon points="60,20 54,17 54,23" fill="#cbd5e1" />
-        </svg>
-      </div>
-    `,
-    particles: {
-      count: 32,
-      colors: ["#f59e0b", "#64748b", "#cbd5e1", "#ffffff"],
-      speedRange: [80, 200],
-      sizeRangePx: [2, 5],
-      gravity: 90, // Heavy kinetic sparks
-      shape: "sparkle",
-      lifeMs: 700
-    }
-  },
-
   thrown_boomerang: {
     id: "thrown_boomerang",
     durationMs: 840,
@@ -1849,6 +1680,361 @@ export const EFFECT_REGISTRY: Record<string, VttEffectDefinition> = {
       gravity: 20, // Precision needle sparks
       shape: "sparkle",
       lifeMs: 650
+    }
+  },
+
+  sword_in_stone: {
+    id: "sword_in_stone",
+    durationMs: 860,
+    renderSvg: () => `
+      <style>
+        @keyframes vttExcaliburRise {
+          0% { transform: translateY(22px) scale(0.6); opacity: 0; }
+          30% { transform: translateY(4px) scale(1.25); opacity: 1; filter: drop-shadow(0 0 20px #fbbf24); }
+          65% { transform: translateY(-8px) scale(1.15); opacity: 0.95; filter: drop-shadow(0 0 24px #facc15); }
+          100% { transform: translateY(-24px) scale(1.35); opacity: 0; filter: blur(6px); }
+        }
+        @keyframes vttAnvilGlow {
+          0% { transform: scale(0.2); opacity: 1; }
+          60% { transform: scale(2.4); opacity: 0.8; }
+          100% { transform: scale(3.5); opacity: 0; }
+        }
+      </style>
+      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <!-- Divine Sovereignty Ring -->
+        <div style="position: absolute; width: 80px; height: 80px; border: 3px solid #fbbf24; border-radius: 50%; box-shadow: 0 0 18px #f59e0b; animation: vttAnvilGlow 0.84s cubic-bezier(0.16, 1, 0.3, 1) forwards;"></div>
+        <!-- Excalibur in the Anvil Stone -->
+        <svg viewBox="0 0 64 64" width="88" height="88" style="position: absolute; animation: vttExcaliburRise 0.84s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
+          <!-- Ancient Anvil Stone Base -->
+          <polygon points="12,54 52,54 44,40 20,40" fill="#334155" stroke="#64748b" stroke-width="2" />
+          <path d="M22 40 L32 40 L32 26" fill="none" stroke="#38bdf8" stroke-width="1.5" opacity="0.8" />
+          <!-- Excalibur Broadsword -->
+          <polygon points="32,6 28,14 32,38 36,14" fill="#e2e8f0" stroke="#fbbf24" stroke-width="1.5" filter="drop-shadow(0 0 8px #facc15)" />
+          <rect x="22" y="38" width="20" height="4" rx="2" fill="#f59e0b" stroke="#fbbf24" stroke-width="1" />
+          <circle cx="32" cy="40" r="3" fill="#ef4444" />
+          <path d="M32 42 L32 50" stroke="#78350f" stroke-width="4" stroke-linecap="round" />
+        </svg>
+      </div>
+    `,
+    particles: {
+      count: 34,
+      colors: ["#fbbf24", "#facc15", "#e2e8f0", "#ffffff"],
+      speedRange: [50, 150],
+      sizeRangePx: [2, 6],
+      gravity: -40, // Divine light sparks pulling upward
+      shape: "sparkle",
+      lifeMs: 850
+    }
+  },
+
+  holy_grail: {
+    id: "holy_grail",
+    durationMs: 880,
+    renderSvg: () => `
+      <style>
+        @keyframes vttGrailHover {
+          0% { transform: translateY(-30px) scale(0.5); opacity: 0; }
+          30% { transform: translateY(0px) scale(1.3); opacity: 1; filter: drop-shadow(0 0 24px #facc15); }
+          65% { transform: translateY(-4px) scale(1.15); opacity: 0.95; }
+          100% { transform: translateY(-16px) scale(1.4); opacity: 0; filter: blur(6px); }
+        }
+        @keyframes vttGrailPillar {
+          0% { transform: scaleY(0); opacity: 0.9; }
+          50% { transform: scaleY(1.4); opacity: 0.7; }
+          100% { transform: scaleY(2); opacity: 0; }
+        }
+      </style>
+      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <!-- Divine Golden Light Pillar -->
+        <div style="position: absolute; width: 44px; height: 120px; background: linear-gradient(to bottom, rgba(254, 240, 138, 0.6), transparent); border-radius: 22px; animation: vttGrailPillar 0.86s ease-out forwards; opacity: 0;"></div>
+        <!-- Sacred Chalice / Holy Grail -->
+        <svg viewBox="0 0 64 64" width="86" height="86" style="position: absolute; animation: vttGrailHover 0.86s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
+          <!-- Chalice Cup -->
+          <path d="M16 14 C16 32 26 40 32 40 C38 40 48 32 48 14 Z" fill="#d97706" stroke="#fef08a" stroke-width="2.5" />
+          <ellipse cx="32" cy="14" rx="16" ry="5" fill="#facc15" stroke="#ffffff" stroke-width="1.5" />
+          <!-- Ruby & Emerald Jewels -->
+          <circle cx="26" cy="24" r="3" fill="#ef4444" />
+          <circle cx="32" cy="28" r="3.5" fill="#10b981" />
+          <circle cx="38" cy="24" r="3" fill="#ef4444" />
+          <!-- Stem & Foot -->
+          <path d="M32 40 L32 50 M20 52 L44 52" stroke="#d97706" stroke-width="5" stroke-linecap="round" />
+          <ellipse cx="32" cy="52" rx="12" ry="3" fill="#facc15" />
+        </svg>
+      </div>
+    `,
+    particles: {
+      count: 36,
+      colors: ["#fef08a", "#facc15", "#ef4444", "#ffffff"],
+      speedRange: [40, 130],
+      sizeRangePx: [2, 6],
+      gravity: 30, // Sacred blessing motes raining gently down
+      shape: "circle",
+      lifeMs: 880
+    }
+  },
+
+  lady_of_lake: {
+    id: "lady_of_lake",
+    durationMs: 850,
+    renderSvg: () => `
+      <style>
+        @keyframes vttLadyHandRise {
+          0% { transform: translateY(40px) scale(0.5); opacity: 0; }
+          30% { transform: translateY(-4px) scale(1.25); opacity: 1; filter: drop-shadow(0 0 20px #38bdf8); }
+          65% { transform: translateY(-10px) scale(1.15); opacity: 0.95; }
+          100% { transform: translateY(-26px) scale(1.35); opacity: 0; filter: blur(6px); }
+        }
+        @keyframes vttLakeRipples {
+          0% { transform: scale(0.2); opacity: 1; border-width: 5px; }
+          60% { transform: scale(2.4); opacity: 0.8; border-width: 2px; }
+          100% { transform: scale(3.5); opacity: 0; border-width: 1px; }
+        }
+      </style>
+      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <!-- Sapphire Lake Ripples -->
+        <div style="position: absolute; width: 80px; height: 80px; border: 3px solid #38bdf8; border-radius: 50%; box-shadow: 0 0 18px #0284c7; animation: vttLakeRipples 0.82s cubic-bezier(0.16, 1, 0.3, 1) forwards;"></div>
+        <!-- Mystical Hand Holding Excalibur Aloft -->
+        <svg viewBox="0 0 64 64" width="88" height="88" style="position: absolute; animation: vttLadyHandRise 0.82s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
+          <!-- Lake Waves Base -->
+          <path d="M8 52 C18 46 26 56 36 50 C46 44 54 54 58 48 L58 58 L8 58 Z" fill="#0284c7" opacity="0.85" />
+          <!-- White Silk Sleeve & Hand -->
+          <path d="M28 52 L28 36 C28 34 36 34 36 36 L36 52 Z" fill="#e2e8f0" stroke="#38bdf8" stroke-width="1.5" />
+          <!-- Excalibur Blade Upward -->
+          <polygon points="32,6 28,14 32,36 36,14" fill="#ffffff" stroke="#38bdf8" stroke-width="1.5" filter="drop-shadow(0 0 10px #e0f2fe)" />
+          <rect x="24" y="34" width="16" height="3" rx="1.5" fill="#facc15" />
+        </svg>
+      </div>
+    `,
+    particles: {
+      count: 36,
+      colors: ["#38bdf8", "#e0f2fe", "#0284c7", "#ffffff"],
+      speedRange: [40, 140],
+      sizeRangePx: [2, 6],
+      gravity: 20, // Water droplets and mist splashing
+      shape: "circle",
+      lifeMs: 850
+    }
+  },
+
+  camelot_crown: {
+    id: "camelot_crown",
+    durationMs: 840,
+    renderSvg: () => `
+      <style>
+        @keyframes vttCrownDescend {
+          0% { transform: translateY(-40px) scale(0.5); opacity: 0; }
+          30% { transform: translateY(0px) scale(1.3); opacity: 1; filter: drop-shadow(0 0 22px #fbbf24); }
+          65% { transform: translateY(-6px) scale(1.15); opacity: 0.95; }
+          100% { transform: translateY(-18px) scale(1.4); opacity: 0; filter: blur(6px); }
+        }
+        @keyframes vttCrownRings {
+          0% { transform: scale(0.2); opacity: 1; }
+          60% { transform: scale(2.3); opacity: 0.8; }
+          100% { transform: scale(3.4); opacity: 0; }
+        }
+      </style>
+      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <!-- Royal Sovereignty Ring -->
+        <div style="position: absolute; width: 78px; height: 78px; border: 3px solid #fbbf24; border-radius: 50%; box-shadow: 0 0 18px #f59e0b; animation: vttCrownRings 0.82s cubic-bezier(0.16, 1, 0.3, 1) forwards;"></div>
+        <!-- High Crown of King Arthur -->
+        <svg viewBox="0 0 64 64" width="88" height="88" style="position: absolute; animation: vttCrownDescend 0.82s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
+          <!-- Crown Band & Peaks -->
+          <path d="M12 44 L12 24 L24 34 L32 16 L40 34 L52 24 L52 44 Z" fill="#d97706" stroke="#fef08a" stroke-width="2.5" />
+          <rect x="12" y="44" width="40" height="6" rx="2" fill="#b45309" stroke="#facc15" stroke-width="1.5" />
+          <!-- Gemstones -->
+          <circle cx="32" cy="16" r="3.5" fill="#ef4444" stroke="#ffffff" stroke-width="1" />
+          <circle cx="12" cy="24" r="3" fill="#38bdf8" />
+          <circle cx="52" cy="24" r="3" fill="#38bdf8" />
+          <circle cx="32" cy="47" r="2.5" fill="#10b981" />
+          <circle cx="22" cy="47" r="2.5" fill="#ef4444" />
+          <circle cx="42" cy="47" r="2.5" fill="#ef4444" />
+        </svg>
+      </div>
+    `,
+    particles: {
+      count: 34,
+      colors: ["#fbbf24", "#ef4444", "#fef08a", "#ffffff"],
+      speedRange: [60, 160],
+      sizeRangePx: [2, 6],
+      gravity: 50, // Royal gold and ruby glints falling
+      shape: "sparkle",
+      lifeMs: 800
+    }
+  },
+
+  round_table: {
+    id: "round_table",
+    durationMs: 820,
+    renderSvg: () => `
+      <style>
+        @keyframes vttTableSpin {
+          0% { transform: scale(0.3) rotate(-180deg); opacity: 0; }
+          30% { transform: scale(1.3) rotate(0deg); opacity: 1; filter: drop-shadow(0 0 20px #fbbf24); }
+          65% { transform: scale(1.1) rotate(15deg); opacity: 0.95; }
+          100% { transform: scale(1.4) rotate(45deg); opacity: 0; filter: blur(6px); }
+        }
+        @keyframes vttTableStar {
+          0% { transform: scale(0.1); opacity: 1; }
+          60% { transform: scale(2.4); opacity: 0.8; }
+          100% { transform: scale(3.5); opacity: 0; }
+        }
+      </style>
+      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <!-- Chivalric Brotherhood Star -->
+        <div style="position: absolute; width: 78px; height: 78px; border: 3px dashed #fbbf24; border-radius: 50%; box-shadow: 0 0 16px #f59e0b; animation: vttTableStar 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;"></div>
+        <!-- Round Table with 12 Knightly Sword Blades -->
+        <svg viewBox="0 0 64 64" width="88" height="88" style="position: absolute; animation: vttTableSpin 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
+          <!-- Outer Polished Oak Ring -->
+          <circle cx="32" cy="32" r="26" fill="#78350f" stroke="#fbbf24" stroke-width="3" />
+          <circle cx="32" cy="32" r="18" fill="#451a03" stroke="#d97706" stroke-width="1.5" />
+          <!-- 8 Pointing Sword Tips -->
+          <path d="M32 6 L32 18 M32 58 L32 46 M6 32 L18 32 M58 32 L46 32 M14 14 L22 22 M50 50 L42 42 M50 14 L42 22 M14 50 L22 42" stroke="#e2e8f0" stroke-width="3" stroke-linecap="round" />
+          <circle cx="32" cy="32" r="6" fill="#fbbf24" filter="drop-shadow(0 0 6px #facc15)" />
+        </svg>
+      </div>
+    `,
+    particles: {
+      count: 34,
+      colors: ["#fbbf24", "#e2e8f0", "#f59e0b", "#ffffff"],
+      speedRange: [50, 150],
+      sizeRangePx: [2, 6],
+      gravity: 10, // Chivalric unity sparks radiating
+      shape: "splinter",
+      lifeMs: 820
+    }
+  },
+
+  merlins_magic: {
+    id: "merlins_magic",
+    durationMs: 880,
+    renderSvg: () => `
+      <style>
+        @keyframes vttMerlinWeave {
+          0% { transform: scale(0.4) rotate(-30deg); opacity: 0; }
+          30% { transform: scale(1.3) rotate(15deg); opacity: 1; filter: drop-shadow(0 0 24px #c084fc); }
+          65% { transform: scale(1.15) rotate(0deg); opacity: 0.95; filter: drop-shadow(0 0 28px #38bdf8); }
+          100% { transform: scale(1.4) rotate(30deg); opacity: 0; filter: blur(6px); }
+        }
+        @keyframes vttProphecyVortex {
+          0% { transform: scale(0.2) rotate(0deg); opacity: 1; }
+          60% { transform: scale(2.4) rotate(180deg); opacity: 0.8; }
+          100% { transform: scale(3.5) rotate(360deg); opacity: 0; }
+        }
+      </style>
+      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <!-- Prophecy Starlight Vortex -->
+        <div style="position: absolute; width: 80px; height: 80px; border: 3px dotted #c084fc; border-radius: 50%; box-shadow: 0 0 18px #38bdf8; animation: vttProphecyVortex 0.86s cubic-bezier(0.16, 1, 0.3, 1) forwards;"></div>
+        <!-- Merlin's Staff & Dragon Orb -->
+        <svg viewBox="0 0 64 64" width="88" height="88" style="position: absolute; animation: vttMerlinWeave 0.86s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
+          <path d="M14 54 C24 44 32 34 38 24" stroke="#78350f" stroke-width="6" stroke-linecap="round" />
+          <!-- Twisting Roots Top -->
+          <path d="M38 24 C44 18 52 14 54 18 C56 22 46 28 38 24" fill="none" stroke="#92400e" stroke-width="4" stroke-linecap="round" />
+          <!-- Glowing Amethyst Crystal Orb -->
+          <circle cx="46" cy="18" r="8" fill="#c084fc" stroke="#38bdf8" stroke-width="2" filter="drop-shadow(0 0 10px #e0f2fe)" />
+          <circle cx="44" cy="16" r="2.5" fill="#ffffff" />
+          <!-- Arcane Runes -->
+          <circle cx="22" cy="30" r="3" fill="#facc15" />
+          <circle cx="54" cy="36" r="3" fill="#38bdf8" />
+        </svg>
+      </div>
+    `,
+    particles: {
+      count: 36,
+      colors: ["#c084fc", "#38bdf8", "#facc15", "#ffffff"],
+      speedRange: [50, 160],
+      sizeRangePx: [2, 6],
+      gravity: -35, // Wizardry stardust orbiting upward
+      shape: "sparkle",
+      lifeMs: 880
+    }
+  },
+
+  pendragon_banner: {
+    id: "pendragon_banner",
+    durationMs: 840,
+    renderSvg: () => `
+      <style>
+        @keyframes vttBannerSlam {
+          0% { transform: translateY(-45px) scale(0.5); opacity: 0; }
+          25% { transform: translateY(0px) scale(1.3); opacity: 1; filter: drop-shadow(0 0 22px #ef4444); }
+          60% { transform: translateY(-6px) scale(1.15); opacity: 0.95; }
+          100% { transform: translateY(-18px) scale(1.4); opacity: 0; filter: blur(6px); }
+        }
+        @keyframes vttDragonAura {
+          0% { transform: scale(0.2); opacity: 1; }
+          60% { transform: scale(2.4); opacity: 0.8; }
+          100% { transform: scale(3.5); opacity: 0; }
+        }
+      </style>
+      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <!-- Crimson Dragon Aura Ring -->
+        <div style="position: absolute; width: 78px; height: 78px; border: 4px solid #ef4444; border-radius: 50%; box-shadow: 0 0 18px #dc2626; animation: vttDragonAura 0.82s cubic-bezier(0.16, 1, 0.3, 1) forwards;"></div>
+        <!-- Pendragon War Shield & Red Dragon Emblem -->
+        <svg viewBox="0 0 64 64" width="88" height="88" style="position: absolute; animation: vttBannerSlam 0.82s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
+          <!-- Knightly Heater Shield -->
+          <path d="M12 10 L52 10 C52 34 44 50 32 58 C20 50 12 34 12 10 Z" fill="#991b1b" stroke="#fbbf24" stroke-width="3" />
+          <!-- Red Dragon Emblem Silhouette -->
+          <path d="M22 36 C24 28 30 20 38 20 C42 20 46 24 46 28 C42 26 38 28 38 32 C44 32 46 36 42 42 C36 40 30 42 26 44 C26 40 22 38 22 36 Z" fill="#fbbf24" stroke="#ffffff" stroke-width="1" />
+          <circle cx="40" cy="23" r="1.5" fill="#ef4444" />
+        </svg>
+      </div>
+    `,
+    particles: {
+      count: 36,
+      colors: ["#ef4444", "#f97316", "#fbbf24", "#ffffff"],
+      speedRange: [60, 180],
+      sizeRangePx: [2, 6],
+      gravity: -45, // Roaring dragon flame and gold sparks rising
+      shape: "splinter",
+      lifeMs: 840
+    }
+  },
+
+  camelot_castle: {
+    id: "camelot_castle",
+    durationMs: 860,
+    renderSvg: () => `
+      <style>
+        @keyframes vttCastleRise {
+          0% { transform: translateY(40px) scale(0.5); opacity: 0; }
+          25% { transform: translateY(0px) scale(1.25); opacity: 1; filter: drop-shadow(0 0 20px #facc15); }
+          65% { transform: translateY(-4px) scale(1.15); opacity: 0.95; }
+          100% { transform: translateY(-18px) scale(1.35); opacity: 0; filter: blur(6px); }
+        }
+        @keyframes vttSunriseGlow {
+          0% { transform: scale(0.2); opacity: 1; }
+          60% { transform: scale(2.4); opacity: 0.8; }
+          100% { transform: scale(3.5); opacity: 0; }
+        }
+      </style>
+      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <!-- Sunrise Glory Ring -->
+        <div style="position: absolute; width: 80px; height: 80px; border: 3px solid #facc15; border-radius: 50%; box-shadow: 0 0 18px #38bdf8; animation: vttSunriseGlow 0.84s cubic-bezier(0.16, 1, 0.3, 1) forwards;"></div>
+        <!-- Camelot White Towers & Pennants -->
+        <svg viewBox="0 0 64 64" width="88" height="88" style="position: absolute; animation: vttCastleRise 0.84s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
+          <!-- Green Hill Base -->
+          <path d="M6 56 C20 48 44 48 58 56 L58 60 L6 60 Z" fill="#15803d" />
+          <!-- Main White Keep & Side Towers -->
+          <rect x="24" y="24" width="16" height="32" fill="#f8fafc" stroke="#64748b" stroke-width="1.5" />
+          <polygon points="22,24 32,10 42,24" fill="#38bdf8" stroke="#fbbf24" stroke-width="1.5" />
+          <rect x="12" y="34" width="12" height="22" fill="#e2e8f0" stroke="#64748b" stroke-width="1.5" />
+          <polygon points="10,34 18,22 26,34" fill="#ef4444" stroke="#fbbf24" stroke-width="1.5" />
+          <rect x="40" y="34" width="12" height="22" fill="#e2e8f0" stroke="#64748b" stroke-width="1.5" />
+          <polygon points="38,34 46,22 54,34" fill="#ef4444" stroke="#fbbf24" stroke-width="1.5" />
+          <!-- Golden Gate & Banners -->
+          <path d="M29 56 L29 44 C29 42 35 42 35 44 L35 56 Z" fill="#78350f" />
+          <polygon points="32,10 38,12 32,14" fill="#ef4444" />
+        </svg>
+      </div>
+    `,
+    particles: {
+      count: 34,
+      colors: ["#fef08a", "#38bdf8", "#ef4444", "#ffffff"],
+      speedRange: [40, 130],
+      sizeRangePx: [2, 6],
+      gravity: 15, // Golden sunlight rays and fluttering pennant embers
+      shape: "splinter",
+      lifeMs: 860
     }
   }
 };
