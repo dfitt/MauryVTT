@@ -46,7 +46,8 @@ export class DocumentStore {
       users: {},
       chatHistory: [],
       quickRolls: {},
-      customVttfxBundles: {}
+      customVttfxBundles: {},
+      primaryTokens: {}
     };
   }
 
@@ -124,6 +125,9 @@ export class DocumentStore {
         if (bundle) loadVttfxBundleFromBundle(bundle);
       }
     }
+    if (!this.doc.primaryTokens) {
+      this.doc.primaryTokens = {};
+    }
     this.cleanupAllUnusedAssets();
     this.notify();
   }
@@ -137,9 +141,23 @@ export class DocumentStore {
   }
 
   private applySingleOp(op: DocumentOperation): void {
+    if (!this.doc.primaryTokens) {
+      this.doc.primaryTokens = {};
+    }
     switch (op.opType) {
       case "CREATE_ENTITY": {
         this.doc.entities[op.entity.id] = op.entity;
+        if (op.entity.type === "token") {
+          const tok = op.entity as any;
+          if (tok.primaryOwnerUsername) {
+            this.doc.primaryTokens[tok.primaryOwnerUsername] = tok.id;
+            for (const ent of Object.values(this.doc.entities)) {
+              if (ent.type === "token" && ent.id !== tok.id && (ent as any).primaryOwnerUsername === tok.primaryOwnerUsername) {
+                (ent as any).primaryOwnerUsername = undefined;
+              }
+            }
+          }
+        }
         break;
       }
       case "UPDATE_ENTITY": {
@@ -155,6 +173,28 @@ export class DocumentStore {
           if (oldHash && oldHash !== newHash) {
             this.cleanupUnusedAssetHash(oldHash);
           }
+          if (existing.type === "token") {
+            const updatedTok = this.doc.entities[op.id] as any;
+            const oldOwner = (existing as any).primaryOwnerUsername;
+            const newOwner = updatedTok.primaryOwnerUsername;
+            if (oldOwner && oldOwner !== newOwner && this.doc.primaryTokens[oldOwner] === op.id) {
+              delete this.doc.primaryTokens[oldOwner];
+            }
+            if (newOwner) {
+              this.doc.primaryTokens[newOwner] = updatedTok.id;
+              for (const ent of Object.values(this.doc.entities)) {
+                if (ent.type === "token" && ent.id !== updatedTok.id && (ent as any).primaryOwnerUsername === newOwner) {
+                  (ent as any).primaryOwnerUsername = undefined;
+                }
+              }
+            } else if ("primaryOwnerUsername" in op.patch && !newOwner) {
+              for (const [uname, tid] of Object.entries(this.doc.primaryTokens)) {
+                if (tid === op.id) {
+                  delete this.doc.primaryTokens[uname];
+                }
+              }
+            }
+          }
         }
         break;
       }
@@ -163,6 +203,13 @@ export class DocumentStore {
         delete this.doc.entities[op.id];
         if (ent && ("assetHash" in ent) && (ent as any).assetHash) {
           this.cleanupUnusedAssetHash((ent as any).assetHash);
+        }
+        if (ent && ent.type === "token") {
+          for (const [uname, tid] of Object.entries(this.doc.primaryTokens)) {
+            if (tid === op.id) {
+              delete this.doc.primaryTokens[uname];
+            }
+          }
         }
         break;
       }

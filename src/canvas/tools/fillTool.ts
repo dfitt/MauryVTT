@@ -11,19 +11,65 @@ export function bindFillTool(engine: CanvasEngine): void {
     const size = doc.canvasSettings.gridSizePx || 50;
     const gx = Math.floor(worldX / size) * size;
     const gy = Math.floor(worldY / size) * size;
-    const cellKey = `${gx},${gy}`;
 
-    if (visitedCells.has(cellKey)) return;
-    visitedCells.add(cellKey);
+    if (engine.fillBucket) {
+      const startKey = `${gx},${gy}`;
+      if (visitedCells.has(startKey)) return;
+      const startCell = doc.gridCells?.[startKey];
+      const targetColor = startCell?.fillColor;
+      if (targetColor === engine.drawColor) return;
 
-    sessionManager.dispatchOperation({
-      opType: "UPDATE_GRID_CELL",
-      cellKey,
-      patch: {
-        fillColor: engine.drawColor,
-        fillCreator: sessionManager.myPeerId || "local"
+      const queue = [{ x: gx, y: gy }];
+      const bfsVisited = new Set<string>();
+      while (queue.length > 0 && bfsVisited.size < 600) {
+        const curr = queue.shift()!;
+        const currKey = `${curr.x},${curr.y}`;
+        if (bfsVisited.has(currKey)) continue;
+        bfsVisited.add(currKey);
+        visitedCells.add(currKey);
+
+        const currCell = doc.gridCells?.[currKey];
+        const currColor = currCell?.fillColor;
+        if (currColor !== targetColor) continue;
+
+        sessionManager.dispatchOperation({
+          opType: "UPDATE_GRID_CELL",
+          cellKey: currKey,
+          patch: {
+            fillColor: engine.drawColor,
+            fillCreator: sessionManager.myPeerId || "local"
+          }
+        });
+
+        queue.push(
+          { x: curr.x + size, y: curr.y },
+          { x: curr.x - size, y: curr.y },
+          { x: curr.x, y: curr.y + size },
+          { x: curr.x, y: curr.y - size }
+        );
       }
-    });
+      return;
+    }
+
+    const span = engine.fillSize || 1;
+    for (let dx = 0; dx < span; dx++) {
+      for (let dy = 0; dy < span; dy++) {
+        const cx = gx + dx * size;
+        const cy = gy + dy * size;
+        const cellKey = `${cx},${cy}`;
+        if (visitedCells.has(cellKey)) continue;
+        visitedCells.add(cellKey);
+
+        sessionManager.dispatchOperation({
+          opType: "UPDATE_GRID_CELL",
+          cellKey,
+          patch: {
+            fillColor: engine.drawColor,
+            fillCreator: sessionManager.myPeerId || "local"
+          }
+        });
+      }
+    }
   }
 
   engine.onMouseDown((_e, worldX, worldY) => {

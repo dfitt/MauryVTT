@@ -1,6 +1,7 @@
 import { docStore } from "../state/documentStore.js";
 import { sessionManager } from "../network/sessionManager.js";
-import { ChatMessage } from "../types/vtt.js";
+import { ChatMessage, TokenEntity, VTTDocument } from "../types/vtt.js";
+import { CanvasEngine } from "../canvas/canvasEngine.js";
 import { EffectEngine } from "../effects/effectEngine.js";
 import { getEffectIdForIcon } from "../effects/effectDefs.js";
 import { ALL_ROLL_ICONS, COIN_ICON_SVG } from "./rollIcons.js";
@@ -18,7 +19,37 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
   };
 }
 
-export function setupChatPanel(): void {
+function playEffectAtUserToken(engine: CanvasEngine | undefined, doc: VTTDocument, senderUsername?: string, senderPeerId?: string, effectId?: string): void {
+  if (!effectId || !engine || !doc || !doc.entities) return;
+
+  let userToken: TokenEntity | undefined;
+
+  if (senderUsername && doc.primaryTokens?.[senderUsername]) {
+    const ent = doc.entities[doc.primaryTokens[senderUsername]];
+    if (ent && ent.type === "token") userToken = ent as TokenEntity;
+  }
+
+  if (!userToken && senderUsername) {
+    userToken = Object.values(doc.entities).find(
+      (e) => e.type === "token" && (e as TokenEntity).primaryOwnerUsername === senderUsername
+    ) as TokenEntity | undefined;
+  }
+
+  if (!userToken && senderPeerId) {
+    userToken = Object.values(doc.entities).find(
+      (e) => e.type === "token" && (e as TokenEntity).ownerPeerIds?.includes(senderPeerId)
+    ) as TokenEntity | undefined;
+  }
+
+  if (userToken) {
+    const screenPos = engine.worldToScreen(userToken.position.x, userToken.position.y);
+    const sizePx = Math.max(140, userToken.size.width * engine.zoom * 1.6);
+    console.log("[DiceAnimation] Playing roll animation at token:", userToken.id, "for user:", senderUsername, "effectId:", effectId, "screenPos:", screenPos);
+    EffectEngine.playAtScreenCoord(screenPos.x, screenPos.y, effectId, sizePx);
+  }
+}
+
+export function setupChatPanel(engine?: CanvasEngine): void {
   const panel = document.createElement("div");
   panel.className = "chat-window";
   panel.id = "vtt-chat-panel";
@@ -715,6 +746,7 @@ export function setupChatPanel(): void {
       const effectId = getEffectIdForIcon(msg.rollIcon);
       if (effectId) {
         EffectEngine.playOverElement(toastEl, effectId);
+        playEffectAtUserToken(engine, docStore.getDocument(), msg.senderUsername, msg.senderPeerId, effectId);
       }
     }
 
@@ -819,6 +851,7 @@ export function setupChatPanel(): void {
             replayBtn.addEventListener("click", (e) => {
               e.stopPropagation();
               EffectEngine.playOverElement(existingEl, effId);
+              playEffectAtUserToken(engine, docStore.getDocument(), msg.senderUsername, msg.senderPeerId, effId);
             });
             existingEl.appendChild(replayBtn);
           }
@@ -910,6 +943,7 @@ export function setupChatPanel(): void {
             const effId = replayBtn.getAttribute("data-effect-id");
             if (effId) {
               EffectEngine.playOverElement(msgEl, effId);
+              playEffectAtUserToken(engine, docStore.getDocument(), msg.senderUsername, msg.senderPeerId, effId);
             }
           });
         }
@@ -925,6 +959,7 @@ export function setupChatPanel(): void {
             const effectId = getEffectIdForIcon(msg.rollIcon);
             if (effectId) {
               EffectEngine.playOverElement(msgEl, effectId);
+              playEffectAtUserToken(engine, docStore.getDocument(), msg.senderUsername, msg.senderPeerId, effectId);
             }
           }
           return;
@@ -943,6 +978,7 @@ export function setupChatPanel(): void {
           const effectId = getEffectIdForIcon(msg.rollIcon);
           if (effectId) {
             EffectEngine.playOverElement(msgEl, effectId);
+            playEffectAtUserToken(engine, docStore.getDocument(), msg.senderUsername, msg.senderPeerId, effectId);
           }
         }
 

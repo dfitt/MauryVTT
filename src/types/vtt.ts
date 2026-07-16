@@ -25,6 +25,7 @@ export interface VTTDocument {
   chatHistory: ChatMessage[];
   quickRolls: Record<string, QuickRoll[]>; // Keyed by username
   customVttfxBundles?: Record<string, any>;
+  primaryTokens?: Record<string, string>; // Keyed by username -> tokenId
 }
 
 export interface CanvasSettings {
@@ -83,6 +84,7 @@ export interface TokenEntity extends BaseEntity {
   gridSnapped: boolean;
   elevation: number;
   ownerPeerIds: string[];
+  primaryOwnerUsername?: string;
   statusEffects: string[];
   aura?: {
     radiusPx: number;

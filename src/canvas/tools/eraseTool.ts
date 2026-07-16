@@ -26,19 +26,26 @@ export function bindEraseTool(engine: CanvasEngine): void {
     const size = doc.canvasSettings.gridSizePx || 50;
     const gx = Math.floor(worldX / size) * size;
     const gy = Math.floor(worldY / size) * size;
-    const endX = gx + size;
-    const endY = gy + size;
-    const cellKey = `${gx},${gy}`;
+    const span = engine.eraseSize || 1;
+    const endX = gx + size * span;
+    const endY = gy + size * span;
 
-    const cell = doc.gridCells?.[cellKey];
-    if (cell && (cell.fillColor || cell.fogHidden)) {
-      if (!deletedInStroke.has(`grid-${cellKey}`)) {
-        deletedInStroke.add(`grid-${cellKey}`);
-        sessionManager.dispatchOperation({
-          opType: "UPDATE_GRID_CELL",
-          cellKey,
-          patch: { fillColor: undefined, fogHidden: undefined }
-        });
+    for (let dx = 0; dx < span; dx++) {
+      for (let dy = 0; dy < span; dy++) {
+        const cx = gx + dx * size;
+        const cy = gy + dy * size;
+        const cellKey = `${cx},${cy}`;
+        const cell = doc.gridCells?.[cellKey];
+        if (cell && (cell.fillColor || cell.fogHidden)) {
+          if (!deletedInStroke.has(`grid-${cellKey}`)) {
+            deletedInStroke.add(`grid-${cellKey}`);
+            sessionManager.dispatchOperation({
+              opType: "UPDATE_GRID_CELL",
+              cellKey,
+              patch: { fillColor: undefined, fogHidden: undefined }
+            });
+          }
+        }
       }
     }
 
@@ -50,7 +57,7 @@ export function bindEraseTool(engine: CanvasEngine): void {
         if (!l.points || l.points.length === 0) continue;
 
         let hits = false;
-        const threshold = size * 0.7;
+        const threshold = (size * span) * 0.5;
         const pad = size * 0.3;
 
         for (const [px, py] of l.points) {
@@ -61,10 +68,12 @@ export function bindEraseTool(engine: CanvasEngine): void {
         }
 
         if (!hits && l.points.length >= 2) {
+          const midX = gx + (endX - gx) / 2;
+          const midY = gy + (endY - gy) / 2;
           for (let i = 0; i < l.points.length - 1; i++) {
             const [x1, y1] = l.points[i];
             const [x2, y2] = l.points[i + 1];
-            if (distanceToSegment(worldX, worldY, x1, y1, x2, y2) <= threshold) {
+            if (distanceToSegment(midX, midY, x1, y1, x2, y2) <= threshold) {
               hits = true;
               break;
             }

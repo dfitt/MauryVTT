@@ -9,7 +9,7 @@ import { bindMeasureTool } from "./canvas/tools/measureTool.js";
 import { bindPingTool } from "./canvas/tools/pingTool.js";
 import { setupHeaderUI } from "./ui/userListUI.js";
 import { setupToolbarUI } from "./ui/toolbarUI.js";
-import { setupSelectionBarUI } from "./ui/selectionBarUI.js";
+import { setupSelectionBarUI, syncPrimaryTokenOwnership } from "./ui/selectionBarUI.js";
 import { setupChatPanel } from "./ui/chatPanel.js";
 import { renderJoinModal } from "./ui/joinModal.js";
 import { sessionManager } from "./network/sessionManager.js";
@@ -75,7 +75,8 @@ function bootstrap(): void {
     setupHeaderUI();
     setupToolbarUI(engine);
     setupSelectionBarUI(engine);
-    setupChatPanel();
+    setupChatPanel(engine);
+    syncPrimaryTokenOwnership();
 
     if (sessionManager.myColor) {
       engine.drawColor = sessionManager.myColor;

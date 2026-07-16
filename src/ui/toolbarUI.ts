@@ -59,18 +59,180 @@ export function setupToolbarUI(engine: CanvasEngine): void {
   const bar = document.createElement("div");
   bar.className = "bottom-toolbar";
 
+  const toolPopover = document.createElement("div");
+  toolPopover.className = "tool-options-popover";
+  toolPopover.style.cssText =
+    "display: none; position: absolute; bottom: 68px; left: 16px; background: rgba(15, 23, 42, 0.96); border: 1px solid rgba(56, 189, 248, 0.45); border-radius: 12px; padding: 12px 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.65); z-index: 1000; flex-direction: column; gap: 10px; min-width: 230px; color: #f8fafc; font-family: Outfit, sans-serif;";
+  bar.appendChild(toolPopover);
+
+  const hasOptions = (id: ToolType) => id === "draw" || id === "line" || id === "fill" || id === "erase";
+
+  const renderPopover = (toolId: ToolType) => {
+    toolPopover.innerHTML = "";
+    if (toolId === "draw" || toolId === "line") {
+      const header = document.createElement("div");
+      header.style.cssText = "font-weight: 600; font-size: 13px; color: #38bdf8; display: flex; justify-content: space-between; align-items: center;";
+      header.innerHTML = `<span>${toolId === "draw" ? "✏️ Freehand Thickness" : "🖊️ Line Thickness"}</span><span id="pop-draw-label">${engine.drawWidth}px</span>`;
+      toolPopover.appendChild(header);
+
+      const presetsRow = document.createElement("div");
+      presetsRow.style.cssText = "display: flex; gap: 6px;";
+      const presets = [
+        { label: "Fine (2px)", val: 2 },
+        { label: "Med (6px)", val: 6 },
+        { label: "Bold (14px)", val: 14 },
+        { label: "Heavy (28px)", val: 28 }
+      ];
+      presets.forEach((p) => {
+        const b = document.createElement("button");
+        const active = engine.drawWidth === p.val;
+        b.className = `btn-glass btn-sm ${active ? "btn-active" : ""}`;
+        b.style.cssText = `flex: 1; padding: 5px 2px; font-size: 11px; border-radius: 6px; cursor: pointer; ${active ? "background: #38bdf8; color: #0f172a; font-weight: 700;" : ""}`;
+        b.textContent = p.label;
+        b.addEventListener("click", () => {
+          engine.drawWidth = p.val;
+          engine.notifyToolOptionsChanged();
+          renderPopover(toolId);
+        });
+        presetsRow.appendChild(b);
+      });
+      toolPopover.appendChild(presetsRow);
+
+      const sliderRow = document.createElement("div");
+      sliderRow.style.cssText = "display: flex; align-items: center; gap: 8px; margin-top: 2px;";
+      const slider = document.createElement("input");
+      slider.type = "range";
+      slider.min = "2";
+      slider.max = "60";
+      slider.value = String(engine.drawWidth);
+      slider.style.cssText = "flex: 1; cursor: pointer; accent-color: #38bdf8;";
+      slider.addEventListener("input", () => {
+        engine.drawWidth = Number(slider.value);
+        const label = toolPopover.querySelector("#pop-draw-label");
+        if (label) label.textContent = `${engine.drawWidth}px`;
+        engine.notifyToolOptionsChanged();
+      });
+      sliderRow.appendChild(slider);
+      toolPopover.appendChild(sliderRow);
+
+      const hint = document.createElement("div");
+      hint.style.cssText = "font-size: 11px; color: #94a3b8; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 6px;";
+      hint.textContent = "💡 Shortcut: [ / ] or Shift+Wheel to resize";
+      toolPopover.appendChild(hint);
+    } else if (toolId === "fill") {
+      const header = document.createElement("div");
+      header.style.cssText = "font-weight: 600; font-size: 13px; color: #38bdf8;";
+      header.textContent = "🔲 Grid Fill Mode";
+      toolPopover.appendChild(header);
+
+      const gridRow = document.createElement("div");
+      gridRow.style.cssText = "display: grid; grid-template-columns: 1fr 1fr; gap: 6px;";
+      const modes = [
+        { label: "1x1 Cell", size: 1, bucket: false },
+        { label: "2x2 Stamp", size: 2, bucket: false },
+        { label: "3x3 Stamp", size: 3, bucket: false },
+        { label: "🪣 Flood Bucket", size: 1, bucket: true }
+      ];
+      modes.forEach((m) => {
+        const b = document.createElement("button");
+        const active = m.bucket ? engine.fillBucket : (!engine.fillBucket && engine.fillSize === m.size);
+        b.className = `btn-glass btn-sm ${active ? "btn-active" : ""}`;
+        b.style.cssText = `padding: 6px 4px; font-size: 12px; border-radius: 6px; cursor: pointer; ${active ? "background: #38bdf8; color: #0f172a; font-weight: 700;" : ""}`;
+        b.textContent = m.label;
+        b.addEventListener("click", () => {
+          engine.fillBucket = m.bucket;
+          if (!m.bucket) engine.fillSize = m.size;
+          engine.notifyToolOptionsChanged();
+          renderPopover(toolId);
+        });
+        gridRow.appendChild(b);
+      });
+      toolPopover.appendChild(gridRow);
+
+      const hint = document.createElement("div");
+      hint.style.cssText = "font-size: 11px; color: #94a3b8; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 6px;";
+      hint.textContent = "💡 Shortcut: [ / ] or Shift+Wheel to change mode";
+      toolPopover.appendChild(hint);
+    } else if (toolId === "erase") {
+      const header = document.createElement("div");
+      header.style.cssText = "font-weight: 600; font-size: 13px; color: #ef4444;";
+      header.textContent = "🧹 Eraser Area";
+      toolPopover.appendChild(header);
+
+      const gridRow = document.createElement("div");
+      gridRow.style.cssText = "display: grid; grid-template-columns: 1fr 1fr; gap: 6px;";
+      const modes = [
+        { label: "1x1 Cell", size: 1 },
+        { label: "2x2 Area", size: 2 },
+        { label: "3x3 Area", size: 3 },
+        { label: "5x5 Large", size: 5 }
+      ];
+      modes.forEach((m) => {
+        const b = document.createElement("button");
+        const active = engine.eraseSize === m.size;
+        b.className = `btn-glass btn-sm ${active ? "btn-active" : ""}`;
+        b.style.cssText = `padding: 6px 4px; font-size: 12px; border-radius: 6px; cursor: pointer; ${active ? "background: #ef4444; color: #ffffff; font-weight: 700;" : ""}`;
+        b.textContent = m.label;
+        b.addEventListener("click", () => {
+          engine.eraseSize = m.size;
+          engine.notifyToolOptionsChanged();
+          renderPopover(toolId);
+        });
+        gridRow.appendChild(b);
+      });
+      toolPopover.appendChild(gridRow);
+
+      const hint = document.createElement("div");
+      hint.style.cssText = "font-size: 11px; color: #94a3b8; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 6px;";
+      hint.textContent = "💡 Shortcut: [ / ] or Shift+Wheel to scale eraser";
+      toolPopover.appendChild(hint);
+    }
+  };
+
   tools.forEach((tool) => {
     const btn = document.createElement("button");
     btn.className = `tool-btn ${engine.activeTool === tool.id ? "active" : ""}`;
-    btn.setAttribute("data-tooltip", tool.title);
+    btn.setAttribute("data-tooltip", tool.title + (hasOptions(tool.id) ? " (Click active or right-click for size & options)" : ""));
     btn.innerHTML = tool.icon;
     btn.setAttribute("data-tool-id", tool.id);
 
-    btn.addEventListener("click", () => {
-      engine.setTool(tool.id);
-      bar.querySelectorAll(".tool-btn[data-tool-id]").forEach((b) => b.classList.remove("active"));
-      btn.classList.add("active");
+    btn.addEventListener("click", (e) => {
+      if (engine.activeTool === tool.id && hasOptions(tool.id)) {
+        e.stopPropagation();
+        if (toolPopover.style.display === "flex" && toolPopover.getAttribute("data-popover-tool") === tool.id) {
+          toolPopover.style.display = "none";
+        } else {
+          toolPopover.setAttribute("data-popover-tool", tool.id);
+          renderPopover(tool.id);
+          toolPopover.style.display = "flex";
+          const rect = btn.getBoundingClientRect();
+          const barRect = bar.getBoundingClientRect();
+          toolPopover.style.left = `${Math.max(10, rect.left - barRect.left - 30)}px`;
+        }
+      } else {
+        engine.setTool(tool.id);
+        bar.querySelectorAll(".tool-btn[data-tool-id]").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        toolPopover.style.display = "none";
+      }
     });
+
+    btn.addEventListener("contextmenu", (e) => {
+      if (hasOptions(tool.id)) {
+        e.preventDefault();
+        e.stopPropagation();
+        engine.setTool(tool.id);
+        bar.querySelectorAll(".tool-btn[data-tool-id]").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        toolPopover.setAttribute("data-popover-tool", tool.id);
+        renderPopover(tool.id);
+        toolPopover.style.display = "flex";
+        const rect = btn.getBoundingClientRect();
+        const barRect = bar.getBoundingClientRect();
+        toolPopover.style.left = `${Math.max(10, rect.left - barRect.left - 30)}px`;
+      }
+    });
+
     bar.appendChild(btn);
   });
 
@@ -78,6 +240,17 @@ export function setupToolbarUI(engine: CanvasEngine): void {
     bar.querySelectorAll(".tool-btn[data-tool-id]").forEach((b) => {
       b.classList.toggle("active", b.getAttribute("data-tool-id") === toolId);
     });
+    const curPopTool = toolPopover.getAttribute("data-popover-tool");
+    if (toolPopover.style.display === "flex" && curPopTool !== toolId) {
+      toolPopover.style.display = "none";
+    }
+  });
+
+  engine.onToolOptionsChanged(() => {
+    const curTool = toolPopover.getAttribute("data-popover-tool") as ToolType;
+    if (toolPopover.style.display === "flex" && curTool && curTool === engine.activeTool) {
+      renderPopover(curTool);
+    }
   });
 
   const divider1 = document.createElement("div");
@@ -197,6 +370,9 @@ export function setupToolbarUI(engine: CanvasEngine): void {
   document.addEventListener("click", (e) => {
     if (!colorGroup.contains(e.target as Node)) {
       colorPopover.style.display = "none";
+    }
+    if (!toolPopover.contains(e.target as Node) && !(e.target as HTMLElement).closest(".tool-btn")) {
+      toolPopover.style.display = "none";
     }
   });
 
@@ -446,7 +622,8 @@ export function setupToolbarUI(engine: CanvasEngine): void {
       labelVisibleToAll: true,
       gridSnapped: true,
       elevation: 0,
-      ownerPeerIds: [],
+      ownerPeerIds: [sessionManager.myPeerId || "local"],
+      primaryOwnerUsername: sessionManager.myUsername || localStorage.getItem("maury_vtt_username") || "Me",
       statusEffects: []
     };
 

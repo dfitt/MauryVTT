@@ -59,10 +59,14 @@ export class CanvasEngine {
   public activeTool: ToolType = "select";
   public drawColor: string = "#38bdf8";
   public drawWidth: number = 8;
+  public fillSize: number = 1;
+  public fillBucket: boolean = false;
+  public eraseSize: number = 1;
   private _selectedEntityId: string | null = null;
   public aligningImageEntityId: string | null = null;
   public resizingTokenId: string | null = null;
   private selectionListeners: Set<(id: string | null) => void> = new Set();
+  private toolOptionsListeners: Set<() => void> = new Set();
 
   // Hover cursor state for tool previews
   public hoverWorldPos: { x: number; y: number } | null = null;
@@ -159,6 +163,65 @@ export class CanvasEngine {
   public onToolChanged(listener: (tool: ToolType) => void): () => void {
     this.toolChangeListeners.add(listener);
     return () => this.toolChangeListeners.delete(listener);
+  }
+
+  public onToolOptionsChanged(listener: () => void): () => void {
+    this.toolOptionsListeners.add(listener);
+    return () => this.toolOptionsListeners.delete(listener);
+  }
+
+  public notifyToolOptionsChanged(): void {
+    for (const l of this.toolOptionsListeners) l();
+  }
+
+  public stepToolSize(step: number): void {
+    if (this.activeTool === "draw" || this.activeTool === "line") {
+      this.drawWidth = Math.min(60, Math.max(2, this.drawWidth + step * 2));
+      this.showToast(`Pen Size: ${this.drawWidth}px`);
+    } else if (this.activeTool === "fill") {
+      if (this.fillBucket) {
+        if (step < 0) {
+          this.fillBucket = false;
+          this.fillSize = 3;
+          this.showToast(`Fill Mode: 3x3 Stamp`);
+        }
+      } else {
+        const next = this.fillSize + step;
+        if (next > 3) {
+          this.fillBucket = true;
+          this.showToast(`Fill Mode: Flood Bucket 🪣`);
+        } else if (next >= 1) {
+          this.fillSize = next;
+          this.showToast(`Fill Mode: ${this.fillSize}x${this.fillSize} Stamp`);
+        }
+      }
+    } else if (this.activeTool === "erase") {
+      const sizes = [1, 2, 3, 5];
+      const idx = sizes.indexOf(this.eraseSize);
+      let nextIdx = idx + step;
+      if (nextIdx < 0) nextIdx = 0;
+      if (nextIdx >= sizes.length) nextIdx = sizes.length - 1;
+      this.eraseSize = sizes[nextIdx];
+      this.showToast(`Eraser Size: ${this.eraseSize}x${this.eraseSize} Area`);
+    }
+    this.notifyToolOptionsChanged();
+  }
+
+  public showToast(msg: string): void {
+    let toast = document.getElementById("vtt-tool-toast");
+    if (!toast) {
+      toast = document.createElement("div");
+      toast.id = "vtt-tool-toast";
+      toast.style.cssText =
+        "position: fixed; bottom: 84px; left: 50%; transform: translateX(-50%); background: rgba(15, 23, 42, 0.92); border: 1px solid rgba(56, 189, 248, 0.5); color: #f8fafc; padding: 6px 16px; border-radius: 999px; font-size: 13px; font-weight: 600; pointer-events: none; z-index: 10000; box-shadow: 0 4px 16px rgba(0,0,0,0.4); transition: opacity 0.25s ease;";
+      document.body.appendChild(toast);
+    }
+    toast.textContent = msg;
+    toast.style.opacity = "1";
+    if ((this as any)._toastTimeout) clearTimeout((this as any)._toastTimeout);
+    (this as any)._toastTimeout = setTimeout(() => {
+      if (toast) toast.style.opacity = "0";
+    }, 1500);
   }
 
   private setupEvents(): void {
@@ -295,8 +358,23 @@ export class CanvasEngine {
       for (const l of this.onMouseUpListeners) l(e, world.x, world.y);
     });
 
+    window.addEventListener("keydown", (e) => {
+      const target = e.target as HTMLElement;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
+      if (e.key === "[" || e.key === "-") {
+        this.stepToolSize(-1);
+      } else if (e.key === "]" || e.key === "+" || e.key === "=") {
+        this.stepToolSize(1);
+      }
+    });
+
     this.canvas.addEventListener("wheel", (e) => {
       e.preventDefault();
+      if (e.shiftKey && (this.activeTool === "draw" || this.activeTool === "line" || this.activeTool === "fill" || this.activeTool === "erase")) {
+        const step = e.deltaY < 0 ? 1 : -1;
+        this.stepToolSize(step);
+        return;
+      }
       const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
       const newZoom = Math.min(Math.max(0.1, this.zoom * zoomFactor), 8.0);
 
@@ -649,29 +727,63 @@ export class CanvasEngine {
       }
     }
 
-    // Tool Hover Previews (Fill, Erase, Hide, Unhide)
+    // Tool Hover Previews (Fill, Erase, Hide, Unhide, Draw, Line)
     if (this.hoverWorldPos) {
       const size = doc.canvasSettings.gridSizePx || 50;
       const gx = Math.floor(this.hoverWorldPos.x / size) * size;
       const gy = Math.floor(this.hoverWorldPos.y / size) * size;
 
       if (this.activeTool === "fill") {
-        if (this.drawColor === "fog") {
-          ctx.fillStyle = "rgba(0, 0, 0, 0.45)";
+        if (this.fillBucket) {
+          if (this.drawColor === "fog") {
+            ctx.fillStyle = "rgba(0, 0, 0, 0.45)";
+          } else {
+            ctx.fillStyle = this.drawColor;
+          }
+          ctx.globalAlpha = 0.35;
+          ctx.fillRect(gx, gy, size, size);
+          ctx.globalAlpha = 1.0;
+          ctx.font = `${Math.max(16, 20 / this.zoom)}px Outfit, sans-serif`;
+          ctx.textAlign = "center";
+          ctx.fillText("🪣", gx + size / 2, gy + size / 2 + 6 / this.zoom);
         } else {
-          ctx.fillStyle = this.drawColor;
+          const span = this.fillSize || 1;
+          if (this.drawColor === "fog") {
+            ctx.fillStyle = "rgba(0, 0, 0, 0.45)";
+          } else {
+            ctx.fillStyle = this.drawColor;
+          }
+          ctx.globalAlpha = 0.35;
+          ctx.fillRect(gx, gy, size * span, size * span);
+          ctx.globalAlpha = 1.0;
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.6)";
+          ctx.lineWidth = 1.5 / this.zoom;
+          ctx.strokeRect(gx, gy, size * span, size * span);
         }
-        ctx.globalAlpha = 0.35;
-        ctx.fillRect(gx, gy, size, size);
-        ctx.globalAlpha = 1.0;
       } else if (this.activeTool === "erase") {
+        const span = this.eraseSize || 1;
         ctx.fillStyle = "#ef4444";
         ctx.globalAlpha = 0.25;
-        ctx.fillRect(gx, gy, size, size);
+        ctx.fillRect(gx, gy, size * span, size * span);
         ctx.globalAlpha = 1.0;
         ctx.strokeStyle = "#ef4444";
         ctx.lineWidth = 2 / this.zoom;
-        ctx.strokeRect(gx, gy, size, size);
+        ctx.strokeRect(gx, gy, size * span, size * span);
+      } else if (this.activeTool === "draw" || this.activeTool === "line") {
+        ctx.beginPath();
+        ctx.arc(this.hoverWorldPos.x, this.hoverWorldPos.y, (this.drawWidth || 4) / 2, 0, Math.PI * 2);
+        if (this.drawColor === "fog") {
+          ctx.fillStyle = "rgba(0, 0, 0, 0.45)";
+          ctx.strokeStyle = "#ffffff";
+        } else {
+          ctx.fillStyle = this.drawColor;
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
+        }
+        ctx.globalAlpha = 0.6;
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
+        ctx.lineWidth = 1.5 / this.zoom;
+        ctx.stroke();
       } else if (this.activeTool === "hide") {
         ctx.fillStyle = "#000000";
         ctx.globalAlpha = 0.65;

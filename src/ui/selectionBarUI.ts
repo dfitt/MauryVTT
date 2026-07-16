@@ -61,6 +61,64 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
       });
       bar.appendChild(nameInput);
 
+      // Mine Checkbox
+      const myUsername = sessionManager.myUsername || localStorage.getItem("maury_vtt_username") || "Me";
+      const myPeerId = sessionManager.myPeerId || "local";
+      const isMine = token.primaryOwnerUsername === myUsername || (doc.primaryTokens?.[myUsername] === token.id);
+
+      const mineLabel = document.createElement("label");
+      mineLabel.className = `btn-glass btn-sm ${isMine ? "btn-active" : ""}`;
+      mineLabel.style.cssText = "display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; margin: 0 4px; border-radius: 8px;";
+      mineLabel.setAttribute("data-tooltip", "Claim as your primary token (Each user can have one primary token)");
+
+      const mineCheckbox = document.createElement("input");
+      mineCheckbox.type = "checkbox";
+      mineCheckbox.checked = isMine;
+      mineCheckbox.style.cssText = "cursor: pointer; width: 14px; height: 14px; accent-color: #38bdf8;";
+
+      mineLabel.appendChild(mineCheckbox);
+      const mineSpan = document.createElement("span");
+      mineSpan.textContent = isMine ? "Mine ✓" : "Mine";
+      mineLabel.appendChild(mineSpan);
+
+      const toggleMine = () => {
+        if (mineCheckbox.checked) {
+          const newOwnerPeerIds = Array.from(new Set([...(token.ownerPeerIds || []), myPeerId]));
+          sessionManager.dispatchOperation({
+            opType: "UPDATE_ENTITY",
+            id: token.id,
+            patch: {
+              primaryOwnerUsername: myUsername,
+              ownerPeerIds: newOwnerPeerIds
+            } as any
+          });
+        } else {
+          const filteredPeers = (token.ownerPeerIds || []).filter((id) => id !== myPeerId);
+          sessionManager.dispatchOperation({
+            opType: "UPDATE_ENTITY",
+            id: token.id,
+            patch: {
+              primaryOwnerUsername: undefined,
+              ownerPeerIds: filteredPeers
+            } as any
+          });
+        }
+      };
+
+      mineCheckbox.addEventListener("change", (e) => {
+        e.stopPropagation();
+        toggleMine();
+      });
+
+      mineLabel.addEventListener("click", (e) => {
+        if (e.target !== mineCheckbox) {
+          mineCheckbox.checked = !mineCheckbox.checked;
+          toggleMine();
+        }
+      });
+
+      bar.appendChild(mineLabel);
+
       // Duplicate Button (1 cell right)
       const dupBtn = document.createElement("button");
       dupBtn.className = "btn-glass btn-sm";
@@ -214,6 +272,30 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
   engine.onSelectionChanged((id) => updateBar(id));
 
   docStore.subscribe(() => {
+    syncPrimaryTokenOwnership();
     updateBar(engine.selectedEntityId);
   });
+}
+
+export function syncPrimaryTokenOwnership(): void {
+  const doc = docStore.getDocument();
+  const myUsername = sessionManager.myUsername || localStorage.getItem("maury_vtt_username");
+  const myPeerId = sessionManager.myPeerId || "local";
+  if (!myUsername || !doc || !doc.entities) return;
+
+  const tokenId = doc.primaryTokens?.[myUsername] || Object.values(doc.entities).find(
+    (e) => e.type === "token" && (e as TokenEntity).primaryOwnerUsername === myUsername
+  )?.id;
+
+  if (tokenId && doc.entities[tokenId]) {
+    const token = doc.entities[tokenId] as TokenEntity;
+    if (token && (!token.ownerPeerIds || !token.ownerPeerIds.includes(myPeerId))) {
+      const newOwnerPeerIds = Array.from(new Set([...(token.ownerPeerIds || []), myPeerId]));
+      sessionManager.dispatchOperation({
+        opType: "UPDATE_ENTITY",
+        id: token.id,
+        patch: { ownerPeerIds: newOwnerPeerIds, primaryOwnerUsername: myUsername } as any
+      });
+    }
+  }
 }
