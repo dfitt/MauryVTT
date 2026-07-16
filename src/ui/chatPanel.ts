@@ -3,6 +3,7 @@ import { sessionManager } from "../network/sessionManager.js";
 import { ChatMessage } from "../types/vtt.js";
 import { EffectEngine } from "../effects/effectEngine.js";
 import { getEffectIdForIcon } from "../effects/effectDefs.js";
+import { ALL_ROLL_ICONS, COIN_ICON_SVG } from "./rollIcons.js";
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } {
   let c = hex.replace(/^#/, "");
@@ -53,7 +54,7 @@ export function setupChatPanel(): void {
         </div>
         <input type="text" id="dice-builder-label" class="dice-builder-label-input" placeholder="Label (e.g. Attack or Holy Damage)..." />
         <div class="dice-builder-actions" style="position: relative; display: flex; gap: 6px; align-items: center;">
-          <button class="btn-glass" id="dice-builder-icon-btn" data-tooltip="Choose Icon for this Roll & QuickRoll" style="padding: 6px 10px; font-size: 1.1em; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 6px;">🎲</button>
+          <button class="btn-glass" id="dice-builder-icon-btn" data-tooltip="Choose Icon for this Roll & QuickRoll" style="padding: 6px 10px; font-size: 1.1em; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 6px;">${ALL_ROLL_ICONS[0]}</button>
           <button class="btn-glass btn-primary" id="dice-builder-roll-btn" style="flex: 1; padding: 6px;">Roll</button>
           <button class="btn-glass" id="dice-builder-clear-btn" style="flex: 1; padding: 6px;">Clear</button>
         </div>
@@ -133,17 +134,7 @@ export function setupChatPanel(): void {
 
   const iconBtnEl = panel.querySelector<HTMLButtonElement>("#dice-builder-icon-btn")!;
   const iconPopoverEl = panel.querySelector<HTMLElement>("#dice-builder-icon-popover")!;
-  let selectedRollIcon = "🎲";
-
-  const ALL_ROLL_ICONS = [
-    "🎲", "⚔️", "🏹", "🔥", "✨", "🗡️", "✝️",
-    `<span style='display:inline-block; transform:rotate(180deg); filter:invert(1);'>✝️</span>`,
-    `<svg viewBox="0 0 64 64" width="1.1em" height="1.1em" style="vertical-align:middle; display:inline-block;"><circle cx="26" cy="42" r="16" fill="#92400e" stroke="#78350f" stroke-width="2"/><circle cx="26" cy="42" r="6" fill="#451a03"/><path d="M36 32 L54 14 L58 18 L40 36 Z" fill="#d97706"/><path d="M52 12 L58 18 L62 14 L56 8 Z" fill="#78350f"/><line x1="22" y1="46" x2="56" y2="12" stroke="#fef08a" stroke-width="1"/><line x1="26" y1="48" x2="58" y2="16" stroke="#fef08a" stroke-width="1"/></svg>`,
-    "⚡",
-    `<span style='display:inline-block; color:#22c55e; filter:drop-shadow(0 0 4px rgba(34,197,94,0.85));'>☁️</span>`,
-    "🛡️", "❄️", "👁️", "💀", "🚫", "🌿", "🧠", "💫", "💢", "🌀", "⏳", "🕊️", "🎯", "🍄", "🔮", "🏮", "🕸️", "🍷", "🐺", "🦋", "🪵", "🐐", "🐈", "🔔", "🦉", "🪃", "🤺",
-    "👑", "🧙", "🏰", "☄️", "🌪️", "🌌", "🎇", "🌟", "🌋", "☢️", "💠"
-  ];
+  let selectedRollIcon = ALL_ROLL_ICONS[0];
 
   let currentIconPage = 0;
   const ICONS_PER_PAGE = 20;
@@ -176,7 +167,7 @@ export function setupChatPanel(): void {
     gridEl.querySelectorAll<HTMLButtonElement>(".roll-icon-swatch").forEach((swatch) => {
       swatch.addEventListener("click", (e) => {
         e.stopPropagation();
-        const chosen = decodeURIComponent(swatch.getAttribute("data-icon") || "🎲");
+        const chosen = decodeURIComponent(swatch.getAttribute("data-icon") || ALL_ROLL_ICONS[0]);
         selectedRollIcon = chosen;
         iconBtnEl.innerHTML = chosen;
         iconPopoverEl.style.display = "none";
@@ -236,7 +227,7 @@ export function setupChatPanel(): void {
     return expr;
   }
 
-  function saveQuickRoll(label: string, expr: string, icon: string = "🎲"): void {
+  function saveQuickRoll(label: string, expr: string, icon: string = ALL_ROLL_ICONS[0]): void {
     const cleanLabel = label.trim();
     const cleanExpr = expr.trim();
     const username = sessionManager.myUsername || "Me";
@@ -274,7 +265,7 @@ export function setupChatPanel(): void {
       .map(
         (qr, idx) => `
           <button class="btn-glass quickroll-btn" data-idx="${idx}" title="Quick roll: ${qr.label} (${qr.expr})" style="padding: 4px 8px; font-size: 0.85em; display: flex; align-items: center; gap: 4px; border: 1px solid rgba(56, 189, 248, 0.4); background: rgba(15, 23, 42, 0.75); border-radius: 4px; color: #f8fafc; cursor: pointer;">
-            <span style="color: #38bdf8; font-size: 1.1em;">${qr.icon || "🎲"}</span>
+            <span style="color: #38bdf8; font-size: 1.1em;">${qr.icon || ALL_ROLL_ICONS[0]}</span>
             <strong style="font-weight: 600;">${qr.label}</strong>
             <span style="color: #94a3b8; font-size: 0.8em;">(${qr.expr})</span>
           </button>
@@ -289,7 +280,7 @@ export function setupChatPanel(): void {
         const qr = list[idx];
         if (!qr) return;
 
-        const rollRes = parseAndRollDice(qr.expr, qr.icon || "🎲");
+        const rollRes = parseAndRollDice(qr.expr, qr.icon || ALL_ROLL_ICONS[0]);
         if (!rollRes) return;
 
         const newMsg: ChatMessage = {
@@ -300,7 +291,7 @@ export function setupChatPanel(): void {
           content: rollRes,
           type: "roll",
           rollLabel: qr.label,
-          rollIcon: qr.icon || "🎲"
+          rollIcon: qr.icon || ALL_ROLL_ICONS[0]
         };
 
         sessionManager.dispatchOperation({
@@ -308,7 +299,7 @@ export function setupChatPanel(): void {
           message: newMsg
         });
 
-        saveQuickRoll(qr.label, qr.expr, qr.icon || "🎲");
+        saveQuickRoll(qr.label, qr.expr, qr.icon || ALL_ROLL_ICONS[0]);
       });
     });
   }
@@ -319,8 +310,8 @@ export function setupChatPanel(): void {
       detailsEl.style.display = "none";
     } else {
       if (detailsEl.style.display === "none") {
-        selectedRollIcon = "🎲";
-        iconBtnEl.innerHTML = "🎲";
+        selectedRollIcon = ALL_ROLL_ICONS[0];
+        iconBtnEl.innerHTML = ALL_ROLL_ICONS[0];
         if (iconPopoverEl) {
           iconPopoverEl.style.display = "none";
           renderPopoverPage();
@@ -337,8 +328,8 @@ export function setupChatPanel(): void {
       builderState[key] = 0;
     }
     labelInputEl.value = "";
-    selectedRollIcon = "🎲";
-    iconBtnEl.innerHTML = "🎲";
+    selectedRollIcon = ALL_ROLL_ICONS[0];
+    iconBtnEl.innerHTML = ALL_ROLL_ICONS[0];
     if (iconPopoverEl) {
       iconPopoverEl.style.display = "none";
       renderPopoverPage();
@@ -427,7 +418,7 @@ export function setupChatPanel(): void {
     resetBuilderState();
   });
 
-  function parseAndRollDice(cmd: string, customIcon: string = "🎲"): string | null {
+  function parseAndRollDice(cmd: string, customIcon: string = ALL_ROLL_ICONS[0]): string | null {
     const rawExpr = cmd.replace(/^\/(roll|r)\s+/i, "").replace(/\s+/g, "");
     if (!rawExpr) return null;
 
@@ -477,7 +468,7 @@ export function setupChatPanel(): void {
     }
 
     if (!valid) return null;
-    let rollIcon = customIcon || "🎲";
+    let rollIcon = customIcon || ALL_ROLL_ICONS[0];
     if (hasD20) {
       if (hasNat20) {
         rollIcon = '<strong style="color: #4ade80; font-weight: 900; letter-spacing: 0.5px;">CRIT!</strong>';
@@ -592,7 +583,7 @@ export function setupChatPanel(): void {
         content,
         type: msgType,
         rollLabel,
-        rollIcon: msgType === "roll" ? (/^\/flip$/i.test(val) ? "🪙" : selectedRollIcon) : undefined
+        rollIcon: msgType === "roll" ? (/^\/flip$/i.test(val) ? COIN_ICON_SVG : selectedRollIcon) : undefined
       };
 
       sessionManager.dispatchOperation({
@@ -659,7 +650,7 @@ export function setupChatPanel(): void {
 
     let contentHtml = msg.content;
     if (msg.type === "roll") {
-      const iconToUse = msg.rollIcon || "🎲";
+      const iconToUse = msg.rollIcon || ALL_ROLL_ICONS[0];
       contentHtml = `${iconToUse} ${msg.rollLabel ? `<strong>${msg.rollLabel}</strong>: ` : ""}${msg.content}`;
     } else if (msg.type === "action") {
       contentHtml = `<em>* ${msg.senderUsername} ${msg.content} *</em>`;
@@ -772,7 +763,7 @@ export function setupChatPanel(): void {
           }
         }
 
-        if (msg.type === "roll" && msg.rollIcon && msg.rollIcon !== "🎲") {
+        if (msg.type === "roll" && msg.rollIcon && getEffectIdForIcon(msg.rollIcon)) {
           const effId = getEffectIdForIcon(msg.rollIcon);
           if (effId && !existingEl.querySelector(".play-roll-anim-btn")) {
             existingEl.style.position = "relative";
@@ -859,7 +850,7 @@ export function setupChatPanel(): void {
             🎉 <span>${msg.celebrate || 0}</span>
           </button>
         </div>
-        ${msg.type === "roll" && msg.rollIcon && msg.rollIcon !== "🎲" && getEffectIdForIcon(msg.rollIcon) ? `
+        ${msg.type === "roll" && msg.rollIcon && getEffectIdForIcon(msg.rollIcon) ? `
           <button class="play-roll-anim-btn" data-effect-id="${getEffectIdForIcon(msg.rollIcon)}" title="Replay Animation" style="position: absolute; bottom: 4px; right: 6px; background: transparent; border: none; color: #38bdf8; font-size: 11px; padding: 4px 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10; transition: transform 0.15s ease, filter 0.15s ease;">▶</button>
         ` : ""}
       `;
@@ -867,7 +858,7 @@ export function setupChatPanel(): void {
       container.appendChild(msgEl);
       container.scrollTop = container.scrollHeight;
 
-      if (msg.type === "roll" && msg.rollIcon && msg.rollIcon !== "🎲" && getEffectIdForIcon(msg.rollIcon)) {
+      if (msg.type === "roll" && msg.rollIcon && getEffectIdForIcon(msg.rollIcon)) {
         msgEl.style.position = "relative";
         msgEl.style.paddingRight = "32px";
         const replayBtn = msgEl.querySelector<HTMLButtonElement>(".play-roll-anim-btn");
@@ -950,7 +941,7 @@ export function setupChatPanel(): void {
 
           let displaySpinning = randomized;
           if (displaySpinning.includes("CRIT!") || displaySpinning.includes("NOPE")) {
-            const iconToRestore = msg.rollIcon || "🎲";
+            const iconToRestore = msg.rollIcon || ALL_ROLL_ICONS[0];
             displaySpinning = displaySpinning.replace(/<strong[^>]*>.*?CRIT!.*?<\/strong>|<strong[^>]*>.*?NOPE.*?<\/strong>/i, iconToRestore);
           }
           beforeSpan.innerHTML = displaySpinning;

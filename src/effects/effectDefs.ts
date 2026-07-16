@@ -18,15 +18,23 @@ export interface VttEffectDefinition {
 
 export function getEffectIdForIcon(icon?: string): string | null {
   if (!icon) return null;
-  if (icon.includes("⚔️")) return "sword_slash";
-  if (icon.includes("🏹")) return "arrow_hit";
-  if (icon.includes("🔥")) return "fireball_explosion";
-  if (icon.includes("✨") || icon.includes("💖")) return "pink_sparkles";
-  if (icon.includes("🗡️")) return "dagger_twirl";
-  if (icon.includes("☀️") || icon.includes("✝️")) return "holy_healing";
-  if (icon.includes("📿") || icon.includes("🧿") || icon.includes("⚰️")) return "turn_undead";
-  if (icon.includes("🪕") || icon.includes("circle cx=\"26\" cy=\"42\" r=\"16\" fill=\"#92400e\"") || icon.includes("🎸") || icon.includes("🪈")) return "lute_music";
-  if (icon.includes("⚡")) return "lightning_strikes";
+  const attrMatch = icon.match(/data-vtt-icon=["']([^"']+)["']/);
+  if (attrMatch && attrMatch[1]) {
+    const id = attrMatch[1];
+    if (id !== "d20_dice" && id !== "coin_flip") {
+      return id;
+    }
+    return null;
+  }
+  if (icon.includes("⚔️") || icon.includes("sword_slash")) return "sword_slash";
+  if (icon.includes("🏹") || icon.includes("arrow_hit")) return "arrow_hit";
+  if (icon.includes("🔥") || icon.includes("fireball_explosion")) return "fireball_explosion";
+  if (icon.includes("✨") || icon.includes("💖") || icon.includes("pink_sparkles")) return "pink_sparkles";
+  if (icon.includes("🗡️") || icon.includes("dagger_twirl")) return "dagger_twirl";
+  if (icon.includes("☀️") || icon.includes("✝️") || icon.includes("holy_healing")) return "holy_healing";
+  if (icon.includes("📿") || icon.includes("🧿") || icon.includes("⚰️") || icon.includes("turn_undead")) return "turn_undead";
+  if (icon.includes("🪕") || icon.includes("circle cx=\"26\" cy=\"42\" r=\"16\" fill=\"#92400e\"") || icon.includes("🎸") || icon.includes("🪈") || icon.includes("lute_music")) return "lute_music";
+  if (icon.includes("⚡") || icon.includes("lightning_strikes")) return "lightning_strikes";
   if (icon.includes("☁️") || icon.includes("☣️") || icon.includes("🧪") || icon.includes("toxic_cloud")) return "toxic_cloud";
   if (icon.includes("🛡️") || icon.includes("arcane_shield")) return "arcane_shield";
   if (icon.includes("❄️") || icon.includes("🧊") || icon.includes("ice_spike")) return "ice_spike";
@@ -52,6 +60,7 @@ export function getEffectIdForIcon(icon?: string): string | null {
   if (icon.includes("🐐") || icon.includes("breggle_charge")) return "breggle_charge";
   if (icon.includes("🐈") || icon.includes("🐾") || icon.includes("grimalkin_shadow")) return "grimalkin_shadow";
   if (icon.includes("🔔") || icon.includes("woodland_shrine")) return "woodland_shrine";
+  if (icon.includes("🦉") || icon.includes("drune_wicker")) return "drune_wicker";
   if (icon.includes("🪃") || icon.includes("thrown_boomerang")) return "thrown_boomerang";
   if (icon.includes("🤺") || icon.includes("rapier_flurry")) return "rapier_flurry";
   if (icon.includes("👑") || icon.includes("camelot_crown")) return "camelot_crown";
@@ -65,6 +74,14 @@ export function getEffectIdForIcon(icon?: string): string | null {
   if (icon.includes("🌋") || icon.includes("magma_eruption")) return "magma_eruption";
   if (icon.includes("☢️") || icon.includes("radiation_pulse")) return "radiation_pulse";
   if (icon.includes("💠") || icon.includes("diamond_burst")) return "diamond_burst";
+  if (icon.includes("plasma_cannon")) return "plasma_cannon";
+  if (icon.includes("soul_harvest")) return "soul_harvest";
+  if (icon.includes("void_collapse")) return "void_collapse";
+  if (icon.includes("pyroclastic_storm")) return "pyroclastic_storm";
+  if (icon.includes("fae_symphony")) return "fae_symphony";
+  if (icon.includes("frost_nova")) return "frost_nova";
+  if (icon.includes("alchemical_blaze")) return "alchemical_blaze";
+  if (icon.includes("celestial_judgment")) return "celestial_judgment";
   return null;
 }
 
@@ -2169,6 +2186,204 @@ export const EFFECT_REGISTRY: Record<string, VttEffectDefinition> = {
       gravity: 30,
       shape: "splinter",
       lifeMs: 830
+    }
+  },
+  plasma_cannon: {
+    id: "plasma_cannon",
+    durationMs: 1500,
+    renderSvg: () => `
+      <style>
+        @keyframes vttPlasmaPulse {
+          0% { transform: scale(0.2); opacity: 1; }
+          60% { transform: scale(2.2); opacity: 0.8; }
+          100% { transform: scale(3.2); opacity: 0; }
+        }
+      </style>
+      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <div style="position: absolute; width: 90px; height: 90px; border: 3px solid #00f2fe; border-radius: 50%; box-shadow: 0 0 20px #38bdf8, inset 0 0 15px #00f2fe; animation: vttPlasmaPulse 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;"></div>
+      </div>
+    `,
+    particles: {
+      count: 55,
+      colors: ["#00f2fe", "#38bdf8", "#e0f2fe", "#a855f7", "#ffffff"],
+      speedRange: [180, 420],
+      sizeRangePx: [4, 9],
+      gravity: -10,
+      shape: "sparkle",
+      lifeMs: 1400
+    }
+  },
+  soul_harvest: {
+    id: "soul_harvest",
+    durationMs: 1800,
+    renderSvg: () => `
+      <style>
+        @keyframes vttSoulMist {
+          0% { transform: scale(0.5); opacity: 0; }
+          30% { transform: scale(1.2); opacity: 0.85; }
+          100% { transform: scale(2.5); opacity: 0; }
+        }
+      </style>
+      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <div style="position: absolute; width: 100px; height: 100px; border: 2px dashed #2dd4bf; border-radius: 50%; box-shadow: 0 0 25px #14b8a6; animation: vttSoulMist 1.6s ease-out forwards;"></div>
+      </div>
+    `,
+    particles: {
+      count: 60,
+      colors: ["#2dd4bf", "#0d9488", "#5eead4", "#a855f7", "#ffffff"],
+      speedRange: [60, 160],
+      sizeRangePx: [5, 12],
+      gravity: -120,
+      shape: "ember",
+      lifeMs: 1700
+    }
+  },
+  void_collapse: {
+    id: "void_collapse",
+    durationMs: 2000,
+    renderSvg: () => `
+      <style>
+        @keyframes vttVoidRing {
+          0% { transform: scale(2.5) rotate(0deg); opacity: 0; }
+          30% { transform: scale(1.4) rotate(120deg); opacity: 0.9; }
+          100% { transform: scale(0.3) rotate(360deg); opacity: 0; }
+        }
+      </style>
+      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <div style="position: absolute; width: 110px; height: 110px; border: 3px solid #c084fc; border-radius: 50%; box-shadow: 0 0 30px #581c87, inset 0 0 20px #000000; animation: vttVoidRing 1.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;"></div>
+      </div>
+    `,
+    particles: {
+      count: 65,
+      colors: ["#c084fc", "#a855f7", "#ec4899", "#6366f1", "#ffffff"],
+      speedRange: [30, 340],
+      sizeRangePx: [3, 8],
+      gravity: 0,
+      shape: "sparkle",
+      lifeMs: 1900
+    }
+  },
+  pyroclastic_storm: {
+    id: "pyroclastic_storm",
+    durationMs: 1600,
+    renderSvg: () => `
+      <style>
+        @keyframes vttPyroWave {
+          0% { transform: scale(0.3); opacity: 1; }
+          100% { transform: scale(2.8); opacity: 0; }
+        }
+      </style>
+      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <div style="position: absolute; width: 90px; height: 90px; border: 3px solid #f97316; border-radius: 50%; box-shadow: 0 0 24px #ef4444; animation: vttPyroWave 1.2s ease-out forwards;"></div>
+      </div>
+    `,
+    particles: {
+      count: 60,
+      colors: ["#ef4444", "#f97316", "#fbbf24", "#7f1d1d", "#ffffff"],
+      speedRange: [150, 390],
+      sizeRangePx: [6, 14],
+      gravity: 240,
+      shape: "splinter",
+      lifeMs: 1500
+    }
+  },
+  fae_symphony: {
+    id: "fae_symphony",
+    durationMs: 1700,
+    renderSvg: () => `
+      <style>
+        @keyframes vttFaeGlow {
+          0% { transform: scale(0.6); opacity: 0; }
+          40% { transform: scale(1.3); opacity: 0.85; }
+          100% { transform: scale(2.2); opacity: 0; }
+        }
+      </style>
+      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <div style="position: absolute; width: 95px; height: 95px; border: 2px solid #facc15; border-radius: 50%; box-shadow: 0 0 20px #4ade80; animation: vttFaeGlow 1.5s ease-in-out forwards;"></div>
+      </div>
+    `,
+    particles: {
+      count: 45,
+      colors: ["#facc15", "#4ade80", "#f472b6", "#38bdf8", "#ffffff"],
+      speedRange: [50, 170],
+      sizeRangePx: [6, 11],
+      gravity: -60,
+      shape: "note",
+      lifeMs: 1600
+    }
+  },
+  frost_nova: {
+    id: "frost_nova",
+    durationMs: 1400,
+    renderSvg: () => `
+      <style>
+        @keyframes vttFrostShock {
+          0% { transform: scale(0.2); opacity: 1; }
+          70% { transform: scale(2.4); opacity: 0.9; }
+          100% { transform: scale(3.2); opacity: 0; }
+        }
+      </style>
+      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <div style="position: absolute; width: 85px; height: 85px; border: 3px solid #7dd3fc; border-radius: 50%; box-shadow: 0 0 22px #38bdf8; animation: vttFrostShock 1.1s cubic-bezier(0.16, 1, 0.3, 1) forwards;"></div>
+      </div>
+    `,
+    particles: {
+      count: 65,
+      colors: ["#e0f2fe", "#7dd3fc", "#38bdf8", "#0284c7", "#ffffff"],
+      speedRange: [160, 410],
+      sizeRangePx: [5, 12],
+      gravity: 100,
+      shape: "splinter",
+      lifeMs: 1300
+    }
+  },
+  alchemical_blaze: {
+    id: "alchemical_blaze",
+    durationMs: 1500,
+    renderSvg: () => `
+      <style>
+        @keyframes vttAcidBurst {
+          0% { transform: scale(0.3); opacity: 1; }
+          100% { transform: scale(2.6); opacity: 0; }
+        }
+      </style>
+      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <div style="position: absolute; width: 88px; height: 88px; border: 3px dashed #84cc16; border-radius: 50%; box-shadow: 0 0 20px #eab308; animation: vttAcidBurst 1.2s ease-out forwards;"></div>
+      </div>
+    `,
+    particles: {
+      count: 60,
+      colors: ["#84cc16", "#eab308", "#a3e635", "#22c55e", "#facc15"],
+      speedRange: [110, 320],
+      sizeRangePx: [4, 12],
+      gravity: 50,
+      shape: "circle",
+      lifeMs: 1400
+    }
+  },
+  celestial_judgment: {
+    id: "celestial_judgment",
+    durationMs: 1900,
+    renderSvg: () => `
+      <style>
+        @keyframes vttHolyStarfall {
+          0% { transform: scale(0.4); opacity: 0; }
+          30% { transform: scale(1.3); opacity: 1; }
+          100% { transform: scale(2.8); opacity: 0; }
+        }
+      </style>
+      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <div style="position: absolute; width: 105px; height: 105px; border: 2px solid #facc15; border-radius: 50%; box-shadow: 0 0 30px #f59e0b, inset 0 0 15px #fef08a; animation: vttHolyStarfall 1.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;"></div>
+      </div>
+    `,
+    particles: {
+      count: 70,
+      colors: ["#fef08a", "#facc15", "#f59e0b", "#ffffff", "#fed7aa"],
+      speedRange: [120, 360],
+      sizeRangePx: [5, 12],
+      gravity: -30,
+      shape: "sparkle",
+      lifeMs: 1800
     }
   }
 };
