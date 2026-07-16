@@ -127,7 +127,23 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
         { id: "down", label: "💀 Down (Near Death)" },
         { id: "flying", label: "🪽 Flying" },
         { id: "blessed", label: "✨ Blessed" },
-        { id: "blind", label: "🕶️ Blind" }
+        { id: "blind", label: "🕶️ Blind" },
+        { id: "charmed", label: "😍 Charmed" },
+        { id: "frightened", label: "😱 Frightened" },
+        { id: "drunk", label: "🥴 Drunk" },
+        { id: "invisible", label: "🫥 Invisible" },
+        { id: "paralyzed", label: "⚡ Paralyzed" },
+        { id: "prone", label: "🛌 Prone" },
+        { id: "unconscious", label: "😴 Unconscious" },
+        { id: "bitchy", label: "💅 Bitchy" },
+        { id: "bitchin", label: "🔥 Bitchin'" },
+        { id: "inspired", label: "💡 Inspired" },
+        { id: "frenzied", label: "💢 Frenzied" },
+        { id: "hidden", label: "🥷 Hidden" },
+        { id: "hungry", label: "🍗 Hungry" },
+        { id: "sleepy", label: "😪 Sleepy" },
+        { id: "poisoned", label: "🤢 Poisoned" },
+        { id: "confused", label: "❓ Confused" }
       ];
 
       const condContainer = document.createElement("div");
@@ -154,9 +170,11 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
         border-radius: 12px;
         padding: 10px;
         display: none;
-        flex-direction: column;
+        grid-template-columns: 1fr 1fr;
         gap: 6px;
-        min-width: 190px;
+        min-width: 340px;
+        max-height: 320px;
+        overflow-y: auto;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
         z-index: 1000;
       `;
@@ -205,12 +223,12 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
 
       condBtn.addEventListener("click", (e) => {
         e.stopPropagation();
-        const isOpen = condPopover.style.display === "flex";
+        const isOpen = condPopover.style.display === "grid";
         if (isOpen) {
           condPopover.style.display = "none";
           window.removeEventListener("click", closePopoverOnOutsideClick);
         } else {
-          condPopover.style.display = "flex";
+          condPopover.style.display = "grid";
           setTimeout(() => window.addEventListener("click", closePopoverOnOutsideClick), 10);
         }
       });

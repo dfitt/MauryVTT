@@ -1066,8 +1066,24 @@ export class CanvasEngine {
       }
 
       ctx.translate(renderX, renderY);
-      ctx.rotate(imgEnt.rotation || 0);
-      ctx.globalAlpha = imgEnt.opacity ?? 1.0;
+      let baseRot = imgEnt.rotation || 0;
+      let baseAlpha = imgEnt.opacity ?? 1.0;
+      if (ent.type === "token") {
+        const effects = (ent as TokenEntity).statusEffects || [];
+        if (effects.includes("invisible")) baseAlpha *= 0.35;
+        if (effects.includes("hidden")) baseAlpha *= 0.6;
+        if (effects.includes("frightened")) {
+          ctx.translate((Math.random() - 0.5) * (4 / this.zoom), (Math.random() - 0.5) * (4 / this.zoom));
+        }
+        if (effects.includes("drunk")) {
+          baseRot += Math.sin(now / 400) * 0.12;
+        }
+        if (effects.includes("prone")) {
+          baseRot += Math.PI / 2;
+        }
+      }
+      ctx.rotate(baseRot);
+      ctx.globalAlpha = baseAlpha;
 
       const hoverScale = ent.type === "token" ? (this.tokenHoverScales.get(ent.id) ?? 1.0) : 1.0;
       const pingPunch = this.pingPunchScales.get(ent.id) ?? 1.0;
@@ -1192,6 +1208,205 @@ export class CanvasEngine {
           ctx.font = `${Math.max(14, 18 / this.zoom)}px sans-serif`;
           ctx.textAlign = "center";
           ctx.fillText("🕶️", 0, -halfH * 0.15);
+          ctx.restore();
+        }
+
+        if (effects.includes("charmed")) {
+          ctx.save();
+          const phase = (now % 2000) / 2000;
+          ctx.font = `${Math.max(13, 16 / this.zoom)}px sans-serif`;
+          ctx.textAlign = "center";
+          ctx.globalAlpha = 1.0 - phase * 0.6;
+          ctx.fillText("💖", -halfW * 0.3 + Math.sin(phase * Math.PI * 2) * (6 / this.zoom), -halfH * (0.3 + phase * 0.8));
+          ctx.fillText("😍", halfW * 0.3 - Math.sin(phase * Math.PI * 2) * (6 / this.zoom), -halfH * (0.1 + phase * 0.7));
+          ctx.restore();
+        }
+
+        if (effects.includes("frightened")) {
+          ctx.save();
+          ctx.font = `${Math.max(14, 18 / this.zoom)}px sans-serif`;
+          ctx.textAlign = "center";
+          ctx.fillText("😱", 0, -halfH * 0.65 + (Math.random() - 0.5) * (3 / this.zoom));
+          ctx.restore();
+        }
+
+        if (effects.includes("drunk")) {
+          ctx.save();
+          const dp = (now % 2400) / 2400;
+          ctx.font = `${Math.max(12, 15 / this.zoom)}px sans-serif`;
+          ctx.textAlign = "center";
+          ctx.globalAlpha = 1.0 - dp * 0.7;
+          ctx.fillText("🫧", halfW * 0.45, halfH * (0.4 - dp * 1.3));
+          ctx.fillText("🥴", 0, -halfH * 0.7);
+          ctx.restore();
+        }
+
+        if (effects.includes("invisible")) {
+          ctx.save();
+          ctx.strokeStyle = "rgba(56, 189, 248, 0.7)";
+          ctx.lineWidth = Math.max(1.5, 2.5 / this.zoom);
+          ctx.setLineDash([4 / this.zoom, 4 / this.zoom]);
+          ctx.strokeRect(-halfW, -halfH, displayW, displayH);
+          ctx.setLineDash([]);
+          ctx.font = `${Math.max(14, 18 / this.zoom)}px sans-serif`;
+          ctx.textAlign = "center";
+          ctx.fillText("🫥", 0, 6 / this.zoom);
+          ctx.restore();
+        }
+
+        if (effects.includes("paralyzed")) {
+          ctx.save();
+          ctx.strokeStyle = Math.random() > 0.3 ? "#eab308" : "#38bdf8";
+          ctx.lineWidth = Math.max(2, 4 / this.zoom);
+          ctx.strokeRect(-halfW, -halfH, displayW, displayH);
+          ctx.font = `${Math.max(14, 18 / this.zoom)}px sans-serif`;
+          ctx.textAlign = "center";
+          const jx = (Math.random() - 0.5) * (8 / this.zoom);
+          const jy = (Math.random() - 0.5) * (8 / this.zoom);
+          ctx.fillText("⚡", jx, jy);
+          ctx.restore();
+        }
+
+        if (effects.includes("prone")) {
+          ctx.save();
+          ctx.font = `${Math.max(13, 16 / this.zoom)}px sans-serif`;
+          ctx.textAlign = "center";
+          ctx.fillText("🛌", 0, halfH * 0.85);
+          ctx.restore();
+        }
+
+        if (effects.includes("unconscious")) {
+          ctx.save();
+          ctx.fillStyle = "rgba(15, 23, 42, 0.55)";
+          ctx.fillRect(-halfW, -halfH, displayW, displayH);
+          const up = (now % 2500) / 2500;
+          ctx.font = `${Math.max(13, 17 / this.zoom)}px sans-serif`;
+          ctx.textAlign = "center";
+          ctx.globalAlpha = 1.0 - up * 0.6;
+          ctx.fillText("💤", halfW * 0.3, -halfH * (0.1 + up * 0.9));
+          ctx.globalAlpha = 1.0;
+          ctx.fillText("😴", 0, 6 / this.zoom);
+          ctx.restore();
+        }
+
+        if (effects.includes("bitchy")) {
+          ctx.save();
+          const pulse = 0.6 + 0.4 * Math.sin(now / 150);
+          ctx.strokeStyle = `rgba(236, 72, 153, ${pulse})`;
+          ctx.lineWidth = Math.max(2.5, 4 / this.zoom);
+          ctx.strokeRect(-halfW - 3, -halfH - 3, displayW + 6, displayH + 6);
+          ctx.font = `${Math.max(13, 16 / this.zoom)}px sans-serif`;
+          ctx.textAlign = "center";
+          const snapRot = Math.sin(now / 200) * 0.3;
+          ctx.rotate(snapRot);
+          ctx.fillText("💅", halfW * 0.6, -halfH * 0.6);
+          ctx.fillText("🙄", -halfW * 0.6, -halfH * 0.6);
+          ctx.restore();
+        }
+
+        if (effects.includes("bitchin")) {
+          ctx.save();
+          const flameAlpha = 0.5 + 0.35 * Math.sin(now / 120);
+          ctx.strokeStyle = `rgba(249, 115, 22, ${flameAlpha})`;
+          ctx.lineWidth = Math.max(3, 5 / this.zoom);
+          ctx.strokeRect(-halfW, -halfH, displayW, displayH);
+          const fp = (now % 1200) / 1200;
+          ctx.font = `${Math.max(14, 18 / this.zoom)}px sans-serif`;
+          ctx.textAlign = "center";
+          ctx.globalAlpha = 1.0 - fp * 0.5;
+          ctx.fillText("🔥", (Math.random() - 0.5) * halfW, halfH * (0.7 - fp * 1.5));
+          ctx.globalAlpha = 1.0;
+          ctx.fillText("😎", 0, 4 / this.zoom);
+          ctx.restore();
+        }
+
+        if (effects.includes("inspired")) {
+          ctx.save();
+          const glow = 0.5 + 0.5 * Math.sin(now / 250);
+          ctx.strokeStyle = `rgba(255, 255, 255, ${glow})`;
+          ctx.lineWidth = Math.max(2, 3 / this.zoom);
+          ctx.strokeRect(-halfW - 2, -halfH - 2, displayW + 4, displayH + 4);
+          ctx.font = `${Math.max(15, 19 / this.zoom)}px sans-serif`;
+          ctx.textAlign = "center";
+          ctx.fillText("💡", 0, -halfH * 0.75 + Math.sin(now / 300) * (3 / this.zoom));
+          ctx.restore();
+        }
+
+        if (effects.includes("frenzied")) {
+          ctx.save();
+          const throb = 1.0 + 0.15 * Math.sin(now / 80);
+          ctx.strokeStyle = "#dc2626";
+          ctx.lineWidth = Math.max(3, 5 / this.zoom);
+          ctx.strokeRect(-halfW, -halfH, displayW, displayH);
+          ctx.font = `${Math.max(14, 18 / this.zoom)}px sans-serif`;
+          ctx.textAlign = "center";
+          ctx.scale(throb, throb);
+          ctx.fillText("💢", halfW * 0.6, -halfH * 0.6);
+          ctx.fillText("😡", -halfW * 0.6, halfH * 0.6);
+          ctx.restore();
+        }
+
+        if (effects.includes("hidden")) {
+          ctx.save();
+          ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
+          ctx.fillRect(-halfW, -halfH, displayW, displayH);
+          ctx.font = `${Math.max(14, 18 / this.zoom)}px sans-serif`;
+          ctx.textAlign = "center";
+          ctx.fillText("🥷", 0, 6 / this.zoom);
+          ctx.restore();
+        }
+
+        if (effects.includes("hungry")) {
+          ctx.save();
+          const hp = (now % 2000) / 2000;
+          ctx.font = `${Math.max(13, 16 / this.zoom)}px sans-serif`;
+          ctx.textAlign = "center";
+          ctx.globalAlpha = 1.0 - hp * 0.6;
+          ctx.fillText("🍗", halfW * 0.5, halfH * (0.2 - hp * 0.8));
+          ctx.globalAlpha = 1.0;
+          ctx.fillText("🤤", 0, halfH * 0.75);
+          ctx.restore();
+        }
+
+        if (effects.includes("sleepy")) {
+          ctx.save();
+          const nod = Math.sin(now / 700) * (4 / this.zoom);
+          ctx.translate(0, nod);
+          ctx.font = `${Math.max(14, 18 / this.zoom)}px sans-serif`;
+          ctx.textAlign = "center";
+          ctx.fillText("😪", 0, -halfH * 0.65);
+          ctx.restore();
+        }
+
+        if (effects.includes("poisoned")) {
+          ctx.save();
+          const tox = 0.35 + 0.25 * Math.sin(now / 220);
+          ctx.fillStyle = `rgba(34, 197, 94, ${tox})`;
+          ctx.fillRect(-halfW, -halfH, displayW, displayH);
+          ctx.strokeStyle = "#22c55e";
+          ctx.lineWidth = Math.max(2, 3.5 / this.zoom);
+          ctx.strokeRect(-halfW, -halfH, displayW, displayH);
+          const pp = (now % 1800) / 1800;
+          ctx.font = `${Math.max(13, 16 / this.zoom)}px sans-serif`;
+          ctx.textAlign = "center";
+          ctx.globalAlpha = 1.0 - pp * 0.7;
+          ctx.fillText("🫧", (Math.random() - 0.5) * halfW, halfH * (0.5 - pp * 1.2));
+          ctx.globalAlpha = 1.0;
+          ctx.fillText("🤢", 0, 6 / this.zoom);
+          ctx.restore();
+        }
+
+        if (effects.includes("confused")) {
+          ctx.save();
+          ctx.font = `${Math.max(13, 16 / this.zoom)}px sans-serif`;
+          ctx.textAlign = "center";
+          const ct = now / 350;
+          for (let i = 0; i < 2; i++) {
+            const ang = ct + i * Math.PI;
+            const qx = Math.cos(ang) * (halfW * 0.6);
+            const qy = -halfH * 0.7 + Math.sin(ang) * (halfH * 0.2);
+            ctx.fillText(i === 0 ? "❓" : "🌀", qx, qy);
+          }
           ctx.restore();
         }
 
