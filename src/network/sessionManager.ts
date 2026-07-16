@@ -107,8 +107,8 @@ class SessionManager {
     }
   }
 
-  public getActiveUsers(): Array<{ username: string; color: string; role: string }> {
-    const map = new Map<string, { username: string; color: string; role: string }>();
+  public getActiveUsers(): Array<{ username: string; color: string; role: string; peerId?: string }> {
+    const map = new Map<string, { username: string; color: string; role: string; peerId?: string }>();
     const now = Date.now();
     const FIVE_MINUTES_MS = 5 * 60 * 1000;
 
@@ -116,7 +116,8 @@ class SessionManager {
       map.set(this.myUsername.toLowerCase().trim(), {
         username: this.myUsername,
         color: this.myColor || "#eab308",
-        role: this.role === "host" ? "host" : "client"
+        role: this.role === "host" ? "host" : "client",
+        peerId: this.myPeerId || "local"
       });
     }
 
@@ -134,7 +135,8 @@ class SessionManager {
         map.set(nameKey, {
           username: u.username || "Anonymous",
           color: u.color || "#38bdf8",
-          role: u.role
+          role: u.role,
+          peerId: u.peerId
         });
       }
     }

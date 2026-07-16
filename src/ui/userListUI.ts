@@ -1,8 +1,10 @@
 import { docStore } from "../state/documentStore.js";
 import { sessionManager } from "../network/sessionManager.js";
 import { exportVTTDocArchive, importVTTDocArchive } from "../archive/vttdocArchive.js";
+import { CanvasEngine } from "../canvas/canvasEngine.js";
+import { TokenEntity } from "../types/vtt.js";
 
-export function setupHeaderUI(): void {
+export function setupHeaderUI(engine?: CanvasEngine): void {
   const header = document.createElement("div");
   header.className = "top-header";
   header.innerHTML = `
@@ -38,6 +40,41 @@ export function setupHeaderUI(): void {
   const copyBtn = header.querySelector<HTMLButtonElement>("#copy-room-btn")!;
   const usersListEl = header.querySelector<HTMLElement>("#connected-users-list")!;
 
+  if (engine) {
+    usersListEl.addEventListener("click", (e) => {
+      const pill = (e.target as HTMLElement).closest(".user-pill");
+      if (!pill) return;
+      const username = pill.getAttribute("data-username");
+      const peerId = pill.getAttribute("data-peerid");
+      if (!username) return;
+
+      const doc = docStore.getDocument();
+      let token: TokenEntity | undefined;
+
+      if (doc.primaryTokens?.[username]) {
+        const ent = doc.entities[doc.primaryTokens[username]];
+        if (ent && ent.type === "token") token = ent as TokenEntity;
+      }
+      if (!token) {
+        token = Object.values(doc.entities).find(
+          (ent) => ent.type === "token" && (ent as TokenEntity).primaryOwnerUsername === username
+        ) as TokenEntity | undefined;
+      }
+      if (!token && peerId) {
+        token = Object.values(doc.entities).find(
+          (ent) => ent.type === "token" && (ent as TokenEntity).ownerPeerIds?.includes(peerId)
+        ) as TokenEntity | undefined;
+      }
+
+      if (token) {
+        engine.zoomToWorldPos(token.position.x, token.position.y, token.id);
+        engine.showToast(`Zoomed to ${username}'s primary token`);
+      } else {
+        engine.showToast(`${username} does not have a primary token claimed yet`);
+      }
+    });
+  }
+
   setInterval(() => {
     if (sessionManager.hostRoomId) {
       badgeEl.style.display = "flex";
@@ -45,10 +82,16 @@ export function setupHeaderUI(): void {
     }
 
     const activeUsers = sessionManager.getActiveUsers();
+    const doc = docStore.getDocument();
     const pills = activeUsers.map((u) => {
       const color = u.color || "#38bdf8";
       const hostTag = u.role === "host" ? " (Host)" : "";
-      return `<span class="user-pill" title="${u.username}${hostTag}">
+      const hasToken = Boolean(
+        (doc.primaryTokens?.[u.username] && doc.entities[doc.primaryTokens[u.username]]) ||
+        Object.values(doc.entities).some((ent) => ent.type === "token" && ((ent as TokenEntity).primaryOwnerUsername === u.username || (u.peerId && (ent as TokenEntity).ownerPeerIds?.includes(u.peerId))))
+      );
+      const titleAttr = hasToken ? `Click to zoom to ${u.username}'s primary token` : `${u.username}${hostTag} (No primary token claimed)`;
+      return `<span class="user-pill ${hasToken ? "user-pill-has-token" : ""}" data-username="${u.username}" data-peerid="${u.peerId || ''}" title="${titleAttr}" style="cursor: pointer; transition: transform 0.15s, background 0.15s; ${hasToken ? "border: 1px solid rgba(56, 189, 248, 0.45); box-shadow: 0 0 8px rgba(56, 189, 248, 0.2);" : ""}">
         <span class="user-pill-dot" style="background-color: ${color};"></span>
         <span>${u.username}${hostTag}</span>
       </span>`;

@@ -72,7 +72,7 @@ function bootstrap(): void {
   // Show Welcome / Join Modal first (before displaying gameplay UI)
   renderJoinModal(() => {
     // Setup UI components after joining or hosting
-    setupHeaderUI();
+    setupHeaderUI(engine);
     setupToolbarUI(engine);
     setupSelectionBarUI(engine);
     setupChatPanel(engine);

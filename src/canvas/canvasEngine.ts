@@ -54,6 +54,7 @@ export class CanvasEngine {
   public panX: number = 0;
   public panY: number = 0;
   public zoom: number = 1.0;
+  public targetPanZoom: { x: number; y: number; zoom: number } | null = null;
 
   // Tool state
   public activeTool: ToolType = "select";
@@ -278,6 +279,7 @@ export class CanvasEngine {
     });
 
     this.canvas.addEventListener("mousedown", (e) => {
+      this.targetPanZoom = null;
       const world = this.screenToWorld(e.offsetX, e.offsetY);
       const activeTool = (window as any).vttActiveTool;
       if (e.button === 1 || e.button === 2 || (e.button === 0 && (isSpacePressed || activeTool === "pan"))) {
@@ -537,6 +539,20 @@ export class CanvasEngine {
     };
   }
 
+  public zoomToWorldPos(wx: number, wy: number, selectEntityId?: string): void {
+    const targetZoom = Math.max(this.zoom, 1.3);
+    const centerX = this.canvas.width / 2;
+    const centerY = this.canvas.height / 2;
+    const targetX = centerX - wx * targetZoom;
+    const targetY = centerY - wy * targetZoom;
+    this.targetPanZoom = { x: targetX, y: targetY, zoom: targetZoom };
+
+    if (selectEntityId) {
+      this.selectedEntityId = selectEntityId;
+      this.setTool("select");
+    }
+  }
+
   public handleEphemeralPayload(payload: EphemeralPayload): void {
     if (payload.type === "CURSOR") {
       const existing = this.remoteCursors.get(payload.peerId);
@@ -654,6 +670,22 @@ export class CanvasEngine {
     if (curW > 0 && curH > 0 && (this.canvas.width !== curW || this.canvas.height !== curH)) {
       this.canvas.width = curW;
       this.canvas.height = curH;
+    }
+
+    if (this.targetPanZoom) {
+      this.panX += (this.targetPanZoom.x - this.panX) * 0.22;
+      this.panY += (this.targetPanZoom.y - this.panY) * 0.22;
+      this.zoom += (this.targetPanZoom.zoom - this.zoom) * 0.22;
+      if (
+        Math.abs(this.targetPanZoom.x - this.panX) < 0.5 &&
+        Math.abs(this.targetPanZoom.y - this.panY) < 0.5 &&
+        Math.abs(this.targetPanZoom.zoom - this.zoom) < 0.005
+      ) {
+        this.panX = this.targetPanZoom.x;
+        this.panY = this.targetPanZoom.y;
+        this.zoom = this.targetPanZoom.zoom;
+        this.targetPanZoom = null;
+      }
     }
 
     const doc = docStore.getDocument();
