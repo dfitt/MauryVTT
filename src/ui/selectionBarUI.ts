@@ -22,32 +22,44 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
   const conditionCheckboxesMap = new Map<string, HTMLInputElement>();
 
   window.addEventListener("pointerdown", (e) => {
-    if (isCondPopoverOpen && activeCondContainer && !activeCondContainer.contains(e.target as Node)) {
-      isCondPopoverOpen = false;
-      if (activeCondPopover) activeCondPopover.style.display = "none";
+    if (isCondPopoverOpen && activeCondContainer && activeCondPopover) {
+      if (!activeCondContainer.contains(e.target as Node) && !activeCondPopover.contains(e.target as Node)) {
+        isCondPopoverOpen = false;
+        activeCondPopover.style.display = "none";
+      }
     }
   }, true);
 
   const updateBar = (selectedId: string | null) => {
-    if (!selectedId) {
-      bar.style.display = "none";
-      lastSelectedId = null;
-      isCondPopoverOpen = false;
-      return;
-    }
-
     const doc = docStore.getDocument();
-    const ent = doc.entities[selectedId];
-    if (!ent) {
+    const ent = selectedId ? doc.entities[selectedId] : null;
+
+    if ((window as any).vttSimpleMode && (!ent || ent.type !== "token")) {
       bar.style.display = "none";
+      if (activeCondPopover && activeCondPopover.parentNode) {
+        activeCondPopover.parentNode.removeChild(activeCondPopover);
+      }
       lastSelectedId = null;
       isCondPopoverOpen = false;
+      document.body.classList.remove("token-selected-in-simple");
       return;
     }
 
-    if ((window as any).vttSimpleMode && ent.type !== "token") {
+    if (!selectedId || !ent) {
       bar.style.display = "none";
+      if (activeCondPopover && activeCondPopover.parentNode) {
+        activeCondPopover.parentNode.removeChild(activeCondPopover);
+      }
+      lastSelectedId = null;
+      isCondPopoverOpen = false;
+      document.body.classList.remove("token-selected-in-simple");
       return;
+    }
+
+    if ((window as any).vttSimpleMode && ent.type === "token") {
+      document.body.classList.add("token-selected-in-simple");
+    } else {
+      document.body.classList.remove("token-selected-in-simple");
     }
 
     bar.style.display = "flex";
@@ -78,6 +90,9 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
     lastSelectedId = selectedId;
     isCondPopoverOpen = false;
     conditionCheckboxesMap.clear();
+    if (activeCondPopover && activeCondPopover.parentNode) {
+      activeCondPopover.parentNode.removeChild(activeCondPopover);
+    }
     bar.innerHTML = "";
 
     if (ent.type === "token") {
@@ -115,29 +130,31 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
       });
       bar.appendChild(nameInput);
 
-      // Mine Checkbox
+      // Mine Button (full button collision area!)
       const myUsername = sessionManager.myUsername || localStorage.getItem("maury_vtt_username") || "Me";
       const myPeerId = sessionManager.myPeerId || "local";
       const isMine = token.primaryOwnerUsername === myUsername || (doc.primaryTokens?.[myUsername] === token.id);
 
-      const mineLabel = document.createElement("label");
-      mineLabel.className = `btn-glass btn-sm ${isMine ? "btn-active" : ""}`;
-      mineLabel.style.cssText = "display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; margin: 0 4px; border-radius: 8px;";
-      mineLabel.setAttribute("data-tooltip", "Claim as your primary token (Each user can have one primary token)");
+      const mineBtn = document.createElement("button");
+      mineBtn.className = `btn-glass btn-sm ${isMine ? "btn-active" : ""}`;
+      mineBtn.style.cssText = "display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; margin: 0 4px; border-radius: 8px; padding: 6px 14px; min-height: 32px;";
+      mineBtn.setAttribute("data-tooltip", "Claim as your primary token (Each user can have one primary token)");
 
       const mineCheckbox = document.createElement("input");
       activeMineCheckbox = mineCheckbox;
       mineCheckbox.type = "checkbox";
       mineCheckbox.checked = isMine;
-      mineCheckbox.style.cssText = "cursor: pointer; width: 14px; height: 14px; accent-color: #38bdf8;";
+      mineCheckbox.style.cssText = "pointer-events: none; width: 15px; height: 15px; accent-color: #38bdf8;";
 
-      mineLabel.appendChild(mineCheckbox);
+      mineBtn.appendChild(mineCheckbox);
       const mineSpan = document.createElement("span");
       activeMineSpan = mineSpan;
       mineSpan.textContent = isMine ? "Mine ✓" : "Mine";
-      mineLabel.appendChild(mineSpan);
+      mineBtn.appendChild(mineSpan);
 
-      const toggleMine = () => {
+      mineBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        mineCheckbox.checked = !mineCheckbox.checked;
         if (mineCheckbox.checked) {
           const newOwnerPeerIds = Array.from(new Set([...(token.ownerPeerIds || []), myPeerId]));
           sessionManager.dispatchOperation({
@@ -159,21 +176,9 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
             } as any
           });
         }
-      };
-
-      mineCheckbox.addEventListener("change", (e) => {
-        e.stopPropagation();
-        toggleMine();
       });
 
-      mineLabel.addEventListener("click", (e) => {
-        if (e.target !== mineCheckbox) {
-          mineCheckbox.checked = !mineCheckbox.checked;
-          toggleMine();
-        }
-      });
-
-      bar.appendChild(mineLabel);
+      bar.appendChild(mineBtn);
 
       // Conditions Selector
       const AVAILABLE_CONDITIONS = [
@@ -218,11 +223,10 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
       activeCondPopover = condPopover;
       condPopover.className = "conditions-popover";
       condPopover.style.cssText = `
-        position: absolute;
-        bottom: 100%;
+        position: fixed;
         left: 50%;
         transform: translateX(-50%);
-        margin-bottom: 8px;
+        bottom: 140px;
         background: rgba(15, 23, 42, 0.95);
         backdrop-filter: blur(16px);
         border: 1px solid rgba(56, 189, 248, 0.45);
@@ -231,8 +235,9 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
         display: none;
         grid-template-columns: 1fr 1fr;
         gap: 6px;
-        min-width: 340px;
-        max-height: 320px;
+        width: calc(100vw - 28px);
+        max-width: 380px;
+        max-height: calc(100vh - 150px);
         overflow-y: auto;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
         z-index: 3500;
@@ -281,11 +286,13 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
           condPopover.style.display = "none";
         } else {
           isCondPopoverOpen = true;
+          const barRect = bar.getBoundingClientRect();
+          condPopover.style.bottom = (window.innerHeight - barRect.top + 10) + "px";
           condPopover.style.display = "grid";
         }
       });
 
-      condContainer.appendChild(condPopover);
+      document.body.appendChild(condPopover);
       bar.appendChild(condContainer);
 
       // Duplicate Button (1 cell right)

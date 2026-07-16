@@ -745,6 +745,7 @@ export function setupToolbarUI(engine: CanvasEngine): void {
       }
       bar.style.display = "flex";
       simpleBar.style.display = "none";
+      document.body.classList.remove("token-selected-in-simple");
     }
   };
 

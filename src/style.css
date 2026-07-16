@@ -290,6 +290,14 @@ body.simple-mode-active #selection-toolbar {
   bottom: 74px;
 }
 
+body.simple-mode-active.token-selected-in-simple #simple-mode-bar {
+  display: none !important;
+}
+
+body.simple-mode-active.token-selected-in-simple #selection-toolbar {
+  bottom: 24px !important;
+}
+
 /* =========================================
    FLOATING BOTTOM TOOLBAR
    ========================================= */
