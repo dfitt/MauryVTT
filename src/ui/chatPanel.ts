@@ -781,7 +781,7 @@ export function setupChatPanel(): void {
             replayBtn.className = "play-roll-anim-btn";
             replayBtn.setAttribute("data-effect-id", effId);
             replayBtn.title = "Replay Animation";
-            replayBtn.style.cssText = "position: absolute; bottom: 4px; right: 6px; background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 4px; color: #38bdf8; font-size: 11px; padding: 2px 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10; transition: all 0.15s ease;";
+            replayBtn.style.cssText = "position: absolute; bottom: 4px; right: 6px; background: transparent; border: none; color: #38bdf8; font-size: 11px; padding: 4px 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10; transition: transform 0.15s ease, filter 0.15s ease;";
             replayBtn.textContent = "▶";
             replayBtn.addEventListener("click", (e) => {
               e.stopPropagation();
@@ -860,7 +860,7 @@ export function setupChatPanel(): void {
           </button>
         </div>
         ${msg.type === "roll" && msg.rollIcon && msg.rollIcon !== "🎲" && getEffectIdForIcon(msg.rollIcon) ? `
-          <button class="play-roll-anim-btn" data-effect-id="${getEffectIdForIcon(msg.rollIcon)}" title="Replay Animation" style="position: absolute; bottom: 4px; right: 6px; background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 4px; color: #38bdf8; font-size: 11px; padding: 2px 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10; transition: all 0.15s ease;">▶</button>
+          <button class="play-roll-anim-btn" data-effect-id="${getEffectIdForIcon(msg.rollIcon)}" title="Replay Animation" style="position: absolute; bottom: 4px; right: 6px; background: transparent; border: none; color: #38bdf8; font-size: 11px; padding: 4px 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10; transition: transform 0.15s ease, filter 0.15s ease;">▶</button>
         ` : ""}
       `;
 

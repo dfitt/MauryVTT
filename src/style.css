@@ -1034,4 +1034,26 @@ body.simple-mode-active #selection-toolbar {
   animation: pingCircle2 1.6s infinite cubic-bezier(0, 0, 0.2, 1) 0.5s;
 }
 
+/* Chat Replay Animation Triangle Button */
+.play-roll-anim-btn {
+  position: absolute;
+  bottom: 4px;
+  right: 6px;
+  background: transparent !important;
+  border: none !important;
+  color: #38bdf8;
+  font-size: 11px;
+  padding: 4px 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.play-roll-anim-btn:hover {
+  transform: scale(1.25);
+  filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.85));
+}
 
