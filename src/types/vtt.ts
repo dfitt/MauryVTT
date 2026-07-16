@@ -24,6 +24,7 @@ export interface VTTDocument {
   users: Record<string, UserProfile>;
   chatHistory: ChatMessage[];
   quickRolls: Record<string, QuickRoll[]>; // Keyed by username
+  customVttfxBundles?: Record<string, any>;
 }
 
 export interface CanvasSettings {
@@ -159,6 +160,7 @@ export type DocumentOperation =
   | { opType: "UPDATE_GRID_CELL"; cellKey: string; patch: Partial<GridCellData> }
   | { opType: "UPDATE_QUICK_ROLLS"; username: string; quickRolls: QuickRoll[] }
   | { opType: "CLEAR_CHAT_HISTORY" }
+  | { opType: "REGISTER_VTTFX_BUNDLE"; bundle: any }
   | { opType: "BATCH"; ops: DocumentOperation[] };
 
 // ==========================================

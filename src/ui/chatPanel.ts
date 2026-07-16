@@ -62,7 +62,11 @@ export function setupChatPanel(): void {
           <div id="popover-nav-header" style="display: flex; align-items: center; justify-content: space-between; width: 100%; border-bottom: 1px solid rgba(56, 189, 248, 0.2); padding-bottom: 4px;">
             <button id="popover-prev-btn" class="btn-glass" style="padding: 2px 10px; font-size: 0.9em; cursor: pointer; border-radius: 4px;" title="Previous Page">◀</button>
             <span id="popover-page-txt" style="font-size: 0.8em; color: #94a3b8; font-weight: 600;">Page 1</span>
-            <button id="popover-next-btn" class="btn-glass" style="padding: 2px 10px; font-size: 0.9em; cursor: pointer; border-radius: 4px;" title="Next Page">▶</button>
+            <div style="display: flex; align-items: center; gap: 4px;">
+              <button id="popover-upload-btn" class="btn-glass" style="padding: 2px 8px; font-size: 0.9em; cursor: pointer; border-radius: 4px; color: #38bdf8; font-weight: bold;" title="Upload & Share .vttfx VFX Bundle">+</button>
+              <button id="popover-next-btn" class="btn-glass" style="padding: 2px 10px; font-size: 0.9em; cursor: pointer; border-radius: 4px;" title="Next Page">▶</button>
+            </div>
+            <input type="file" id="popover-vttfx-file-input" accept=".vttfx,.json" style="display: none;" />
           </div>
           <div id="popover-icon-grid" style="display: flex; flex-direction: row; justify-content: center; flex-wrap: wrap; gap: 8px;"></div>
         </div>
@@ -190,6 +194,44 @@ export function setupChatPanel(): void {
     if (currentIconPage < totalPages - 1) {
       currentIconPage++;
       renderPopoverPage();
+    }
+  });
+
+  const vttfxFileInput = iconPopoverEl.querySelector<HTMLInputElement>("#popover-vttfx-file-input");
+  iconPopoverEl.querySelector<HTMLButtonElement>("#popover-upload-btn")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    vttfxFileInput?.click();
+  });
+
+  vttfxFileInput?.addEventListener("change", async (e) => {
+    e.stopPropagation();
+    const file = vttfxFileInput.files?.[0];
+    if (file) {
+      try {
+        const text = await file.text();
+        const bundle = JSON.parse(text);
+        if (bundle && Array.isArray(bundle.effects)) {
+          sessionManager.dispatchOperation({
+            opType: "REGISTER_VTTFX_BUNDLE",
+            bundle
+          } as any);
+          renderPopoverPage();
+          const newMsg: ChatMessage = {
+            id: "sys-" + Date.now(),
+            timestamp: Date.now(),
+            senderPeerId: sessionManager.myPeerId || "local",
+            senderUsername: sessionManager.myUsername || "System",
+            content: `✨ Uploaded VFX bundle <strong>${bundle.bundleName || file.name}</strong> (${bundle.effects.length} effects) and shared with session!`,
+            type: "system"
+          };
+          sessionManager.dispatchOperation({ opType: "APPEND_CHAT_MESSAGE", message: newMsg });
+        } else {
+          alert("Invalid .vttfx bundle format (missing effects array).");
+        }
+      } catch (err) {
+        alert("Could not parse .vttfx file: " + (err as Error).message);
+      }
+      vttfxFileInput.value = "";
     }
   });
 

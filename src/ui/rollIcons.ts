@@ -763,4 +763,31 @@ export const ROLL_ICONS: RollIconSvg[] = [
 ];
 
 export const ALL_ROLL_ICONS: string[] = ROLL_ICONS.filter(i => i.id !== "coin_flip").map(i => i.svgHtml);
-export const COIN_ICON_SVG: string = ROLL_ICONS.find(i => i.id === "coin_flip")?.svgHtml || ALL_ROLL_ICONS[0];
+export let COIN_ICON_SVG: string = ROLL_ICONS.find(i => i.id === "coin_flip")?.svgHtml || ALL_ROLL_ICONS[0];
+
+export function registerCustomRollIcon(id: string, name: string, svgHtml: string): void {
+  const existingIndex = ROLL_ICONS.findIndex(icon => icon.id === id);
+  if (existingIndex !== -1) {
+    const oldSvgHtml = ROLL_ICONS[existingIndex].svgHtml;
+    ROLL_ICONS[existingIndex] = { id, name, svgHtml };
+    if (id === "coin_flip") {
+      COIN_ICON_SVG = svgHtml;
+    } else if (id !== "d20_dice") {
+      const idx = ALL_ROLL_ICONS.indexOf(oldSvgHtml);
+      if (idx !== -1) {
+        ALL_ROLL_ICONS[idx] = svgHtml;
+      } else if (!ALL_ROLL_ICONS.includes(svgHtml)) {
+        ALL_ROLL_ICONS.push(svgHtml);
+      }
+    }
+  } else {
+    ROLL_ICONS.push({ id, name, svgHtml });
+    if (id === "coin_flip") {
+      COIN_ICON_SVG = svgHtml;
+    } else if (id !== "d20_dice" && !ALL_ROLL_ICONS.includes(svgHtml)) {
+      ALL_ROLL_ICONS.push(svgHtml);
+    }
+  }
+}
+
+

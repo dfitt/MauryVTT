@@ -14,9 +14,13 @@ import { setupChatPanel } from "./ui/chatPanel.js";
 import { renderJoinModal } from "./ui/joinModal.js";
 import { sessionManager } from "./network/sessionManager.js";
 import { registerTroubleshootingUtilities } from "./utils/troubleshooting.js";
+import { loadVttfxManifestFromUrl } from "./effects/vttfxLoader.js";
 
 function bootstrap(): void {
   registerTroubleshootingUtilities();
+  loadVttfxManifestFromUrl("vttfx/manifest.json");
+
+
 
   // Global mobile/touch haptic feedback (using capturing listeners so e.stopPropagation() never blocks it)
   let lastVibrateTime = 0;

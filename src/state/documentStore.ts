@@ -6,6 +6,8 @@ import {
   ChatMessage
 } from "../types/vtt.js";
 import { assetStore } from "./idbAssetStore.js";
+import { loadVttfxBundleFromBundle } from "../effects/vttfxLoader.js";
+
 
 const LOCAL_STORAGE_KEY = "vtt_active_document_snapshot";
 
@@ -43,7 +45,8 @@ export class DocumentStore {
       assetManifest: {},
       users: {},
       chatHistory: [],
-      quickRolls: {}
+      quickRolls: {},
+      customVttfxBundles: {}
     };
   }
 
@@ -113,6 +116,13 @@ export class DocumentStore {
     }
     if (!this.doc.quickRolls) {
       this.doc.quickRolls = {};
+    }
+    if (!this.doc.customVttfxBundles) {
+      this.doc.customVttfxBundles = {};
+    } else {
+      for (const bundle of Object.values(this.doc.customVttfxBundles)) {
+        if (bundle) loadVttfxBundleFromBundle(bundle);
+      }
     }
     this.cleanupAllUnusedAssets();
     this.notify();
@@ -215,6 +225,15 @@ export class DocumentStore {
         for (const subOp of op.ops) {
           this.applySingleOp(subOp);
         }
+        break;
+      }
+      case "REGISTER_VTTFX_BUNDLE": {
+        if (!this.doc.customVttfxBundles) {
+          this.doc.customVttfxBundles = {};
+        }
+        const key = op.bundle.bundleName || "bundle_" + Date.now();
+        this.doc.customVttfxBundles[key] = op.bundle;
+        loadVttfxBundleFromBundle(op.bundle);
         break;
       }
     }
