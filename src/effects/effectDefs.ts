@@ -53,10 +53,12 @@ export function getEffectIdForIcon(icon?: string): string | null {
   if (icon.includes("🐈") || icon.includes("🐾") || icon.includes("grimalkin_shadow")) return "grimalkin_shadow";
   if (icon.includes("🔔") || icon.includes("woodland_shrine")) return "woodland_shrine";
   if (icon.includes("🦉") || icon.includes("drune_wicker")) return "drune_wicker";
-  if (icon.includes("🌫️") || icon.includes("bog_mist")) return "bog_mist";
-  if (icon.includes("🎶") || icon.includes("fairy_pipes")) return "fairy_pipes";
-  if (icon.includes("🍵") || icon.includes("herbal_remedy")) return "herbal_remedy";
-  if (icon.includes("🌲") || icon.includes("ancient_woods")) return "ancient_woods";
+  if (icon.includes("🔨") || icon.includes("warhammer_crush")) return "warhammer_crush";
+  if (icon.includes("🪓") || icon.includes("greataxe_cleave")) return "greataxe_cleave";
+  if (icon.includes("🔱") || icon.includes("spear_thrust")) return "spear_thrust";
+  if (icon.includes("⛓️") || icon.includes("flail_strike")) return "flail_strike";
+  if (icon.includes("🪃") || icon.includes("thrown_boomerang")) return "thrown_boomerang";
+  if (icon.includes("🤺") || icon.includes("rapier_flurry")) return "rapier_flurry";
   return null;
 }
 
@@ -1594,175 +1596,259 @@ export const EFFECT_REGISTRY: Record<string, VttEffectDefinition> = {
     }
   },
 
-  bog_mist: {
-    id: "bog_mist",
-    durationMs: 880,
+  warhammer_crush: {
+    id: "warhammer_crush",
+    durationMs: 820,
     renderSvg: () => `
       <style>
-        @keyframes vttFogRoll {
-          0% { transform: translateX(-40px) scale(0.6); opacity: 0; }
-          30% { transform: translateX(0px) scale(1.3); opacity: 1; filter: drop-shadow(0 0 18px #4ade80); }
-          70% { transform: translateX(10px) scale(1.2); opacity: 0.9; }
-          100% { transform: translateX(40px) scale(1.6); opacity: 0; filter: blur(8px); }
+        @keyframes vttHammerSmash {
+          0% { transform: scale(0.4) rotate(-55deg) translate(-20px, -30px); opacity: 0; transform-origin: bottom right; }
+          25% { transform: scale(1.3) rotate(15deg) translate(0px, 10px); opacity: 1; filter: drop-shadow(0 0 20px #fbbf24); }
+          50% { transform: scale(1.15) rotate(5deg) translate(0px, 5px); opacity: 0.95; }
+          100% { transform: scale(1.4) rotate(20deg) translate(5px, 15px); opacity: 0; filter: blur(6px); }
         }
-        @keyframes vttWispPulse {
-          0%, 100% { transform: scale(1); opacity: 0.8; }
-          50% { transform: scale(1.4); opacity: 1; filter: drop-shadow(0 0 12px #86efac); }
+        @keyframes vttCrushRing {
+          0% { transform: scale(0.2); opacity: 1; border-width: 6px; }
+          60% { transform: scale(2.5); opacity: 0.8; border-width: 2px; }
+          100% { transform: scale(3.6); opacity: 0; border-width: 1px; }
         }
       </style>
       <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
-        <!-- Hag's Addle Bog Fog & Will-o'-Wisps -->
-        <svg viewBox="0 0 64 64" width="92" height="92" style="position: absolute; animation: vttFogRoll 0.86s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
-          <!-- Rolling Marsh Clouds -->
-          <path d="M6 44 C6 34 16 30 24 34 C30 26 44 26 50 36 C56 36 60 42 58 50 L8 50 Z" fill="#334155" opacity="0.85" />
-          <path d="M12 52 C12 42 22 38 30 42 C36 34 50 36 54 44 C58 46 60 52 56 58 L10 58 Z" fill="#166534" opacity="0.75" />
-          <!-- Will-o'-Wisp Lights -->
-          <circle cx="24" cy="28" r="5" fill="#86efac" style="animation: vttWispPulse 0.5s ease-in-out infinite;" />
-          <circle cx="44" cy="22" r="4" fill="#38bdf8" style="animation: vttWispPulse 0.6s ease-in-out infinite; animation-delay: 0.2s;" />
+        <!-- Bludgeoning Ground Tremor Ring -->
+        <div style="position: absolute; width: 80px; height: 80px; border: 4px solid #fbbf24; border-radius: 50%; box-shadow: 0 0 18px #f59e0b; animation: vttCrushRing 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards; animation-delay: 0.15s; opacity: 0;"></div>
+        <!-- Heavy Warhammer Head & Handle -->
+        <svg viewBox="0 0 64 64" width="86" height="86" style="position: absolute; animation: vttHammerSmash 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
+          <!-- Handle -->
+          <path d="M14 50 L46 18" stroke="#78350f" stroke-width="6" stroke-linecap="round" />
+          <!-- Heavy Steel/Bronze Head -->
+          <polygon points="36,12 52,28 44,36 28,20" fill="#64748b" stroke="#f59e0b" stroke-width="2" />
+          <rect x="42" y="10" width="10" height="12" rx="2" transform="rotate(45 47 16)" fill="#475569" stroke="#fbbf24" stroke-width="1.5" />
+          <circle cx="38" cy="24" r="3" fill="#facc15" />
         </svg>
       </div>
     `,
     particles: {
       count: 34,
-      colors: ["#86efac", "#4ade80", "#38bdf8", "#64748b"],
-      speedRange: [20, 70],
+      colors: ["#fbbf24", "#64748b", "#cbd5e1", "#f59e0b"],
+      speedRange: [80, 210],
       sizeRangePx: [2, 6],
-      gravity: -25, // Marsh vapors floating up
-      shape: "circle",
-      lifeMs: 850
+      gravity: 120, // Stone and iron debris falling hard
+      shape: "splinter",
+      lifeMs: 700
     }
   },
 
-  fairy_pipes: {
-    id: "fairy_pipes",
-    durationMs: 850,
+  greataxe_cleave: {
+    id: "greataxe_cleave",
+    durationMs: 800,
     renderSvg: () => `
       <style>
-        @keyframes vttPipesPlay {
-          0% { transform: translateY(30px) scale(0.4) rotate(-15deg); opacity: 0; }
-          25% { transform: translateY(0px) scale(1.25) rotate(0deg); opacity: 1; filter: drop-shadow(0 0 18px #34d399); }
-          65% { transform: translateY(-6px) scale(1.1) rotate(6deg); opacity: 0.95; }
-          100% { transform: translateY(-20px) scale(1.4) rotate(15deg); opacity: 0; filter: blur(6px); }
+        @keyframes vttAxeCleave {
+          0% { transform: scale(0.5) rotate(-65deg) translate(-30px, -30px); opacity: 0; }
+          25% { transform: scale(1.3) rotate(35deg) translate(10px, 10px); opacity: 1; filter: drop-shadow(0 0 20px #ef4444); }
+          60% { transform: scale(1.1) rotate(45deg) translate(15px, 15px); opacity: 0.95; }
+          100% { transform: scale(1.4) rotate(60deg) translate(25px, 25px); opacity: 0; filter: blur(6px); }
         }
-        @keyframes vttFairyStave {
-          0% { transform: scale(0.2) rotate(0deg); opacity: 1; }
-          60% { transform: scale(2.4) rotate(60deg); opacity: 0.8; }
-          100% { transform: scale(3.5) rotate(120deg); opacity: 0; }
+        @keyframes vttCleaveArc {
+          0% { transform: scale(0.3) rotate(-45deg); opacity: 1; }
+          50% { transform: scale(2.2) rotate(15deg); opacity: 0.8; }
+          100% { transform: scale(3.2) rotate(45deg); opacity: 0; }
         }
       </style>
       <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
-        <!-- Musical Stave Spiral Rings -->
-        <div style="position: absolute; width: 80px; height: 80px; border: 3px dashed #34d399; border-radius: 50%; box-shadow: 0 0 16px #c084fc; animation: vttFairyStave 0.82s cubic-bezier(0.16, 1, 0.3, 1) forwards;"></div>
-        <!-- Pan-Pipes / Penny Whistle -->
-        <svg viewBox="0 0 64 64" width="84" height="84" style="position: absolute; animation: vttPipesPlay 0.82s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
-          <!-- 5 Wooden Pipes -->
-          <rect x="16" y="24" width="6" height="32" rx="3" fill="#92400e" stroke="#facc15" stroke-width="1.5" />
-          <rect x="23" y="20" width="6" height="36" rx="3" fill="#b45309" stroke="#facc15" stroke-width="1.5" />
-          <rect x="30" y="16" width="6" height="40" rx="3" fill="#92400e" stroke="#facc15" stroke-width="1.5" />
-          <rect x="37" y="20" width="6" height="36" rx="3" fill="#b45309" stroke="#facc15" stroke-width="1.5" />
-          <rect x="44" y="26" width="6" height="30" rx="3" fill="#92400e" stroke="#facc15" stroke-width="1.5" />
-          <!-- Binding Band -->
-          <rect x="14" y="34" width="38" height="6" rx="2" fill="#78350f" stroke="#facc15" stroke-width="1.5" />
+        <!-- Crimson Slashing Arc -->
+        <svg viewBox="0 0 100 100" width="120" height="120" style="position: absolute; animation: vttCleaveArc 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
+          <path d="M15 85 Q 50 20 85 85" fill="none" stroke="#ef4444" stroke-width="6" stroke-linecap="round" filter="drop-shadow(0 0 12px #ef4444)" />
+        </svg>
+        <!-- Bearded Greataxe -->
+        <svg viewBox="0 0 64 64" width="88" height="88" style="position: absolute; animation: vttAxeCleave 0.78s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
+          <path d="M12 52 L48 16" stroke="#78350f" stroke-width="6" stroke-linecap="round" />
+          <path d="M34 14 C48 8 58 18 52 32 L36 24 Z" fill="#991b1b" stroke="#ef4444" stroke-width="2" />
+          <path d="M36 24 L52 32 C48 38 42 38 36 32 Z" fill="#cbd5e1" stroke="#ffffff" stroke-width="1.5" />
+          <circle cx="42" cy="22" r="3" fill="#facc15" />
         </svg>
       </div>
     `,
     particles: {
-      count: 36,
-      colors: ["#34d399", "#c084fc", "#facc15", "#ffffff"],
-      speedRange: [40, 130],
+      count: 34,
+      colors: ["#ef4444", "#f87171", "#e2e8f0", "#991b1b"],
+      speedRange: [90, 220],
       sizeRangePx: [2, 6],
-      gravity: -50, // Floating fairy tune notes
-      shape: "note",
-      lifeMs: 800
+      gravity: 80, // Slashing sparks falling
+      shape: "splinter",
+      lifeMs: 650
     }
   },
 
-  herbal_remedy: {
-    id: "herbal_remedy",
-    durationMs: 840,
+  spear_thrust: {
+    id: "spear_thrust",
+    durationMs: 780,
     renderSvg: () => `
       <style>
-        @keyframes vttTeaSteep {
-          0% { transform: scale(0.4) translateY(20px); opacity: 0; }
-          25% { transform: scale(1.25) translateY(0px); opacity: 1; filter: drop-shadow(0 0 18px #86efac); }
-          65% { transform: scale(1.1) translateY(-4px); opacity: 0.95; }
-          100% { transform: scale(1.4) translateY(-14px); opacity: 0; filter: blur(6px); }
+        @keyframes vttTridentLunge {
+          0% { transform: translate(-45px, 45px) scale(0.6) rotate(-45deg); opacity: 0; }
+          25% { transform: translate(12px, -12px) scale(1.3) rotate(-45deg); opacity: 1; filter: drop-shadow(0 0 20px #38bdf8); }
+          60% { transform: translate(6px, -6px) scale(1.15) rotate(-45deg); opacity: 0.95; }
+          100% { transform: translate(25px, -25px) scale(1.4) rotate(-45deg); opacity: 0; filter: blur(6px); }
         }
-        @keyframes vttTeaSteam {
-          0% { transform: translateY(0px) scale(0.4); opacity: 0.9; }
-          100% { transform: translateY(-45px) scale(2.4); opacity: 0; }
+        @keyframes vttPiercingRipple {
+          0% { transform: scale(0.2); opacity: 1; border-width: 5px; }
+          60% { transform: scale(2.4); opacity: 0.8; border-width: 2px; }
+          100% { transform: scale(3.4); opacity: 0; border-width: 1px; }
         }
       </style>
       <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
-        <!-- Fragrant Steam Curls -->
-        <div style="position: absolute; width: 60px; height: 60px; border: 3px solid #86efac; border-radius: 50%; animation: vttTeaSteam 0.82s ease-out forwards; opacity: 0;"></div>
-        <!-- Foraged Tea Bowl & Herbs -->
-        <svg viewBox="0 0 64 64" width="86" height="86" style="position: absolute; animation: vttTeaSteep 0.82s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
-          <!-- Bowl -->
-          <path d="M14 28 C14 44 24 54 32 54 C40 54 50 44 50 28 Z" fill="#15803d" stroke="#86efac" stroke-width="2.5" />
-          <ellipse cx="32" cy="28" rx="18" ry="6" fill="#166534" stroke="#fef08a" stroke-width="2" />
-          <!-- Floating Mint/Herb Leaves -->
-          <path d="M26 26 C28 22 32 22 34 26 C32 30 28 30 26 26 Z" fill="#4ade80" />
-          <path d="M36 28 C38 24 42 24 44 28 C42 32 38 32 36 28 Z" fill="#facc15" />
-          <!-- Base -->
-          <rect x="24" y="54" width="16" height="4" rx="2" fill="#15803d" />
+        <!-- Piercing Shock Ripples -->
+        <div style="position: absolute; width: 76px; height: 76px; border: 3px solid #38bdf8; border-radius: 50%; box-shadow: 0 0 16px #0284c7; animation: vttPiercingRipple 0.72s cubic-bezier(0.16, 1, 0.3, 1) forwards; animation-delay: 0.12s; opacity: 0;"></div>
+        <!-- Trident / Spear Piercing Head -->
+        <svg viewBox="0 0 64 64" width="88" height="88" style="position: absolute; animation: vttTridentLunge 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
+          <!-- Shaft -->
+          <path d="M10 54 L44 20" stroke="#78350f" stroke-width="5" stroke-linecap="round" />
+          <!-- Trident Prongs -->
+          <path d="M38 26 L54 10 L48 32 M32 20 L54 10 L42 14" fill="none" stroke="#e2e8f0" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
+          <polygon points="56,8 46,14 50,18" fill="#38bdf8" stroke="#ffffff" stroke-width="1.5" />
+        </svg>
+      </div>
+    `,
+    particles: {
+      count: 32,
+      colors: ["#38bdf8", "#e0f2fe", "#ffffff", "#0284c7"],
+      speedRange: [100, 240],
+      sizeRangePx: [2, 5],
+      gravity: 30, // Piercing kinetic sparks
+      shape: "splinter",
+      lifeMs: 650
+    }
+  },
+
+  flail_strike: {
+    id: "flail_strike",
+    durationMs: 820,
+    renderSvg: () => `
+      <style>
+        @keyframes vttFlailSwing {
+          0% { transform: scale(0.4) rotate(-180deg); opacity: 0; }
+          30% { transform: scale(1.3) rotate(360deg); opacity: 1; filter: drop-shadow(0 0 20px #f59e0b); }
+          65% { transform: scale(1.1) rotate(420deg); opacity: 0.95; }
+          100% { transform: scale(1.4) rotate(540deg); opacity: 0; filter: blur(6px); }
+        }
+        @keyframes vttFlailFlash {
+          0% { transform: scale(0.1); opacity: 1; }
+          50% { transform: scale(2.2); opacity: 0.8; }
+          100% { transform: scale(3.3); opacity: 0; }
+        }
+      </style>
+      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <!-- Kinetic Impact Ring -->
+        <div style="position: absolute; width: 78px; height: 78px; border: 4px solid #f59e0b; border-radius: 50%; box-shadow: 0 0 16px #fbbf24; animation: vttFlailFlash 0.78s cubic-bezier(0.16, 1, 0.3, 1) forwards; animation-delay: 0.15s; opacity: 0;"></div>
+        <!-- Spiked Chain Ball Flail -->
+        <svg viewBox="0 0 64 64" width="86" height="86" style="position: absolute; animation: vttFlailSwing 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
+          <!-- Handle -->
+          <path d="M12 52 L26 38" stroke="#78350f" stroke-width="6" stroke-linecap="round" />
+          <!-- Chain Links -->
+          <path d="M26 38 C32 30 38 28 44 24" fill="none" stroke="#94a3b8" stroke-width="3" stroke-dasharray="5 3" />
+          <!-- Spiked Morningstar Ball -->
+          <circle cx="46" cy="20" r="10" fill="#475569" stroke="#f59e0b" stroke-width="2" />
+          <!-- Spikes -->
+          <polygon points="46,6 43,12 49,12" fill="#cbd5e1" />
+          <polygon points="46,34 43,28 49,28" fill="#cbd5e1" />
+          <polygon points="32,20 38,17 38,23" fill="#cbd5e1" />
+          <polygon points="60,20 54,17 54,23" fill="#cbd5e1" />
+        </svg>
+      </div>
+    `,
+    particles: {
+      count: 32,
+      colors: ["#f59e0b", "#64748b", "#cbd5e1", "#ffffff"],
+      speedRange: [80, 200],
+      sizeRangePx: [2, 5],
+      gravity: 90, // Heavy kinetic sparks
+      shape: "sparkle",
+      lifeMs: 700
+    }
+  },
+
+  thrown_boomerang: {
+    id: "thrown_boomerang",
+    durationMs: 840,
+    renderSvg: () => `
+      <style>
+        @keyframes vttBoomerangFlight {
+          0% { transform: scale(0.4) rotate(0deg) translate(-40px, 20px); opacity: 0; }
+          25% { transform: scale(1.25) rotate(180deg) translate(0px, -15px); opacity: 1; filter: drop-shadow(0 0 18px #10b981); }
+          50% { transform: scale(1.1) rotate(360deg) translate(25px, 0px); opacity: 0.95; }
+          75% { transform: scale(1.2) rotate(540deg) translate(0px, 15px); opacity: 0.9; }
+          100% { transform: scale(1.4) rotate(720deg) translate(-30px, -10px); opacity: 0; filter: blur(6px); }
+        }
+        @keyframes vttWindRing {
+          0% { transform: scale(0.2); opacity: 1; }
+          60% { transform: scale(2.4); opacity: 0.7; }
+          100% { transform: scale(3.5); opacity: 0; }
+        }
+      </style>
+      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <!-- Ricochet Wind Ring -->
+        <div style="position: absolute; width: 78px; height: 78px; border: 3px dashed #10b981; border-radius: 50%; box-shadow: 0 0 16px #34d399; animation: vttWindRing 0.82s cubic-bezier(0.16, 1, 0.3, 1) forwards;"></div>
+        <!-- Thrown Boomerang / Handaxe -->
+        <svg viewBox="0 0 64 64" width="86" height="86" style="position: absolute; animation: vttBoomerangFlight 0.82s linear forwards;">
+          <path d="M14 50 C26 38 38 26 50 14 C44 26 36 40 28 50 C22 48 16 48 14 50 Z" fill="#065f46" stroke="#34d399" stroke-width="2.5" />
+          <path d="M42 22 L50 14 L38 24 Z" fill="#e2e8f0" stroke="#ffffff" stroke-width="1.5" />
+          <circle cx="34" cy="30" r="3" fill="#facc15" />
         </svg>
       </div>
     `,
     particles: {
       count: 30,
-      colors: ["#86efac", "#4ade80", "#fef08a", "#ffffff"],
-      speedRange: [20, 65],
+      colors: ["#10b981", "#34d399", "#e2e8f0", "#ffffff"],
+      speedRange: [60, 160],
       sizeRangePx: [2, 5],
-      gravity: -70, // Fragrant tea & poultice steam rising
-      shape: "circle",
-      lifeMs: 800
+      gravity: 0, // Zero gravity wind trail sparks
+      shape: "splinter",
+      lifeMs: 750
     }
   },
 
-  ancient_woods: {
-    id: "ancient_woods",
-    durationMs: 860,
+  rapier_flurry: {
+    id: "rapier_flurry",
+    durationMs: 780,
     renderSvg: () => `
       <style>
-        @keyframes vttTreesRise {
-          0% { transform: translateY(45px) scale(0.4); opacity: 0; }
-          25% { transform: translateY(0px) scale(1.25); opacity: 1; filter: drop-shadow(0 0 20px #22c55e); }
-          65% { transform: translateY(-4px) scale(1.1); opacity: 0.95; }
-          100% { transform: translateY(-16px) scale(1.4); opacity: 0; filter: blur(6px); }
+        @keyframes vttRapierLunge {
+          0% { transform: scale(0.4) translate(-30px, 30px); opacity: 0; }
+          25% { transform: scale(1.3) translate(10px, -10px); opacity: 1; filter: drop-shadow(0 0 18px #facc15); }
+          45% { transform: scale(1.0) translate(-5px, 5px); }
+          65% { transform: scale(1.25) translate(15px, -15px); opacity: 0.95; }
+          100% { transform: scale(1.4) translate(25px, -25px); opacity: 0; filter: blur(6px); }
         }
-        @keyframes vttLeyRoadPulse {
-          0% { transform: scale(0.2); opacity: 1; }
-          60% { transform: scale(2.4); opacity: 0.7; }
-          100% { transform: scale(3.4); opacity: 0; }
+        @keyframes vttFlurryStars {
+          0% { transform: scale(0.1) rotate(0deg); opacity: 1; }
+          50% { transform: scale(2.2) rotate(45deg); opacity: 0.8; }
+          100% { transform: scale(3.3) rotate(90deg); opacity: 0; }
         }
       </style>
       <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
-        <!-- Fairy Road Ley Ring -->
-        <div style="position: absolute; width: 80px; height: 80px; border: 3px solid #22c55e; border-radius: 50%; box-shadow: 0 0 16px #facc15; animation: vttLeyRoadPulse 0.84s cubic-bezier(0.16, 1, 0.3, 1) forwards;"></div>
-        <!-- Mossy Twin Pine Trees & Fairy Road -->
-        <svg viewBox="0 0 64 64" width="88" height="88" style="position: absolute; animation: vttTreesRise 0.84s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
-          <!-- Left Pine -->
-          <polygon points="22,10 32,32 12,32" fill="#064e3b" stroke="#34d399" stroke-width="1.5" />
-          <polygon points="22,24 34,46 10,46" fill="#065f46" stroke="#34d399" stroke-width="1.5" />
-          <rect x="20" y="46" width="4" height="10" fill="#78350f" />
-          <!-- Right Pine -->
-          <polygon points="42,14 52,34 32,34" fill="#064e3b" stroke="#34d399" stroke-width="1.5" />
-          <polygon points="42,26 54,48 30,48" fill="#065f46" stroke="#34d399" stroke-width="1.5" />
-          <rect x="40" y="48" width="4" height="8" fill="#78350f" />
-          <!-- Fairy Road Star -->
-          <circle cx="32" cy="22" r="3.5" fill="#facc15" filter="drop-shadow(0 0 6px #facc15)" />
+        <!-- Puncture Critical Hit Stars -->
+        <div style="position: absolute; width: 76px; height: 76px; border: 3px solid #facc15; border-radius: 50%; box-shadow: 0 0 16px #38bdf8; animation: vttFlurryStars 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards; animation-delay: 0.1s; opacity: 0;"></div>
+        <!-- Duelist Rapier & Basket Hilt -->
+        <svg viewBox="0 0 64 64" width="88" height="88" style="position: absolute; animation: vttRapierLunge 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
+          <!-- Hilt -->
+          <circle cx="18" cy="46" r="8" fill="none" stroke="#f59e0b" stroke-width="3" />
+          <path d="M12 52 L22 42" stroke="#78350f" stroke-width="4" stroke-linecap="round" />
+          <!-- Needle Blade -->
+          <line x1="22" y1="42" x2="56" y2="8" stroke="#e2e8f0" stroke-width="3" stroke-linecap="round" filter="drop-shadow(0 0 4px #ffffff)" />
+          <polygon points="58,6 50,12 54,16" fill="#facc15" />
+          <circle cx="46" cy="18" r="3" fill="#38bdf8" />
         </svg>
       </div>
     `,
     particles: {
       count: 34,
-      colors: ["#15803d", "#22c55e", "#86efac", "#facc15"],
-      speedRange: [40, 110],
-      sizeRangePx: [2, 6],
-      gravity: 60, // Falling pine needles and moss embers
-      shape: "splinter",
-      lifeMs: 800
+      colors: ["#facc15", "#e2e8f0", "#ffffff", "#38bdf8"],
+      speedRange: [90, 220],
+      sizeRangePx: [2, 5],
+      gravity: 20, // Precision needle sparks
+      shape: "sparkle",
+      lifeMs: 650
     }
   }
 };
