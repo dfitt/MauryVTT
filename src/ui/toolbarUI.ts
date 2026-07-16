@@ -163,9 +163,9 @@ export function setupToolbarUI(engine: CanvasEngine): void {
       gridRow.style.cssText = "display: grid; grid-template-columns: 1fr 1fr; gap: 6px;";
       const modes = [
         { label: "1x1 Cell", size: 1 },
-        { label: "2x2 Area", size: 2 },
         { label: "3x3 Area", size: 3 },
-        { label: "5x5 Large", size: 5 }
+        { label: "5x5 Area", size: 5 },
+        { label: "20x20 Massive", size: 20 }
       ];
       modes.forEach((m) => {
         const b = document.createElement("button");

@@ -196,7 +196,7 @@ export class CanvasEngine {
         }
       }
     } else if (this.activeTool === "erase") {
-      const sizes = [1, 2, 3, 5];
+      const sizes = [1, 3, 5, 20];
       const idx = sizes.indexOf(this.eraseSize);
       let nextIdx = idx + step;
       if (nextIdx < 0) nextIdx = 0;
@@ -707,16 +707,16 @@ export class CanvasEngine {
       this.drawEntity(ctx, ent);
     }
 
-    // 4. Draw Tokens over all images (including map & regular images)
-    for (const ent of tokens) {
+    // 4. Draw Fills over all regular/map images
+    this.drawGridCells(ctx, doc);
+
+    // 5. Draw Drawings over fills and images
+    for (const ent of drawings) {
       this.drawEntity(ctx, ent);
     }
 
-    // 5. Draw Fills over all images and tokens
-    this.drawGridCells(ctx, doc);
-
-    // 6. Draw Drawings over all images and tokens
-    for (const ent of drawings) {
+    // 6. Draw Tokens on top of everything (including drawings and fills)
+    for (const ent of tokens) {
       this.drawEntity(ctx, ent);
     }
 
