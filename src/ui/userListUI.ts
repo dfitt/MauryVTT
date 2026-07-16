@@ -25,6 +25,25 @@ export function setupHeaderUI(engine?: CanvasEngine): void {
 
   document.body.appendChild(header);
 
+  const panHint = document.createElement("div");
+  panHint.id = "pan-hint-banner";
+  panHint.className = "pan-hint-banner";
+  panHint.textContent = "right-click (or pinch) to move";
+  document.body.appendChild(panHint);
+
+  if (engine) {
+    let hasPanned = false;
+    const hidePanHint = () => {
+      if (hasPanned) return;
+      hasPanned = true;
+      panHint.classList.add("hidden");
+      setTimeout(() => {
+        if (panHint.parentNode) panHint.parentNode.removeChild(panHint);
+      }, 1000);
+    };
+    engine.onPanView(() => hidePanHint());
+  }
+
   if (window.innerWidth <= 768) {
     header.classList.add("header-collapsed");
   }

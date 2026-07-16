@@ -68,6 +68,7 @@ export class CanvasEngine {
   public resizingTokenId: string | null = null;
   private selectionListeners: Set<(id: string | null) => void> = new Set();
   private toolOptionsListeners: Set<() => void> = new Set();
+  private panViewListeners: Set<() => void> = new Set();
 
   // Hover cursor state for tool previews
   public hoverWorldPos: { x: number; y: number } | null = null;
@@ -175,6 +176,15 @@ export class CanvasEngine {
     for (const l of this.toolOptionsListeners) l();
   }
 
+  public onPanView(listener: () => void): () => void {
+    this.panViewListeners.add(listener);
+    return () => this.panViewListeners.delete(listener);
+  }
+
+  public notifyPanView(): void {
+    for (const l of this.panViewListeners) l();
+  }
+
   public stepToolSize(step: number): void {
     if (this.activeTool === "draw" || this.activeTool === "line") {
       this.drawWidth = Math.min(60, Math.max(2, this.drawWidth + step * 2));
@@ -259,19 +269,25 @@ export class CanvasEngine {
 
       if (!isTyping) {
         const panStep = 45;
+        let moved = false;
         if (e.code === "ArrowUp") {
           this.panY += panStep;
+          moved = true;
           e.preventDefault();
         } else if (e.code === "ArrowDown") {
           this.panY -= panStep;
+          moved = true;
           e.preventDefault();
         } else if (e.code === "ArrowLeft") {
           this.panX += panStep;
+          moved = true;
           e.preventDefault();
         } else if (e.code === "ArrowRight") {
           this.panX -= panStep;
+          moved = true;
           e.preventDefault();
         }
+        if (moved) this.notifyPanView();
       }
     });
     window.addEventListener("keyup", (e) => {
@@ -305,6 +321,7 @@ export class CanvasEngine {
         this.panY += dy;
         lastMouseX = e.clientX;
         lastMouseY = e.clientY;
+        if (Math.abs(dx) > 0 || Math.abs(dy) > 0) this.notifyPanView();
         return;
       }
 
@@ -386,6 +403,7 @@ export class CanvasEngine {
 
       this.panX += (worldAfter.x - worldBefore.x) * this.zoom;
       this.panY += (worldAfter.y - worldBefore.y) * this.zoom;
+      this.notifyPanView();
     });
 
     // Mobile touch support: Two-finger pan & pinch zoom + 1-finger Pan Tool
@@ -447,8 +465,10 @@ export class CanvasEngine {
         const screenY = midY - rect.top;
 
         // Apply panning from finger drag first
-        this.panX += midX - lastTouchX;
-        this.panY += midY - lastTouchY;
+        const dx = midX - lastTouchX;
+        const dy = midY - lastTouchY;
+        this.panX += dx;
+        this.panY += dy;
         lastTouchX = midX;
         lastTouchY = midY;
 
@@ -463,6 +483,9 @@ export class CanvasEngine {
           this.panY += (worldAfter.y - worldBefore.y) * this.zoom;
           initialPinchDist = dist;
         }
+        if (Math.abs(dx) > 0 || Math.abs(dy) > 0 || Math.abs(dist - initialPinchDist) > 2) {
+          this.notifyPanView();
+        }
         return;
       }
 
@@ -473,10 +496,13 @@ export class CanvasEngine {
         this.hoverWorldPos = world;
 
         if (touchPan) {
-          this.panX += touch.clientX - lastTouchX;
-          this.panY += touch.clientY - lastTouchY;
+          const dx = touch.clientX - lastTouchX;
+          const dy = touch.clientY - lastTouchY;
+          this.panX += dx;
+          this.panY += dy;
           lastTouchX = touch.clientX;
           lastTouchY = touch.clientY;
+          if (Math.abs(dx) > 0 || Math.abs(dy) > 0) this.notifyPanView();
           return;
         }
 
