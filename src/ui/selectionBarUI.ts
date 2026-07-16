@@ -119,6 +119,105 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
 
       bar.appendChild(mineLabel);
 
+      // Conditions Selector
+      const AVAILABLE_CONDITIONS = [
+        { id: "restrained", label: "⛓️ Restrained" },
+        { id: "stunned", label: "💫 Stunned" },
+        { id: "exhausted", label: "🥱 Exhausted" },
+        { id: "down", label: "💀 Down (Near Death)" },
+        { id: "flying", label: "🪽 Flying" },
+        { id: "blessed", label: "✨ Blessed" },
+        { id: "blind", label: "🕶️ Blind" }
+      ];
+
+      const condContainer = document.createElement("div");
+      condContainer.style.cssText = "position: relative; display: inline-flex; align-items: center; margin: 0 4px;";
+
+      const condBtn = document.createElement("button");
+      const activeCondCount = (token.statusEffects || []).length;
+      condBtn.className = `btn-glass btn-sm ${activeCondCount > 0 ? "btn-active" : ""}`;
+      condBtn.setAttribute("data-tooltip", "Set token status conditions");
+      condBtn.innerHTML = activeCondCount > 0 ? `🏷️ Conditions (${activeCondCount})` : "🏷️ Conditions";
+      condContainer.appendChild(condBtn);
+
+      const condPopover = document.createElement("div");
+      condPopover.className = "conditions-popover";
+      condPopover.style.cssText = `
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        margin-bottom: 8px;
+        background: rgba(15, 23, 42, 0.95);
+        backdrop-filter: blur(16px);
+        border: 1px solid rgba(56, 189, 248, 0.45);
+        border-radius: 12px;
+        padding: 10px;
+        display: none;
+        flex-direction: column;
+        gap: 6px;
+        min-width: 190px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+        z-index: 1000;
+      `;
+
+      AVAILABLE_CONDITIONS.forEach((c) => {
+        const hasCond = (token.statusEffects || []).includes(c.id);
+        const itemLabel = document.createElement("label");
+        itemLabel.style.cssText = "display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; font-size: 13px; color: #f8fafc; padding: 4px 6px; border-radius: 6px; transition: background 0.15s;";
+        itemLabel.addEventListener("mouseenter", () => itemLabel.style.background = "rgba(56, 189, 248, 0.15)");
+        itemLabel.addEventListener("mouseleave", () => itemLabel.style.background = "transparent");
+
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.checked = hasCond;
+        cb.style.cssText = "cursor: pointer; width: 14px; height: 14px; accent-color: #38bdf8;";
+
+        cb.addEventListener("change", (e) => {
+          e.stopPropagation();
+          const currentStatus = new Set(token.statusEffects || []);
+          if (cb.checked) {
+            currentStatus.add(c.id);
+          } else {
+            currentStatus.delete(c.id);
+          }
+          const nextEffects = Array.from(currentStatus);
+          sessionManager.dispatchOperation({
+            opType: "UPDATE_ENTITY",
+            id: token.id,
+            patch: { statusEffects: nextEffects } as any
+          });
+        });
+
+        itemLabel.appendChild(cb);
+        const textSpan = document.createElement("span");
+        textSpan.textContent = c.label;
+        itemLabel.appendChild(textSpan);
+        condPopover.appendChild(itemLabel);
+      });
+
+      const closePopoverOnOutsideClick = (e: MouseEvent) => {
+        if (!condContainer.contains(e.target as Node)) {
+          condPopover.style.display = "none";
+          window.removeEventListener("click", closePopoverOnOutsideClick);
+        }
+      };
+
+      condBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const isOpen = condPopover.style.display === "flex";
+        if (isOpen) {
+          condPopover.style.display = "none";
+          window.removeEventListener("click", closePopoverOnOutsideClick);
+        } else {
+          condPopover.style.display = "flex";
+          setTimeout(() => window.addEventListener("click", closePopoverOnOutsideClick), 10);
+        }
+      });
+
+      condContainer.appendChild(condPopover);
+      bar.appendChild(condContainer);
+
       // Duplicate Button (1 cell right)
       const dupBtn = document.createElement("button");
       dupBtn.className = "btn-glass btn-sm";

@@ -966,6 +966,7 @@ export class CanvasEngine {
   }
 
   private drawEntity(ctx: CanvasRenderingContext2D, ent: CanvasEntity): void {
+    const now = Date.now();
     ctx.save();
     if (ent.type === "line") {
       const l = ent as LineEntity;
@@ -1044,6 +1045,25 @@ export class CanvasEngine {
       const halfW = displayW / 2;
       const halfH = displayH / 2;
 
+      let isTokenFlying = false;
+      if (ent.type === "token") {
+        const token = ent as TokenEntity;
+        const effects = token.statusEffects || [];
+        isTokenFlying = effects.includes("flying");
+        if (isTokenFlying) {
+          const shadowScale = 0.65 + Math.sin(now / 350) * 0.05;
+          ctx.save();
+          ctx.beginPath();
+          ctx.ellipse(0, halfH * 0.45, halfW * shadowScale, halfH * (shadowScale * 0.45), 0, 0, Math.PI * 2);
+          ctx.fillStyle = "rgba(0, 0, 0, 0.45)";
+          ctx.fill();
+          ctx.restore();
+
+          const bobY = Math.sin(now / 350) * (halfH * 0.16) - (halfH * 0.14);
+          ctx.translate(0, bobY);
+        }
+      }
+
       if (img && img.complete && img.naturalWidth > 0) {
         ctx.drawImage(img, -halfW, -halfH, displayW, displayH);
       } else {
@@ -1056,6 +1076,92 @@ export class CanvasEngine {
         ctx.strokeStyle = "#38bdf8";
         ctx.lineWidth = 3 / this.zoom;
         ctx.strokeRect(-halfW, -halfH, displayW, displayH);
+
+        const effects = token.statusEffects || [];
+
+        // Condition Animations
+        if (effects.includes("restrained")) {
+          ctx.save();
+          const rot = (now / 1200) % (Math.PI * 2);
+          ctx.rotate(rot);
+          ctx.strokeStyle = "#cbd5e1";
+          ctx.lineWidth = Math.max(2, 3 / this.zoom);
+          ctx.setLineDash([8 / this.zoom, 6 / this.zoom]);
+          ctx.strokeRect(-halfW * 0.85, -halfH * 0.85, displayW * 0.85, displayH * 0.85);
+          ctx.setLineDash([]);
+          ctx.font = `${Math.max(12, 14 / this.zoom)}px sans-serif`;
+          ctx.textAlign = "center";
+          ctx.fillText("⛓️", 0, -halfH * 0.75);
+          ctx.fillText("⛓️", 0, halfH * 0.85);
+          ctx.restore();
+        }
+
+        if (effects.includes("stunned")) {
+          ctx.save();
+          ctx.font = `${Math.max(13, 16 / this.zoom)}px sans-serif`;
+          ctx.textAlign = "center";
+          const t = now / 400;
+          for (let i = 0; i < 3; i++) {
+            const ang = t + (i * Math.PI * 2) / 3;
+            const sx = Math.cos(ang) * (halfW * 0.65);
+            const sy = -halfH * 0.65 + Math.sin(ang) * (halfH * 0.15);
+            ctx.fillText("💫", sx, sy);
+          }
+          ctx.restore();
+        }
+
+        if (effects.includes("exhausted")) {
+          ctx.save();
+          const p = (now % 2200) / 2200;
+          ctx.font = `${Math.max(12, 16 / this.zoom)}px sans-serif`;
+          ctx.textAlign = "center";
+          ctx.globalAlpha = 1.0 - p * 0.7;
+          const zx = halfW * 0.4 + Math.sin(p * Math.PI * 2) * (8 / this.zoom);
+          const zy = -halfH * (0.2 + p * 0.9);
+          ctx.fillText("🥱", zx, zy);
+          ctx.restore();
+        }
+
+        if (effects.includes("down")) {
+          ctx.save();
+          const pulse = 0.4 + 0.35 * Math.sin(now / 200);
+          ctx.strokeStyle = `rgba(239, 68, 68, ${pulse})`;
+          ctx.lineWidth = Math.max(3, 5 / this.zoom);
+          ctx.strokeRect(-halfW, -halfH, displayW, displayH);
+          ctx.fillStyle = `rgba(239, 68, 68, ${pulse * 0.3})`;
+          ctx.fillRect(-halfW, -halfH, displayW, displayH);
+          ctx.font = `${Math.max(14, 18 / this.zoom)}px sans-serif`;
+          ctx.textAlign = "center";
+          const skullScale = 1.0 + 0.12 * Math.sin(now / 150);
+          ctx.scale(skullScale, skullScale);
+          ctx.fillText("💀", 0, 6 / this.zoom);
+          ctx.restore();
+        }
+
+        if (effects.includes("blessed")) {
+          ctx.save();
+          const shimmer = 0.4 + 0.25 * Math.sin(now / 300);
+          ctx.strokeStyle = `rgba(234, 179, 8, ${shimmer})`;
+          ctx.lineWidth = Math.max(2, 4 / this.zoom);
+          ctx.strokeRect(-halfW - 2, -halfH - 2, displayW + 4, displayH + 4);
+          const sp = (now % 1800) / 1800;
+          ctx.font = `${Math.max(12, 15 / this.zoom)}px sans-serif`;
+          ctx.textAlign = "center";
+          ctx.globalAlpha = 1.0 - sp * 0.6;
+          ctx.fillText("✨", -halfW * 0.45, halfH * (0.5 - sp * 1.1));
+          ctx.fillText("✨", halfW * 0.45, halfH * (0.8 - sp * 1.1));
+          ctx.restore();
+        }
+
+        if (effects.includes("blind")) {
+          ctx.save();
+          ctx.fillStyle = "rgba(15, 23, 42, 0.65)";
+          ctx.fillRect(-halfW, -halfH, displayW, displayH * 0.5);
+          ctx.font = `${Math.max(14, 18 / this.zoom)}px sans-serif`;
+          ctx.textAlign = "center";
+          ctx.fillText("🕶️", 0, -halfH * 0.15);
+          ctx.restore();
+        }
 
         const isHoveredOrSelected = hoverScale > 1.05 || this.selectedEntityId === ent.id;
         if (token.label && isHoveredOrSelected) {
