@@ -82,6 +82,16 @@ export function setupChatPanel(): void {
           <button class="btn-glass roll-icon-swatch" data-icon="⏳" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">⏳</button>
           <button class="btn-glass roll-icon-swatch" data-icon="🕊️" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🕊️</button>
           <button class="btn-glass roll-icon-swatch" data-icon="🎯" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🎯</button>
+          <button class="btn-glass roll-icon-swatch" data-icon="🍄" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🍄</button>
+          <button class="btn-glass roll-icon-swatch" data-icon="🔮" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🔮</button>
+          <button class="btn-glass roll-icon-swatch" data-icon="🏮" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🏮</button>
+          <button class="btn-glass roll-icon-swatch" data-icon="🕸️" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🕸️</button>
+          <button class="btn-glass roll-icon-swatch" data-icon="🍷" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🍷</button>
+          <button class="btn-glass roll-icon-swatch" data-icon="📯" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">📯</button>
+          <button class="btn-glass roll-icon-swatch" data-icon="🐺" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🐺</button>
+          <button class="btn-glass roll-icon-swatch" data-icon="🦋" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🦋</button>
+          <button class="btn-glass roll-icon-swatch" data-icon="🗿" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🗿</button>
+          <button class="btn-glass roll-icon-swatch" data-icon="🪵" style="padding: 6px 10px; font-size: 1.25em; cursor: pointer; border-radius: 6px;">🪵</button>
         </div>
       </div>
     </div>

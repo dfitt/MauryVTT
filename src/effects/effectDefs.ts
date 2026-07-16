@@ -41,6 +41,16 @@ export function getEffectIdForIcon(icon?: string): string | null {
   if (icon.includes("⏳") || icon.includes("time_warp")) return "time_warp";
   if (icon.includes("🕊️") || icon.includes("🙏") || icon.includes("guidance_bless")) return "guidance_bless";
   if (icon.includes("🎯") || icon.includes("hunters_mark")) return "hunters_mark";
+  if (icon.includes("🍄") || icon.includes("spore_cloud")) return "spore_cloud";
+  if (icon.includes("🔮") || icon.includes("witch_hex")) return "witch_hex";
+  if (icon.includes("🏮") || icon.includes("🪔") || icon.includes("lantern_light")) return "lantern_light";
+  if (icon.includes("🕸️") || icon.includes("🕷️") || icon.includes("spider_web")) return "spider_web";
+  if (icon.includes("🍷") || icon.includes("🏺") || icon.includes("potion_elixir")) return "potion_elixir";
+  if (icon.includes("📯") || icon.includes("📢") || icon.includes("thunder_wave")) return "thunder_wave";
+  if (icon.includes("🐺") || icon.includes("beast_shape")) return "beast_shape";
+  if (icon.includes("🦋") || icon.includes("🧚") || icon.includes("fairy_glamour")) return "fairy_glamour";
+  if (icon.includes("🗿") || icon.includes("🪨") || icon.includes("rune_ward")) return "rune_ward";
+  if (icon.includes("🪵") || icon.includes("campfire_rest")) return "campfire_rest";
   return null;
 }
 
@@ -1065,6 +1075,416 @@ export const EFFECT_REGISTRY: Record<string, VttEffectDefinition> = {
       gravity: 0,
       shape: "sparkle",
       lifeMs: 650
+    }
+  },
+
+  spore_cloud: {
+    id: "spore_cloud",
+    durationMs: 850,
+    renderSvg: () => `
+      <style>
+        @keyframes vttToadstoolPop {
+          0% { transform: translateY(40px) scale(0.3); opacity: 0; }
+          25% { transform: translateY(0px) scale(1.25); opacity: 1; filter: drop-shadow(0 0 16px #c084fc); }
+          65% { transform: translateY(-4px) scale(1.1); opacity: 0.9; }
+          100% { transform: translateY(-16px) scale(1.4); opacity: 0; filter: blur(6px); }
+        }
+        @keyframes vttSporePuff {
+          0% { transform: scale(0.2); opacity: 0.9; }
+          60% { transform: scale(2.2); opacity: 0.7; }
+          100% { transform: scale(3.2); opacity: 0; filter: blur(8px); }
+        }
+      </style>
+      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <!-- Bioluminescent Spore Puff Rings -->
+        <div style="position: absolute; width: 78px; height: 78px; border: 3px solid #c084fc; border-radius: 50%; box-shadow: 0 0 16px #2dd4bf; animation: vttSporePuff 0.82s cubic-bezier(0.16, 1, 0.3, 1) forwards;"></div>
+        <div style="position: absolute; width: 78px; height: 78px; border: 2px dashed #2dd4bf; border-radius: 50%; animation: vttSporePuff 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards; animation-delay: 0.15s; opacity: 0;"></div>
+        <!-- Moss/Fungi Toadstool -->
+        <svg viewBox="0 0 64 64" width="84" height="84" style="position: absolute; animation: vttToadstoolPop 0.82s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
+          <path d="M26 38 L38 38 L40 56 L24 56 Z" fill="#f1f5f9" stroke="#94a3b8" stroke-width="2" />
+          <path d="M12 38 C12 20 22 10 32 10 C42 10 52 20 52 38 Z" fill="#9333ea" stroke="#c084fc" stroke-width="2" />
+          <circle cx="24" cy="26" r="3.5" fill="#2dd4bf" />
+          <circle cx="38" cy="22" r="4.5" fill="#e879f9" />
+          <circle cx="44" cy="30" r="3" fill="#2dd4bf" />
+          <circle cx="28" cy="18" r="2.5" fill="#f1f5f9" />
+        </svg>
+      </div>
+    `,
+    particles: {
+      count: 36,
+      colors: ["#c084fc", "#2dd4bf", "#e879f9", "#86efac"],
+      speedRange: [20, 75],
+      sizeRangePx: [2, 6],
+      gravity: -40, // Bioluminescent moss spores drifting up
+      shape: "circle",
+      lifeMs: 850
+    }
+  },
+
+  witch_hex: {
+    id: "witch_hex",
+    durationMs: 800,
+    renderSvg: () => `
+      <style>
+        @keyframes vttHexOrb {
+          0% { transform: scale(0.3) rotate(0deg); opacity: 0; }
+          30% { transform: scale(1.35) rotate(180deg); opacity: 1; filter: drop-shadow(0 0 20px #a855f7); }
+          70% { transform: scale(1.15) rotate(360deg); opacity: 0.9; }
+          100% { transform: scale(1.6) rotate(540deg); opacity: 0; filter: blur(8px); }
+        }
+        @keyframes vttHexRunes {
+          0% { transform: scale(0.2) rotate(45deg); opacity: 1; }
+          60% { transform: scale(2.3) rotate(-45deg); opacity: 0.7; }
+          100% { transform: scale(3.4) rotate(-90deg); opacity: 0; }
+        }
+      </style>
+      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <!-- Hex Rune Circle -->
+        <div style="position: absolute; width: 80px; height: 80px; border: 3px solid #10b981; border-radius: 50%; box-shadow: 0 0 18px #a855f7; animation: vttHexRunes 0.78s cubic-bezier(0.16, 1, 0.3, 1) forwards;"></div>
+        <!-- Witchcraft Scrying Orb -->
+        <svg viewBox="0 0 64 64" width="84" height="84" style="position: absolute; animation: vttHexOrb 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
+          <circle cx="32" cy="32" r="18" fill="#3b0764" stroke="#a855f7" stroke-width="3" />
+          <path d="M26 26 L38 38 M38 26 L26 38" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" />
+          <circle cx="32" cy="32" r="6" fill="none" stroke="#e879f9" stroke-width="2" />
+        </svg>
+      </div>
+    `,
+    particles: {
+      count: 30,
+      colors: ["#a855f7", "#10b981", "#6b21a8", "#34d399"],
+      speedRange: [50, 150],
+      sizeRangePx: [2, 5],
+      gravity: -20,
+      shape: "sparkle",
+      lifeMs: 750
+    }
+  },
+
+  lantern_light: {
+    id: "lantern_light",
+    durationMs: 880,
+    renderSvg: () => `
+      <style>
+        @keyframes vttLanternSwing {
+          0% { transform: rotate(-25deg) scale(0.5); opacity: 0; transform-origin: top center; }
+          30% { transform: rotate(12deg) scale(1.2); opacity: 1; filter: drop-shadow(0 0 22px #fbbf24); }
+          65% { transform: rotate(-8deg) scale(1.1); opacity: 0.95; }
+          100% { transform: rotate(0deg) scale(1.4); opacity: 0; filter: blur(6px); }
+        }
+        @keyframes vttLanternGlow {
+          0% { transform: scale(0.2); opacity: 1; }
+          50% { transform: scale(2.4); opacity: 0.8; }
+          100% { transform: scale(3.6); opacity: 0; }
+        }
+      </style>
+      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <!-- Warm Expanding Ley Light Waves -->
+        <div style="position: absolute; width: 84px; height: 84px; background: radial-gradient(circle, #fef08a 10%, #fbbf24 40%, transparent 80%); border-radius: 50%; animation: vttLanternGlow 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0;"></div>
+        <!-- Rustic Briar Lantern -->
+        <svg viewBox="0 0 64 64" width="86" height="86" style="position: absolute; animation: vttLanternSwing 0.88s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
+          <path d="M28 8 L36 8 L36 14 L28 14 Z" fill="#78350f" />
+          <path d="M22 14 L42 14 L46 22 L18 22 Z" fill="#92400e" stroke="#78350f" stroke-width="1.5" />
+          <rect x="20" y="22" width="24" height="26" rx="3" fill="rgba(254, 240, 138, 0.85)" stroke="#d97706" stroke-width="2.5" />
+          <path d="M18 48 L46 48 L42 56 L22 56 Z" fill="#92400e" stroke="#78350f" stroke-width="1.5" />
+          <circle cx="32" cy="35" r="6" fill="#ffffff" filter="drop-shadow(0 0 8px #f59e0b)" />
+        </svg>
+      </div>
+    `,
+    particles: {
+      count: 32,
+      colors: ["#fbbf24", "#fef08a", "#f59e0b", "#fffbeb"],
+      speedRange: [30, 80],
+      sizeRangePx: [2, 6],
+      gravity: -15, // Floating warm forest fireflies
+      shape: "circle",
+      lifeMs: 850
+    }
+  },
+
+  spider_web: {
+    id: "spider_web",
+    durationMs: 800,
+    renderSvg: () => `
+      <style>
+        @keyframes vttWebNet {
+          0% { transform: scale(0.2) rotate(-30deg); opacity: 0; }
+          25% { transform: scale(1.3) rotate(0deg); opacity: 1; filter: drop-shadow(0 0 16px #cbd5e1); }
+          65% { transform: scale(1.15) rotate(5deg); opacity: 0.9; }
+          100% { transform: scale(1.5) rotate(10deg); opacity: 0; filter: blur(6px); }
+        }
+        @keyframes vttWebShiver {
+          0%, 100% { transform: translate(0, 0); }
+          20% { transform: translate(-3px, 2px); }
+          40% { transform: translate(3px, -2px); }
+          60% { transform: translate(-2px, -1px); }
+        }
+      </style>
+      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <!-- Silvery Spider Web Net -->
+        <svg viewBox="0 0 64 64" width="90" height="90" style="position: absolute; animation: vttWebNet 0.78s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
+          <g style="animation: vttWebShiver 0.4s ease-in-out infinite;">
+            <line x1="4" y1="4" x2="60" y2="60" stroke="#cbd5e1" stroke-width="2" />
+            <line x1="60" y1="4" x2="4" y2="60" stroke="#cbd5e1" stroke-width="2" />
+            <line x1="32" y1="2" x2="32" y2="62" stroke="#e2e8f0" stroke-width="2" />
+            <line x1="2" y1="32" x2="62" y2="32" stroke="#e2e8f0" stroke-width="2" />
+            <polygon points="32,12 52,32 32,52 12,32" fill="none" stroke="#94a3b8" stroke-width="1.5" />
+            <polygon points="32,22 42,32 32,42 22,32" fill="none" stroke="#cbd5e1" stroke-width="1.5" />
+          </g>
+        </svg>
+      </div>
+    `,
+    particles: {
+      count: 28,
+      colors: ["#e2e8f0", "#cbd5e1", "#ffffff", "#94a3b8"],
+      speedRange: [60, 160],
+      sizeRangePx: [2, 5],
+      gravity: 50, // Dew drops sliding off silk
+      shape: "splinter",
+      lifeMs: 700
+    }
+  },
+
+  potion_elixir: {
+    id: "potion_elixir",
+    durationMs: 820,
+    renderSvg: () => `
+      <style>
+        @keyframes vttPotionRaise {
+          0% { transform: translateY(30px) scale(0.4) rotate(-15deg); opacity: 0; }
+          25% { transform: translateY(0px) scale(1.25) rotate(0deg); opacity: 1; filter: drop-shadow(0 0 18px #ef4444); }
+          65% { transform: translateY(-6px) scale(1.1) rotate(6deg); opacity: 0.95; }
+          100% { transform: translateY(-20px) scale(1.4) rotate(12deg); opacity: 0; filter: blur(6px); }
+        }
+        @keyframes vttElixirGlow {
+          0% { transform: scale(0.2); opacity: 1; }
+          50% { transform: scale(2.2); opacity: 0.8; }
+          100% { transform: scale(3.4); opacity: 0; }
+        }
+      </style>
+      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <!-- Ruby Healing Aura Ring -->
+        <div style="position: absolute; width: 78px; height: 78px; border: 3px solid #ef4444; border-radius: 50%; box-shadow: 0 0 16px #facc15; animation: vttElixirGlow 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;"></div>
+        <!-- Potion / Goblet Vessel -->
+        <svg viewBox="0 0 64 64" width="84" height="84" style="position: absolute; animation: vttPotionRaise 0.82s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
+          <path d="M22 14 L42 14 L42 32 C42 42 34 50 32 50 C30 50 22 42 22 32 Z" fill="#ef4444" stroke="#facc15" stroke-width="2.5" />
+          <path d="M20 12 L44 12 L44 16 L20 16 Z" fill="#fbbf24" />
+          <line x1="32" y1="50" x2="32" y2="58" stroke="#facc15" stroke-width="3" />
+          <line x1="24" y1="58" x2="40" y2="58" stroke="#facc15" stroke-width="3" stroke-linecap="round" />
+          <circle cx="32" cy="30" r="5" fill="#ffffff" opacity="0.6" />
+        </svg>
+      </div>
+    `,
+    particles: {
+      count: 34,
+      colors: ["#ef4444", "#facc15", "#60a5fa", "#ffffff"],
+      speedRange: [50, 140],
+      sizeRangePx: [2, 6],
+      gravity: -120, // Rising carbonated healing fizz
+      shape: "circle",
+      lifeMs: 750
+    }
+  },
+
+  thunder_wave: {
+    id: "thunder_wave",
+    durationMs: 800,
+    renderSvg: () => `
+      <style>
+        @keyframes vttHornBlast {
+          0% { transform: scale(0.4) rotate(-30deg); opacity: 0; }
+          25% { transform: scale(1.25) rotate(0deg); opacity: 1; filter: drop-shadow(0 0 20px #38bdf8); }
+          65% { transform: scale(1.1) rotate(5deg); opacity: 0.95; }
+          100% { transform: scale(1.4) rotate(15deg); opacity: 0; filter: blur(6px); }
+        }
+        @keyframes vttSonicRipple {
+          0% { transform: scale(0.1); opacity: 1; border-width: 5px; }
+          60% { transform: scale(2.6); opacity: 0.8; border-width: 2px; }
+          100% { transform: scale(3.8); opacity: 0; border-width: 1px; }
+        }
+      </style>
+      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <!-- Concussive Sonic Shockwaves -->
+        <div style="position: absolute; width: 80px; height: 80px; border: 4px solid #38bdf8; border-radius: 50%; box-shadow: 0 0 18px #0284c7; animation: vttSonicRipple 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;"></div>
+        <div style="position: absolute; width: 80px; height: 80px; border: 3px solid #bae6fd; border-radius: 50%; animation: vttSonicRipple 0.78s cubic-bezier(0.16, 1, 0.3, 1) forwards; animation-delay: 0.12s; opacity: 0;"></div>
+        <!-- Hunting Horn / Sonic Blast -->
+        <svg viewBox="0 0 64 64" width="86" height="86" style="position: absolute; animation: vttHornBlast 0.78s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
+          <path d="M14 42 C14 26 28 16 44 16 L54 12 C54 22 46 28 44 28 C34 28 26 34 26 42 C26 48 30 52 36 52" fill="none" stroke="#f59e0b" stroke-width="5" stroke-linecap="round" />
+          <polygon points="50,10 58,6 58,22 50,18" fill="#fbbf24" stroke="#d97706" stroke-width="1.5" />
+          <circle cx="14" cy="42" r="4" fill="#78350f" />
+        </svg>
+      </div>
+    `,
+    particles: {
+      count: 30,
+      colors: ["#38bdf8", "#bae6fd", "#ffffff", "#0284c7"],
+      speedRange: [100, 230],
+      sizeRangePx: [2, 5],
+      gravity: 0,
+      shape: "note",
+      lifeMs: 650
+    }
+  },
+
+  beast_shape: {
+    id: "beast_shape",
+    durationMs: 820,
+    renderSvg: () => `
+      <style>
+        @keyframes vttBeastLeap {
+          0% { transform: scale(0.4) translate(-20px, 20px) rotate(-15deg); opacity: 0; }
+          25% { transform: scale(1.2) translate(0px, 0px) rotate(0deg); opacity: 1; filter: drop-shadow(0 0 18px #10b981); }
+          65% { transform: scale(1.1) translate(5px, -5px) rotate(5deg); opacity: 0.95; }
+          100% { transform: scale(1.4) translate(15px, -15px) rotate(15deg); opacity: 0; filter: blur(6px); }
+        }
+        @keyframes vttMoonRing {
+          0% { transform: scale(0.2); opacity: 1; }
+          60% { transform: scale(2.3); opacity: 0.7; }
+          100% { transform: scale(3.3); opacity: 0; }
+        }
+      </style>
+      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <!-- Moonlit Primal Ring -->
+        <div style="position: absolute; width: 82px; height: 82px; border: 3px solid #10b981; border-radius: 50%; box-shadow: 0 0 18px #34d399; animation: vttMoonRing 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;"></div>
+        <!-- Beast / Wolf Silhouette -->
+        <svg viewBox="0 0 64 64" width="86" height="86" style="position: absolute; animation: vttBeastLeap 0.82s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
+          <path d="M14 46 L20 30 L16 18 L26 24 L36 20 L48 28 L54 24 L50 36 L44 48 L28 50 Z" fill="#065f46" stroke="#34d399" stroke-width="2" />
+          <circle cx="38" cy="28" r="3" fill="#facc15" />
+        </svg>
+      </div>
+    `,
+    particles: {
+      count: 32,
+      colors: ["#10b981", "#34d399", "#e2e8f0", "#ffffff"],
+      speedRange: [70, 180],
+      sizeRangePx: [2, 5],
+      gravity: -30,
+      shape: "sparkle",
+      lifeMs: 700
+    }
+  },
+
+  fairy_glamour: {
+    id: "fairy_glamour",
+    durationMs: 850,
+    renderSvg: () => `
+      <style>
+        @keyframes vttButterflyFlutter {
+          0% { transform: scale(0.4) rotate(-20deg); opacity: 0; }
+          25% { transform: scale(1.25) rotate(10deg); opacity: 1; filter: drop-shadow(0 0 18px #f472b6); }
+          50% { transform: scale(1.1) rotate(-10deg); }
+          75% { transform: scale(1.2) rotate(12deg); opacity: 0.9; }
+          100% { transform: scale(1.5) rotate(-15deg); opacity: 0; filter: blur(6px); }
+        }
+        @keyframes vttGlamourRing {
+          0% { transform: scale(0.2); opacity: 1; }
+          50% { transform: scale(2.2); opacity: 0.8; }
+          100% { transform: scale(3.4); opacity: 0; }
+        }
+      </style>
+      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <!-- Iridescent Glamour Rings -->
+        <div style="position: absolute; width: 78px; height: 78px; border: 3px dashed #f472b6; border-radius: 50%; box-shadow: 0 0 16px #38bdf8; animation: vttGlamourRing 0.82s cubic-bezier(0.16, 1, 0.3, 1) forwards;"></div>
+        <!-- Pixie / Fairy Butterfly Wings -->
+        <svg viewBox="0 0 64 64" width="86" height="86" style="position: absolute; animation: vttButterflyFlutter 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
+          <path d="M32 32 C18 12 6 22 14 36 C20 44 32 32 32 32 Z" fill="#f472b6" stroke="#facc15" stroke-width="2" opacity="0.9" />
+          <path d="M32 32 C46 12 58 22 50 36 C44 44 32 32 32 32 Z" fill="#38bdf8" stroke="#facc15" stroke-width="2" opacity="0.9" />
+          <path d="M32 32 C20 46 12 56 22 58 C30 58 32 32 32 32 Z" fill="#c084fc" opacity="0.8" />
+          <path d="M32 32 C44 46 52 56 42 58 C34 58 32 32 32 32 Z" fill="#c084fc" opacity="0.8" />
+          <line x1="32" y1="20" x2="32" y2="44" stroke="#facc15" stroke-width="2.5" stroke-linecap="round" />
+        </svg>
+      </div>
+    `,
+    particles: {
+      count: 36,
+      colors: ["#f472b6", "#38bdf8", "#facc15", "#c084fc", "#ffffff"],
+      speedRange: [40, 120],
+      sizeRangePx: [2, 6],
+      gravity: 10,
+      shape: "sparkle",
+      lifeMs: 800
+    }
+  },
+
+  rune_ward: {
+    id: "rune_ward",
+    durationMs: 850,
+    renderSvg: () => `
+      <style>
+        @keyframes vttMegalithRaise {
+          0% { transform: translateY(40px) scale(0.4); opacity: 0; }
+          25% { transform: translateY(0px) scale(1.2); opacity: 1; filter: drop-shadow(0 0 18px #38bdf8); }
+          65% { transform: translateY(-4px) scale(1.1); opacity: 0.95; }
+          100% { transform: translateY(-16px) scale(1.4); opacity: 0; filter: blur(6px); }
+        }
+        @keyframes vttRunePulse {
+          0% { transform: scale(0.2) rotate(0deg); opacity: 1; }
+          60% { transform: scale(2.4) rotate(90deg); opacity: 0.8; }
+          100% { transform: scale(3.5) rotate(180deg); opacity: 0; }
+        }
+      </style>
+      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <!-- Ley Line Rune Circle -->
+        <div style="position: absolute; width: 80px; height: 80px; border: 3px solid #38bdf8; border-radius: 50%; box-shadow: 0 0 16px #f59e0b; animation: vttRunePulse 0.82s cubic-bezier(0.16, 1, 0.3, 1) forwards;"></div>
+        <!-- Ancient Standing Megalith Stone -->
+        <svg viewBox="0 0 64 64" width="84" height="84" style="position: absolute; animation: vttMegalithRaise 0.82s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
+          <polygon points="20,12 44,12 48,54 16,54" fill="#475569" stroke="#94a3b8" stroke-width="2" />
+          <!-- Glowing Cyan Rune -->
+          <path d="M32 20 L32 46 M24 28 L40 28 M26 38 L38 38" stroke="#38bdf8" stroke-width="3" stroke-linecap="round" filter="drop-shadow(0 0 6px #38bdf8)" />
+          <circle cx="32" cy="20" r="3" fill="#facc15" />
+        </svg>
+      </div>
+    `,
+    particles: {
+      count: 30,
+      colors: ["#38bdf8", "#f59e0b", "#64748b", "#cbd5e1"],
+      speedRange: [50, 140],
+      sizeRangePx: [2, 5],
+      gravity: 40,
+      shape: "splinter",
+      lifeMs: 750
+    }
+  },
+
+  campfire_rest: {
+    id: "campfire_rest",
+    durationMs: 880,
+    renderSvg: () => `
+      <style>
+        @keyframes vttCampfireBurn {
+          0% { transform: scale(0.4) translateY(20px); opacity: 0; }
+          25% { transform: scale(1.25) translateY(0px); opacity: 1; filter: drop-shadow(0 0 20px #f97316); }
+          65% { transform: scale(1.1) translateY(-3px); opacity: 0.95; }
+          100% { transform: scale(1.4) translateY(-12px); opacity: 0; filter: blur(6px); }
+        }
+        @keyframes vttSmokeRing {
+          0% { transform: translateY(0px) scale(0.3); opacity: 0.8; }
+          100% { transform: translateY(-50px) scale(2.6); opacity: 0; }
+        }
+      </style>
+      <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <!-- Rising Smoke Rings -->
+        <div style="position: absolute; width: 50px; height: 30px; border: 3px solid #cbd5e1; border-radius: 50%; animation: vttSmokeRing 0.85s ease-out forwards; opacity: 0;"></div>
+        <div style="position: absolute; width: 50px; height: 30px; border: 2px solid #94a3b8; border-radius: 50%; animation: vttSmokeRing 0.88s ease-out forwards; animation-delay: 0.15s; opacity: 0;"></div>
+        <!-- Campfire Logs & Flames -->
+        <svg viewBox="0 0 64 64" width="86" height="86" style="position: absolute; animation: vttCampfireBurn 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
+          <!-- Logs -->
+          <path d="M14 50 L50 38" stroke="#78350f" stroke-width="6" stroke-linecap="round" />
+          <path d="M14 38 L50 50" stroke="#92400e" stroke-width="6" stroke-linecap="round" />
+          <!-- Flame -->
+          <path d="M32 14 C20 30 22 46 32 46 C42 46 44 30 32 14 Z" fill="#f97316" />
+          <path d="M32 24 C26 34 26 44 32 44 C38 44 38 34 32 24 Z" fill="#fbbf24" />
+          <circle cx="32" cy="38" r="4" fill="#ffffff" />
+        </svg>
+      </div>
+    `,
+    particles: {
+      count: 32,
+      colors: ["#f97316", "#fbbf24", "#94a3b8", "#cbd5e1"],
+      speedRange: [30, 90],
+      sizeRangePx: [2, 5],
+      gravity: -80, // Cozy campfire sparks and smoke rising up
+      shape: "sparkle",
+      lifeMs: 850
     }
   }
 };
