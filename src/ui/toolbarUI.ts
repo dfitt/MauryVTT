@@ -31,6 +31,8 @@ export function setupToolbarUI(engine: CanvasEngine): void {
   (window as any).vttActiveTool = engine.activeTool;
 
   const SHAPE_ICONS: Record<typeof engine.lineShape, string> = {
+    doodle: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><path d="M3 17C6 14 7 19 10 16C13 13 14 18 17 15C19 13 20 12 21 11"/></svg>`,
+    select: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><rect x="4" y="4" width="16" height="16" rx="2" stroke-dasharray="4 4"/><circle cx="4" cy="4" r="1.5" fill="currentColor"/><circle cx="20" cy="20" r="1.5" fill="currentColor"/></svg>`,
     straight: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><line x1="5" y1="19" x2="19" y2="5"/><circle cx="5" cy="19" r="1.8" fill="currentColor"/><circle cx="19" cy="5" r="1.8" fill="currentColor"/></svg>`,
     rectangle: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="3" cy="6" r="1.5" fill="currentColor"/><circle cx="21" cy="18" r="1.5" fill="currentColor"/></svg>`,
     circle: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>`,
@@ -43,17 +45,16 @@ export function setupToolbarUI(engine: CanvasEngine): void {
   const updateMainLineIcon = () => {
     const lineBtn = bar.querySelector('.tool-btn[data-tool-id="line"]');
     if (lineBtn) {
-      lineBtn.innerHTML = SHAPE_ICONS[engine.lineShape] || SHAPE_ICONS.straight;
+      lineBtn.innerHTML = SHAPE_ICONS[engine.lineShape] || SHAPE_ICONS.doodle;
     }
   };
 
   const tools: { id: ToolType; icon: string; title: string }[] = [
     { id: "select", icon: "↖️", title: "Select & Move / Resize Entities" },
-    { id: "draw", icon: "✏️", title: "Freehand Sketch" },
     {
       id: "line",
-      icon: SHAPE_ICONS[engine.lineShape] || SHAPE_ICONS.straight,
-      title: "Line & Shape Tool"
+      icon: SHAPE_ICONS[engine.lineShape] || SHAPE_ICONS.doodle,
+      title: "Drawing & Shape Tools"
     },
     {
       id: "fill",
@@ -94,12 +95,14 @@ export function setupToolbarUI(engine: CanvasEngine): void {
       if (toolId === "line") {
         const shapeHeader = document.createElement("div");
         shapeHeader.style.cssText = "font-weight: 600; font-size: 13px; color: #38bdf8; margin-bottom: 4px;";
-        shapeHeader.textContent = "📐 Shape Mode";
+        shapeHeader.textContent = "📐 Drawing Tools";
         toolPopover.appendChild(shapeHeader);
 
         const shapeGrid = document.createElement("div");
         shapeGrid.style.cssText = "display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;";
         const shapes: { id: typeof engine.lineShape; label: string; icon: string }[] = [
+          { id: "doodle", label: "Doodle", icon: SHAPE_ICONS.doodle },
+          { id: "select", label: "Select", icon: SHAPE_ICONS.select },
           { id: "straight", label: "Straight", icon: SHAPE_ICONS.straight },
           { id: "rectangle", label: "Rectangle", icon: SHAPE_ICONS.rectangle },
           { id: "circle", label: "Circle", icon: SHAPE_ICONS.circle },
@@ -115,6 +118,10 @@ export function setupToolbarUI(engine: CanvasEngine): void {
           b.style.cssText = `padding: 6px 4px; font-size: 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; ${active ? "background: #38bdf8; color: #0f172a; font-weight: 700;" : ""}`;
           b.innerHTML = `<span>${s.icon}</span><span>${s.label}</span>`;
           b.addEventListener("click", () => {
+            if (engine.lineShape === "select" && s.id !== "select" && engine.selectedDrawingIds.size > 0) {
+              engine.selectedDrawingIds.clear();
+              engine.notifyDrawingSelectionChanged();
+            }
             engine.lineShape = s.id;
             updateMainLineIcon();
             engine.notifyToolOptionsChanged();
@@ -125,50 +132,52 @@ export function setupToolbarUI(engine: CanvasEngine): void {
         toolPopover.appendChild(shapeGrid);
       }
 
-      const header = document.createElement("div");
-      header.style.cssText = "font-weight: 600; font-size: 13px; color: #38bdf8; display: flex; justify-content: space-between; align-items: center;";
-      header.innerHTML = `<span>${toolId === "draw" ? "✏️ Freehand Thickness" : "📏 Thickness"}</span><span id="pop-draw-label">${engine.drawWidth}px</span>`;
-      toolPopover.appendChild(header);
+      if (engine.lineShape !== "select") {
+        const header = document.createElement("div");
+        header.style.cssText = "font-weight: 600; font-size: 13px; color: #38bdf8; display: flex; justify-content: space-between; align-items: center;";
+        header.innerHTML = `<span>📏 Thickness</span><span id="pop-draw-label">${engine.drawWidth}px</span>`;
+        toolPopover.appendChild(header);
 
-      const presetsRow = document.createElement("div");
-      presetsRow.style.cssText = "display: flex; gap: 6px;";
-      const presets = [
-        { label: "Fine (2px)", val: 2 },
-        { label: "Med (6px)", val: 6 },
-        { label: "Bold (14px)", val: 14 },
-        { label: "Heavy (28px)", val: 28 }
-      ];
-      presets.forEach((p) => {
-        const b = document.createElement("button");
-        const active = engine.drawWidth === p.val;
-        b.className = `btn-glass btn-sm ${active ? "btn-active" : ""}`;
-        b.style.cssText = `flex: 1; padding: 5px 2px; font-size: 11px; border-radius: 6px; cursor: pointer; ${active ? "background: #38bdf8; color: #0f172a; font-weight: 700;" : ""}`;
-        b.textContent = p.label;
-        b.addEventListener("click", () => {
-          engine.drawWidth = p.val;
-          engine.notifyToolOptionsChanged();
-          renderPopover(toolId);
+        const presetsRow = document.createElement("div");
+        presetsRow.style.cssText = "display: flex; gap: 6px;";
+        const presets = [
+          { label: "Fine (2px)", val: 2 },
+          { label: "Med (6px)", val: 6 },
+          { label: "Bold (14px)", val: 14 },
+          { label: "Heavy (28px)", val: 28 }
+        ];
+        presets.forEach((p) => {
+          const b = document.createElement("button");
+          const active = engine.drawWidth === p.val;
+          b.className = `btn-glass btn-sm ${active ? "btn-active" : ""}`;
+          b.style.cssText = `flex: 1; padding: 5px 2px; font-size: 11px; border-radius: 6px; cursor: pointer; ${active ? "background: #38bdf8; color: #0f172a; font-weight: 700;" : ""}`;
+          b.textContent = p.label;
+          b.addEventListener("click", () => {
+            engine.drawWidth = p.val;
+            engine.notifyToolOptionsChanged();
+            renderPopover(toolId);
+          });
+          presetsRow.appendChild(b);
         });
-        presetsRow.appendChild(b);
-      });
-      toolPopover.appendChild(presetsRow);
+        toolPopover.appendChild(presetsRow);
 
-      const sliderRow = document.createElement("div");
-      sliderRow.style.cssText = "display: flex; align-items: center; gap: 8px; margin-top: 2px;";
-      const slider = document.createElement("input");
-      slider.type = "range";
-      slider.min = "2";
-      slider.max = "60";
-      slider.value = String(engine.drawWidth);
-      slider.style.cssText = "flex: 1; cursor: pointer; accent-color: #38bdf8;";
-      slider.addEventListener("input", () => {
-        engine.drawWidth = Number(slider.value);
-        const label = toolPopover.querySelector("#pop-draw-label");
-        if (label) label.textContent = `${engine.drawWidth}px`;
-        engine.notifyToolOptionsChanged();
-      });
-      sliderRow.appendChild(slider);
-      toolPopover.appendChild(sliderRow);
+        const sliderRow = document.createElement("div");
+        sliderRow.style.cssText = "display: flex; align-items: center; gap: 8px; margin-top: 2px;";
+        const slider = document.createElement("input");
+        slider.type = "range";
+        slider.min = "2";
+        slider.max = "60";
+        slider.value = String(engine.drawWidth);
+        slider.style.cssText = "flex: 1; cursor: pointer; accent-color: #38bdf8;";
+        slider.addEventListener("input", () => {
+          engine.drawWidth = Number(slider.value);
+          const label = toolPopover.querySelector("#pop-draw-label");
+          if (label) label.textContent = `${engine.drawWidth}px`;
+          engine.notifyToolOptionsChanged();
+        });
+        sliderRow.appendChild(slider);
+        toolPopover.appendChild(sliderRow);
+      }
 
       const hint = document.createElement("div");
       hint.style.cssText = "font-size: 11px; color: #94a3b8; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 6px;";
@@ -319,6 +328,41 @@ export function setupToolbarUI(engine: CanvasEngine): void {
   });
 
   updateMainLineIcon();
+
+  const deleteFloatingBar = document.createElement("div");
+  deleteFloatingBar.className = "drawing-selection-bar";
+  deleteFloatingBar.style.cssText =
+    "display: none; position: fixed; bottom: 84px; left: 50%; transform: translateX(-50%); background: rgba(15, 23, 42, 0.96); border: 1px solid #f43f5e; border-radius: 12px; padding: 10px 18px; box-shadow: 0 10px 30px rgba(244, 63, 94, 0.3); z-index: 2000; align-items: center; gap: 12px; font-family: Outfit, sans-serif; color: #f8fafc;";
+  document.body.appendChild(deleteFloatingBar);
+
+  const updateDeleteFloatingBar = () => {
+    if (engine.selectedDrawingIds.size > 0) {
+      deleteFloatingBar.style.display = "flex";
+      deleteFloatingBar.innerHTML = `
+        <span style="font-weight: 600; font-size: 14px;">Selected Drawings (${engine.selectedDrawingIds.size})</span>
+        <button id="btn-delete-selected-drawings" class="btn-glass" style="background: #f43f5e; color: #ffffff; font-weight: 700; padding: 6px 14px; border-radius: 8px; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 13px;">
+          <span>🗑️ Delete</span>
+        </button>
+      `;
+      const btn = deleteFloatingBar.querySelector("#btn-delete-selected-drawings");
+      btn?.addEventListener("click", () => {
+        for (const id of engine.selectedDrawingIds) {
+          sessionManager.dispatchOperation({
+            opType: "DELETE_ENTITY",
+            id
+          });
+        }
+        engine.selectedDrawingIds.clear();
+        engine.notifyDrawingSelectionChanged();
+      });
+    } else {
+      deleteFloatingBar.style.display = "none";
+    }
+  };
+
+  engine.onDrawingSelectionChanged(() => {
+    updateDeleteFloatingBar();
+  });
 
   engine.onToolChanged((toolId) => {
     bar.querySelectorAll(".tool-btn[data-tool-id]").forEach((b) => {

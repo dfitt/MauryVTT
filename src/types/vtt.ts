@@ -95,7 +95,7 @@ export interface TokenEntity extends BaseEntity {
 
 export interface LineEntity extends BaseEntity {
   type: "line";
-  lineType: "straight" | "freehand" | "rectangle" | "circle" | "cone" | "hexagon" | "spiral" | "arrow";
+  lineType: "straight" | "freehand" | "doodle" | "rectangle" | "circle" | "cone" | "hexagon" | "spiral" | "arrow";
   points: [number, number][];
   strokeColor: string;
   strokeWidth: number;

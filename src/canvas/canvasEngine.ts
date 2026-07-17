@@ -61,15 +61,18 @@ export class CanvasEngine {
   public activeTool: ToolType = "select";
   public drawColor: string = "#38bdf8";
   public drawWidth: number = 8;
-  public lineShape: "straight" | "rectangle" | "circle" | "cone" | "hexagon" | "spiral" | "arrow" = "straight";
+  public lineShape: "doodle" | "select" | "straight" | "rectangle" | "circle" | "cone" | "hexagon" | "spiral" | "arrow" = "doodle";
   public fillSize: number = 1;
   public fillBucket: boolean = false;
   public eraseSize: number = 1;
   public eraseOnlyMine: boolean = false;
+  public selectedDrawingIds: Set<string> = new Set();
+  public drawingSelectionBox: { x1: number; y1: number; x2: number; y2: number } | null = null;
   private _selectedEntityId: string | null = null;
   public aligningImageEntityId: string | null = null;
   public resizingTokenId: string | null = null;
   private selectionListeners: Set<(id: string | null) => void> = new Set();
+  private drawingSelectionListeners: Set<() => void> = new Set();
   private toolOptionsListeners: Set<() => void> = new Set();
   private panViewListeners: Set<() => void> = new Set();
   private accumulatedUserPanDistance: number = 0;
@@ -156,8 +159,24 @@ export class CanvasEngine {
     return () => this.selectionListeners.delete(listener);
   }
 
+  public onDrawingSelectionChanged(listener: () => void): () => void {
+    this.drawingSelectionListeners.add(listener);
+    listener();
+    return () => this.drawingSelectionListeners.delete(listener);
+  }
+
+  public notifyDrawingSelectionChanged(): void {
+    for (const l of this.drawingSelectionListeners) l();
+  }
+
   public setTool(tool: ToolType): void {
     if (this.activeTool !== tool || (window as any).vttActiveTool !== tool) {
+      if ((tool !== "line" && tool !== "draw") || this.lineShape !== "select") {
+        if (this.selectedDrawingIds.size > 0) {
+          this.selectedDrawingIds.clear();
+          this.notifyDrawingSelectionChanged();
+        }
+      }
       this.activeTool = tool;
       (window as any).vttActiveTool = tool;
       for (const l of this.toolChangeListeners) {
@@ -849,7 +868,7 @@ export class CanvasEngine {
         ctx.strokeStyle = "#ef4444";
         ctx.lineWidth = 2 / this.zoom;
         ctx.strokeRect(eraseX, eraseY, size * span, size * span);
-      } else if (this.activeTool === "draw" || this.activeTool === "line") {
+      } else if (this.activeTool === "draw" || (this.activeTool === "line" && this.lineShape !== "select")) {
         ctx.beginPath();
         ctx.arc(this.hoverWorldPos.x, this.hoverWorldPos.y, (this.drawWidth || 4) / 2, 0, Math.PI * 2);
         if (this.drawColor === "fog") {
@@ -900,6 +919,46 @@ export class CanvasEngine {
     }
     if (this.localMeasurement) {
       this.drawMeasurement(ctx, this.localMeasurement);
+    }
+
+    if (this.drawingSelectionBox) {
+      ctx.save();
+      ctx.strokeStyle = "#38bdf8";
+      ctx.lineWidth = 2 / this.zoom;
+      ctx.setLineDash([6 / this.zoom, 4 / this.zoom]);
+      ctx.fillStyle = "rgba(56, 189, 248, 0.15)";
+      const minX = Math.min(this.drawingSelectionBox.x1, this.drawingSelectionBox.x2);
+      const minY = Math.min(this.drawingSelectionBox.y1, this.drawingSelectionBox.y2);
+      const w = Math.abs(this.drawingSelectionBox.x2 - this.drawingSelectionBox.x1);
+      const h = Math.abs(this.drawingSelectionBox.y2 - this.drawingSelectionBox.y1);
+      ctx.fillRect(minX, minY, w, h);
+      ctx.strokeRect(minX, minY, w, h);
+      ctx.restore();
+    }
+
+    if (this.selectedDrawingIds.size > 0) {
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (const id of this.selectedDrawingIds) {
+        const ent = doc.entities[id];
+        if (ent && ent.type === "line") {
+          const l = ent as LineEntity;
+          for (const [px, py] of l.points) {
+            if (px < minX) minX = px;
+            if (py < minY) minY = py;
+            if (px > maxX) maxX = px;
+            if (py > maxY) maxY = py;
+          }
+        }
+      }
+      if (minX !== Infinity && maxX !== -Infinity) {
+        const pad = 10 / this.zoom;
+        ctx.save();
+        ctx.strokeStyle = "#38bdf8";
+        ctx.lineWidth = 1.5 / this.zoom;
+        ctx.setLineDash([6 / this.zoom, 4 / this.zoom]);
+        ctx.strokeRect(minX - pad, minY - pad, (maxX - minX) + pad * 2, (maxY - minY) + pad * 2);
+        ctx.restore();
+      }
     }
 
     for (const [id, ping] of this.activePings.entries()) {
@@ -1081,6 +1140,16 @@ export class CanvasEngine {
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
       ctx.stroke();
+      if (this.selectedDrawingIds.has(ent.id)) {
+        ctx.save();
+        ctx.strokeStyle = "#a855f7";
+        ctx.lineWidth = (l.strokeWidth || 4) + (4 / this.zoom);
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.setLineDash([8 / this.zoom, 6 / this.zoom]);
+        ctx.stroke();
+        ctx.restore();
+      }
     } else if (ent.type === "image" || ent.type === "token") {
       const imgEnt = ent as ImageEntity | TokenEntity;
       this.ensureImageLoaded(imgEnt.assetHash);

@@ -21,12 +21,50 @@ function snapToGridPoint(x: number, y: number, gridPx: number): [number, number]
 
 export function bindDrawTool(engine: CanvasEngine): void {
   let isDrawing = false;
+  let isSelectingBox = false;
+  let isDraggingSelected = false;
   let startPt: [number, number] = [0, 0];
+  let dragLastWorldPt: [number, number] = [0, 0];
 
   engine.onMouseDown((_e, worldX, worldY) => {
     if (engine.activeTool !== "draw" && engine.activeTool !== "line") return;
+
+    if (engine.activeTool === "line" && engine.lineShape === "select") {
+      if (engine.selectedDrawingIds.size > 0) {
+        const doc = docStore.getDocument();
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        for (const id of engine.selectedDrawingIds) {
+          const ent = doc.entities[id];
+          if (ent && ent.type === "line") {
+            const l = ent as LineEntity;
+            for (const [px, py] of l.points) {
+              if (px < minX) minX = px;
+              if (py < minY) minY = py;
+              if (px > maxX) maxX = px;
+              if (py > maxY) maxY = py;
+            }
+          }
+        }
+        if (worldX >= minX - 15 && worldX <= maxX + 15 && worldY >= minY - 15 && worldY <= maxY + 15) {
+          isDraggingSelected = true;
+          dragLastWorldPt = [worldX, worldY];
+          return;
+        }
+      }
+      if (engine.selectedDrawingIds.size > 0) {
+        engine.selectedDrawingIds.clear();
+        engine.notifyDrawingSelectionChanged();
+      }
+      isSelectingBox = true;
+      engine.drawingSelectionBox = { x1: worldX, y1: worldY, x2: worldX, y2: worldY };
+      return;
+    }
+
     isDrawing = true;
-    if (engine.activeTool === "line") {
+    if (engine.activeTool === "draw" || (engine.activeTool === "line" && engine.lineShape === "doodle")) {
+      startPt = [worldX, worldY];
+      engine.draftPoints = [[worldX, worldY]];
+    } else if (engine.activeTool === "line") {
       const doc = docStore.getDocument();
       const gridPx = doc.canvasSettings.gridSizePx || 50;
       const snapped = snapToGridPoint(worldX, worldY, gridPx);
@@ -45,16 +83,33 @@ export function bindDrawTool(engine: CanvasEngine): void {
           showCircle: engine.lineShape === "circle"
         };
       }
-    } else {
-      startPt = [worldX, worldY];
-      engine.draftPoints = [[worldX, worldY]];
     }
   });
 
   engine.onMouseMove((_e, worldX, worldY) => {
+    if (isSelectingBox && engine.drawingSelectionBox) {
+      engine.drawingSelectionBox.x2 = worldX;
+      engine.drawingSelectionBox.y2 = worldY;
+      return;
+    }
+    if (isDraggingSelected && engine.selectedDrawingIds.size > 0) {
+      const dx = worldX - dragLastWorldPt[0];
+      const dy = worldY - dragLastWorldPt[1];
+      dragLastWorldPt = [worldX, worldY];
+      const doc = docStore.getDocument();
+      for (const id of engine.selectedDrawingIds) {
+        const ent = doc.entities[id];
+        if (ent && ent.type === "line") {
+          const l = ent as LineEntity;
+          l.points = l.points.map(([px, py]) => [px + dx, py + dy]);
+        }
+      }
+      return;
+    }
+
     if (!isDrawing || !engine.draftPoints) return;
 
-    if (engine.activeTool === "draw") {
+    if (engine.activeTool === "draw" || (engine.activeTool === "line" && engine.lineShape === "doodle")) {
       engine.draftPoints.push([worldX, worldY]);
     } else if (engine.activeTool === "line") {
       const doc = docStore.getDocument();
@@ -135,6 +190,71 @@ export function bindDrawTool(engine: CanvasEngine): void {
   });
 
   engine.onMouseUp(() => {
+    if (isSelectingBox) {
+      isSelectingBox = false;
+      const box = engine.drawingSelectionBox;
+      engine.drawingSelectionBox = null;
+      if (box) {
+        const minX = Math.min(box.x1, box.x2);
+        const maxX = Math.max(box.x1, box.x2);
+        const minY = Math.min(box.y1, box.y2);
+        const maxY = Math.max(box.y1, box.y2);
+        if (Math.abs(maxX - minX) > 4 && Math.abs(maxY - minY) > 4) {
+          const doc = docStore.getDocument();
+          for (const ent of Object.values(doc.entities)) {
+            if (ent.type === "line") {
+              const l = ent as LineEntity;
+              if (!l.points || l.points.length === 0) continue;
+              let hit = false;
+              for (const [px, py] of l.points) {
+                if (px >= minX && px <= maxX && py >= minY && py <= maxY) {
+                  hit = true;
+                  break;
+                }
+              }
+              if (!hit && l.points.length >= 2) {
+                for (let i = 0; i < l.points.length - 1; i++) {
+                  const [x1, y1] = l.points[i];
+                  const [x2, y2] = l.points[i + 1];
+                  const dx = x2 - x1, dy = y2 - y1;
+                  const lenSq = dx * dx + dy * dy;
+                  let t = 0;
+                  if (lenSq !== 0) t = Math.max(0, Math.min(1, ((minX + (maxX - minX) / 2 - x1) * dx + (minY + (maxY - minY) / 2 - y1) * dy) / lenSq));
+                  const projX = x1 + t * dx, projY = y1 + t * dy;
+                  if (projX >= minX && projX <= maxX && projY >= minY && projY <= maxY) {
+                    hit = true;
+                    break;
+                  }
+                }
+              }
+              if (hit) {
+                engine.selectedDrawingIds.add(l.id);
+              }
+            }
+          }
+          engine.notifyDrawingSelectionChanged();
+        }
+      }
+      return;
+    }
+
+    if (isDraggingSelected) {
+      isDraggingSelected = false;
+      const doc = docStore.getDocument();
+      for (const id of engine.selectedDrawingIds) {
+        const ent = doc.entities[id];
+        if (ent && ent.type === "line") {
+          const l = ent as LineEntity;
+          sessionManager.dispatchOperation({
+            opType: "UPDATE_ENTITY",
+            id: l.id,
+            patch: { points: l.points, updatedAt: Date.now() }
+          });
+        }
+      }
+      return;
+    }
+
     if (!isDrawing || !engine.draftPoints || engine.draftPoints.length < 2) {
       isDrawing = false;
       engine.draftPoints = null;
@@ -152,7 +272,7 @@ export function bindDrawTool(engine: CanvasEngine): void {
       updatedAt: Date.now(),
       lastModifiedBy: sessionManager.myPeerId || "local",
       locked: false,
-      lineType: engine.activeTool === "draw" ? "freehand" : engine.lineShape,
+      lineType: (engine.activeTool === "draw" || engine.lineShape === "doodle" || engine.lineShape === "select") ? "freehand" : (engine.lineShape as LineEntity["lineType"]),
       points: [...engine.draftPoints],
       strokeColor: engine.drawColor,
       strokeWidth: engine.drawWidth,
