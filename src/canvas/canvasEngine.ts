@@ -10,7 +10,17 @@ import {
 } from "../types/vtt.js";
 import { sessionManager } from "../network/sessionManager.js";
 
-export type ToolType = "select" | "pan" | "draw" | "line" | "fill" | "erase" | "hide" | "unhide" | "measure" | "ping" | "token";
+export type ToolType = "select" | "pan" | "draw" | "line" | "fill" | "erase" | "hide" | "unhide" | "measure" | "ping" | "token" | "ephemeral" | "laser";
+
+export interface ActiveLaser {
+  laserId: string;
+  peerId: string;
+  username: string;
+  color: string;
+  points: [number, number][];
+  createdAt: number;
+  ttlMs: number;
+}
 
 export interface ActiveMeasurement {
   measureId: string;
@@ -59,6 +69,7 @@ export class CanvasEngine {
 
   // Tool state
   public activeTool: ToolType = "select";
+  public ephemeralTool: "ping" | "measure" | "laser" = "laser";
   public drawColor: string = "#38bdf8";
   public drawWidth: number = 8;
   public lineShape: "doodle" | "select" | "straight" | "rectangle" | "circle" | "cone" | "hexagon" | "spiral" | "arrow" = "doodle";
@@ -75,16 +86,20 @@ export class CanvasEngine {
   private drawingSelectionListeners: Set<() => void> = new Set();
   private toolOptionsListeners: Set<() => void> = new Set();
   private panViewListeners: Set<() => void> = new Set();
+  private pingTriggerListeners: Set<() => void> = new Set();
   private accumulatedUserPanDistance: number = 0;
 
   // Hover cursor state for tool previews
   public hoverWorldPos: { x: number; y: number } | null = null;
   public isTouchInput: boolean = false;
+  private lastTouchTapTime: number = 0;
+  private lastTouchTapPos = { x: 0, y: 0 };
 
   // Ephemeral states
   private remoteCursors: Map<string, RemoteCursor> = new Map();
   private activePings: Map<string, ActivePing> = new Map();
   private activeMeasurements: Map<string, ActiveMeasurement> = new Map();
+  public activeLasers: Map<string, ActiveLaser> = new Map();
   private tokenHoverScales: Map<string, number> = new Map();
   private pingPunchScales: Map<string, number> = new Map();
   private pingPunchTweens: Map<string, { peakScale: number; startTime: number; durationMs: number }> = new Map();
@@ -206,6 +221,46 @@ export class CanvasEngine {
 
   public notifyPanView(): void {
     for (const l of this.panViewListeners) l();
+  }
+
+  public onPingTriggered(listener: () => void): () => void {
+    this.pingTriggerListeners.add(listener);
+    return () => this.pingTriggerListeners.delete(listener);
+  }
+
+  public notifyPingTriggered(): void {
+    for (const l of this.pingTriggerListeners) l();
+  }
+
+  public triggerPing(worldX: number, worldY: number): void {
+    const pingId = "ping-" + Math.random().toString(36).substring(2, 7);
+    const ttlMs = 2000;
+
+    this.handleEphemeralPayload({
+      type: "PING",
+      pingId,
+      peerId: sessionManager.myPeerId || "local",
+      username: sessionManager.myUsername || "Me",
+      color: sessionManager.myColor || "#eab308",
+      x: worldX,
+      y: worldY,
+      pingStyle: "ripple",
+      ttlMs
+    });
+
+    sessionManager.sendEphemeral({
+      type: "PING",
+      pingId,
+      peerId: sessionManager.myPeerId || "local",
+      username: sessionManager.myUsername || "Me",
+      color: sessionManager.myColor || "#eab308",
+      x: worldX,
+      y: worldY,
+      pingStyle: "ripple",
+      ttlMs
+    });
+
+    this.notifyPingTriggered();
   }
 
   public stepToolSize(step: number): void {
@@ -333,6 +388,12 @@ export class CanvasEngine {
       for (const l of this.onMouseDownListeners) l(e, world.x, world.y);
     });
 
+    this.canvas.addEventListener("dblclick", (e) => {
+      if ((window as any).vttSimpleMode) return;
+      const world = this.screenToWorld(e.offsetX, e.offsetY);
+      this.triggerPing(world.x, world.y);
+    });
+
     window.addEventListener("mousemove", (e) => {
       const rect = this.canvas.getBoundingClientRect();
       const offsetX = e.clientX - rect.left;
@@ -458,6 +519,20 @@ export class CanvasEngine {
         const touch = e.touches[0];
         const rect = this.canvas.getBoundingClientRect();
         const world = this.screenToWorld(touch.clientX - rect.left, touch.clientY - rect.top);
+
+        const nowTap = Date.now();
+        if (
+          !(window as any).vttSimpleMode &&
+          nowTap - this.lastTouchTapTime < 350 &&
+          Math.hypot(touch.clientX - this.lastTouchTapPos.x, touch.clientY - this.lastTouchTapPos.y) < 25
+        ) {
+          this.lastTouchTapTime = 0;
+          this.triggerPing(world.x, world.y);
+          return;
+        } else {
+          this.lastTouchTapTime = nowTap;
+          this.lastTouchTapPos = { x: touch.clientX, y: touch.clientY };
+        }
 
         const activeTool = (window as any).vttActiveTool || "select";
         if (activeTool === "pan") {
@@ -646,6 +721,7 @@ export class CanvasEngine {
         createdAt: Date.now(),
         ttlMs: payload.ttlMs
       });
+      this.notifyPingTriggered();
 
       const doc = docStore.getDocument();
       const entities = Object.values(doc.entities);
@@ -706,6 +782,16 @@ export class CanvasEngine {
           });
         }
       }
+    } else if (payload.type === "LASER_LINE") {
+      this.activeLasers.set(payload.laserId, {
+        laserId: payload.laserId,
+        peerId: payload.peerId,
+        username: payload.username,
+        color: payload.color,
+        points: payload.points,
+        createdAt: Date.now(),
+        ttlMs: payload.ttlMs
+      });
     }
   }
 
@@ -958,6 +1044,15 @@ export class CanvasEngine {
         ctx.setLineDash([6 / this.zoom, 4 / this.zoom]);
         ctx.strokeRect(minX - pad, minY - pad, (maxX - minX) + pad * 2, (maxY - minY) + pad * 2);
         ctx.restore();
+      }
+    }
+
+    for (const [id, laser] of this.activeLasers.entries()) {
+      const elapsed = now - laser.createdAt;
+      if (elapsed > laser.ttlMs) {
+        this.activeLasers.delete(id);
+      } else if (laser.points && laser.points.length >= 2) {
+        this.drawLaser(ctx, laser, elapsed / laser.ttlMs);
       }
     }
 
@@ -1640,6 +1735,40 @@ export class CanvasEngine {
     ctx.fillStyle = m.color;
     ctx.textAlign = "center";
     ctx.fillText(label, midX, midY + 4);
+    ctx.restore();
+  }
+
+  private drawLaser(ctx: CanvasRenderingContext2D, laser: ActiveLaser, progress: number): void {
+    ctx.save();
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    const opacity = Math.max(0, 1 - progress);
+
+    // Outer glow
+    ctx.beginPath();
+    ctx.moveTo(laser.points[0][0], laser.points[0][1]);
+    for (let i = 1; i < laser.points.length; i++) {
+      ctx.lineTo(laser.points[i][0], laser.points[i][1]);
+    }
+    ctx.strokeStyle = laser.color;
+    ctx.globalAlpha = opacity * 0.45;
+    ctx.lineWidth = Math.max(10, 14 / this.zoom);
+    ctx.shadowColor = laser.color;
+    ctx.shadowBlur = 16 / this.zoom;
+    ctx.stroke();
+
+    // Inner bright core
+    ctx.beginPath();
+    ctx.moveTo(laser.points[0][0], laser.points[0][1]);
+    for (let i = 1; i < laser.points.length; i++) {
+      ctx.lineTo(laser.points[i][0], laser.points[i][1]);
+    }
+    ctx.globalAlpha = opacity;
+    ctx.lineWidth = Math.max(3, 4 / this.zoom);
+    ctx.strokeStyle = "#ffffff";
+    ctx.shadowBlur = 0;
+    ctx.stroke();
+
     ctx.restore();
   }
 

@@ -31,6 +31,24 @@ export function setupHeaderUI(engine?: CanvasEngine): void {
   panHint.textContent = "right-click (or pinch) to move";
   document.body.appendChild(panHint);
 
+  const pingHint = document.createElement("div");
+  pingHint.id = "ping-hint-banner";
+  pingHint.className = "pan-hint-banner";
+  pingHint.style.top = "120px";
+  pingHint.textContent = "double-click to ping";
+  document.body.appendChild(pingHint);
+
+  let hasPinged = false;
+  const hidePingHint = () => {
+    if (hasPinged) return;
+    hasPinged = true;
+    pingHint.classList.add("hidden");
+    setTimeout(() => {
+      if (pingHint.parentNode) pingHint.parentNode.removeChild(pingHint);
+    }, 1000);
+  };
+  setTimeout(hidePingHint, 30000);
+
   if (engine) {
     let hasPanned = false;
     const hidePanHint = () => {
@@ -40,8 +58,12 @@ export function setupHeaderUI(engine?: CanvasEngine): void {
       setTimeout(() => {
         if (panHint.parentNode) panHint.parentNode.removeChild(panHint);
       }, 1000);
+      if (!hasPinged && pingHint.parentNode) {
+        pingHint.style.top = "82px";
+      }
     };
     engine.onPanView(() => hidePanHint());
+    engine.onPingTriggered(() => hidePingHint());
   }
 
   if (window.innerWidth <= 768) {

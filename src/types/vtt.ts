@@ -221,4 +221,13 @@ export type EphemeralPayload =
       endPoint: { x: number; y: number };
       color: string;
       unitLabel: string;
+    }
+  | {
+      type: "LASER_LINE";
+      laserId: string;
+      peerId: string;
+      username: string;
+      color: string;
+      points: [number, number][];
+      ttlMs: number;
     };

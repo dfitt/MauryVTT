@@ -42,6 +42,12 @@ export function setupToolbarUI(engine: CanvasEngine): void {
     arrow: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><line x1="4" y1="20" x2="19" y2="5"/><polyline points="10 5 19 5 19 14"/></svg>`
   };
 
+  const EPHEMERAL_ICONS: Record<string, string> = {
+    ping: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; overflow: visible;"><circle cx="12" cy="12" r="2.5" fill="currentColor"/><circle cx="12" cy="12" r="6" stroke="currentColor" stroke-width="2" class="ping-circle-1"/><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" class="ping-circle-2"/></svg>`,
+    measure: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle;"><rect x="2" y="7" width="11" height="11" rx="3" fill="#eab308" stroke="currentColor" stroke-width="1.6"/><circle cx="7.5" cy="12.5" r="2" fill="#fef08a" stroke="currentColor" stroke-width="1.2"/><path d="M13 15H22V10H13" fill="#fef9c3" stroke="currentColor" stroke-width="1.4"/><line x1="16" y1="10" x2="16" y2="12.5" stroke="currentColor" stroke-width="1.4"/><line x1="19" y1="10" x2="19" y2="12.5" stroke="currentColor" stroke-width="1.4"/></svg>`,
+    laser: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; overflow: visible;"><path d="M4 20L8 16L11 19L7 23C6 24 4 24 3 23C2 22 2 20 4 20Z" fill="currentColor" fill-opacity="0.25" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M8 16L13 11L16 14L11 19L8 16Z" fill="currentColor" fill-opacity="0.1" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M13 11L15 9L18 12L16 14L13 11Z" fill="#f43f5e" fill-opacity="0.3" stroke="#f43f5e" stroke-width="1.8" stroke-linejoin="round"/><line x1="16.5" y1="10.5" x2="22" y2="5" stroke="#f43f5e" stroke-width="2.5" stroke-linecap="round"/><line x1="16.5" y1="10.5" x2="22" y2="5" stroke="#ffffff" stroke-width="1.2" stroke-linecap="round"/><circle cx="22" cy="5" r="3.5" fill="#f43f5e" fill-opacity="0.4"/><circle cx="22" cy="5" r="1.5" fill="#ffffff"/><path d="M18.5 2.5C19.5 1.5 21 1.5 22 2.5" stroke="#f43f5e" stroke-width="1.5" stroke-linecap="round"/><path d="M21.5 8.5C22.5 7.5 22.5 6 21.5 5" stroke="#f43f5e" stroke-width="1.5" stroke-linecap="round"/></svg>`
+  };
+
   const updateMainLineIcon = () => {
     const lineBtn = bar.querySelector('.tool-btn[data-tool-id="line"]');
     if (lineBtn) {
@@ -49,8 +55,19 @@ export function setupToolbarUI(engine: CanvasEngine): void {
     }
   };
 
+  const updateMainEphemeralIcon = () => {
+    const ephemBtn = bar.querySelector('.tool-btn[data-tool-id="ephemeral"]');
+    if (ephemBtn) {
+      ephemBtn.innerHTML = EPHEMERAL_ICONS[engine.ephemeralTool] || EPHEMERAL_ICONS.laser;
+    }
+  };
+
   const tools: { id: ToolType; icon: string; title: string }[] = [
-    { id: "select", icon: "↖️", title: "Select & Move / Resize Entities" },
+    {
+      id: "select",
+      icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle;"><path d="M4 4L11.2 21.6L13.8 14.2L21.2 11.6L4 4Z" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>`,
+      title: "Select & Move / Resize Entities"
+    },
     {
       id: "line",
       icon: SHAPE_ICONS[engine.lineShape] || SHAPE_ICONS.doodle,
@@ -67,14 +84,9 @@ export function setupToolbarUI(engine: CanvasEngine): void {
       title: "Eraser (Clear lines & fills under cursor)"
     },
     {
-      id: "measure",
-      icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle;"><rect x="2" y="7" width="11" height="11" rx="3" fill="#eab308" stroke="currentColor" stroke-width="1.6"/><circle cx="7.5" cy="12.5" r="2" fill="#fef08a" stroke="currentColor" stroke-width="1.2"/><path d="M13 15H22V10H13" fill="#fef9c3" stroke="currentColor" stroke-width="1.4"/><line x1="16" y1="10" x2="16" y2="12.5" stroke="currentColor" stroke-width="1.4"/><line x1="19" y1="10" x2="19" y2="12.5" stroke="currentColor" stroke-width="1.4"/></svg>`,
-      title: "Distance Tape Measure (Ephemeral)"
-    },
-    {
-      id: "ping",
-      icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; overflow: visible;"><circle cx="12" cy="12" r="2.5" fill="currentColor"/><circle cx="12" cy="12" r="6" stroke="currentColor" stroke-width="2" class="ping-circle-1"/><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" class="ping-circle-2"/></svg>`,
-      title: "Ripple Ping (Ephemeral)"
+      id: "ephemeral",
+      icon: EPHEMERAL_ICONS[engine.ephemeralTool] || EPHEMERAL_ICONS.laser,
+      title: "Ephemeral Tools (Ping, Measure, Laser)"
     }
   ];
 
@@ -87,7 +99,7 @@ export function setupToolbarUI(engine: CanvasEngine): void {
     "display: none; position: absolute; bottom: 68px; left: 16px; background: rgba(15, 23, 42, 0.96); border: 1px solid rgba(56, 189, 248, 0.45); border-radius: 12px; padding: 12px 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.65); z-index: 1000; flex-direction: column; gap: 10px; min-width: 230px; color: #f8fafc; font-family: Outfit, sans-serif;";
   bar.appendChild(toolPopover);
 
-  const hasOptions = (id: ToolType) => id === "draw" || id === "line" || id === "fill" || id === "erase";
+  const hasOptions = (id: ToolType) => id === "draw" || id === "line" || id === "fill" || id === "erase" || id === "ephemeral";
 
   const renderPopover = (toolId: ToolType) => {
     toolPopover.innerHTML = "";
@@ -277,6 +289,39 @@ export function setupToolbarUI(engine: CanvasEngine): void {
       hint.style.cssText = "font-size: 11px; color: #94a3b8; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 6px;";
       hint.textContent = "💡 Shortcut: [ / ] or Shift+Wheel to scale eraser";
       toolPopover.appendChild(hint);
+    } else if (toolId === "ephemeral") {
+      const header = document.createElement("div");
+      header.style.cssText = "font-weight: 600; font-size: 13px; color: #38bdf8; margin-bottom: 4px;";
+      header.textContent = "⚡ Ephemeral Tools";
+      toolPopover.appendChild(header);
+
+      const grid = document.createElement("div");
+      grid.style.cssText = "display: grid; grid-template-columns: 1fr; gap: 6px; margin-bottom: 4px;";
+      const modes: { id: typeof engine.ephemeralTool; label: string; icon: string }[] = [
+        { id: "ping", label: "Ping (Double-click or click)", icon: EPHEMERAL_ICONS.ping },
+        { id: "measure", label: "Measure (Drag line)", icon: EPHEMERAL_ICONS.measure },
+        { id: "laser", label: "Laser (Fading doodle)", icon: EPHEMERAL_ICONS.laser }
+      ];
+      modes.forEach((m) => {
+        const b = document.createElement("button");
+        const active = engine.ephemeralTool === m.id;
+        b.className = `btn-glass btn-sm ${active ? "btn-active" : ""}`;
+        b.style.cssText = `padding: 8px 10px; font-size: 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: flex-start; gap: 8px; ${active ? "background: #38bdf8; color: #0f172a; font-weight: 700;" : ""}`;
+        b.innerHTML = `<span>${m.icon}</span><span>${m.label}</span>`;
+        b.addEventListener("click", () => {
+          engine.ephemeralTool = m.id;
+          updateMainEphemeralIcon();
+          engine.notifyToolOptionsChanged();
+          renderPopover(toolId);
+        });
+        grid.appendChild(b);
+      });
+      toolPopover.appendChild(grid);
+
+      const hint = document.createElement("div");
+      hint.style.cssText = "font-size: 11px; color: #94a3b8; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 6px;";
+      hint.textContent = "💡 Shortcut: Double-click canvas anytime to ping";
+      toolPopover.appendChild(hint);
     }
   };
 
@@ -328,6 +373,7 @@ export function setupToolbarUI(engine: CanvasEngine): void {
   });
 
   updateMainLineIcon();
+  updateMainEphemeralIcon();
 
   const deleteFloatingBar = document.createElement("div");
   deleteFloatingBar.className = "drawing-selection-bar";
@@ -369,6 +415,7 @@ export function setupToolbarUI(engine: CanvasEngine): void {
       b.classList.toggle("active", b.getAttribute("data-tool-id") === toolId);
     });
     updateMainLineIcon();
+    updateMainEphemeralIcon();
     const curPopTool = toolPopover.getAttribute("data-popover-tool");
     if (toolPopover.style.display === "flex" && curPopTool !== toolId) {
       toolPopover.style.display = "none";
@@ -377,6 +424,7 @@ export function setupToolbarUI(engine: CanvasEngine): void {
 
   engine.onToolOptionsChanged(() => {
     updateMainLineIcon();
+    updateMainEphemeralIcon();
     const curTool = toolPopover.getAttribute("data-popover-tool") as ToolType;
     if (toolPopover.style.display === "flex" && curTool && curTool === engine.activeTool) {
       renderPopover(curTool);

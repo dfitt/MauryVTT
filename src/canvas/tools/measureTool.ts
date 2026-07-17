@@ -10,7 +10,7 @@ export function bindMeasureTool(engine: CanvasEngine): void {
   let pendingMeasureTimeout: any = null;
 
   engine.onMouseDown((_e, worldX, worldY) => {
-    if (engine.activeTool !== "measure") return;
+    if (engine.activeTool !== "measure" && (engine.activeTool !== "ephemeral" || engine.ephemeralTool !== "measure")) return;
     isMeasuring = true;
     startPt = { x: worldX, y: worldY };
 
