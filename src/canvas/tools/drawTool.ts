@@ -41,7 +41,8 @@ export function bindDrawTool(engine: CanvasEngine): void {
           startPoint: { x: snapped[0], y: snapped[1] },
           endPoint: { x: snapped[0], y: snapped[1] },
           color: engine.drawColor || "#38bdf8",
-          unitLabel: "0 ft"
+          unitLabel: "0 ft",
+          showCircle: engine.lineShape === "circle"
         };
       }
     } else {
@@ -86,7 +87,7 @@ export function bindDrawTool(engine: CanvasEngine): void {
           pts = [[x1, y1]];
           for (let i = 0; i <= 12; i++) {
             const a = (angle - halfSpread) + (i / 12) * (halfSpread * 2);
-            pts.push([x1 + Math.cos(a) * Math.hypot(L, L * 0.5), y1 + Math.sin(a) * Math.hypot(L, L * 0.5)]);
+            pts.push([x1 + Math.cos(a) * L, y1 + Math.sin(a) * L]);
           }
           pts.push([x1, y1]);
         }
@@ -98,9 +99,10 @@ export function bindDrawTool(engine: CanvasEngine): void {
         }
       } else if (shape === "spiral") {
         const maxR = Math.hypot(x2 - x1, y2 - y1);
+        const startAngle = Math.atan2(y2 - y1, x2 - x1);
         for (let i = 0; i <= 72; i++) {
           const t = i / 72;
-          const angle = t * 3 * Math.PI * 2;
+          const angle = startAngle + t * 3 * Math.PI * 2;
           const r = t * maxR;
           pts.push([x1 + Math.cos(angle) * r, y1 + Math.sin(angle) * r]);
         }

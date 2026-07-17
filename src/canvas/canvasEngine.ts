@@ -21,6 +21,7 @@ export interface ActiveMeasurement {
   targetEndPoint?: { x: number; y: number };
   color: string;
   unitLabel: string;
+  showCircle?: boolean;
 }
 
 export interface ActivePing {
@@ -1536,7 +1537,7 @@ export class CanvasEngine {
     const radius = Math.sqrt(dx * dx + dy * dy);
 
     // Ephemeral dashed circle centered at startPoint with radius = distance
-    if (radius > 2) {
+    if (radius > 2 && m.showCircle !== false) {
       ctx.beginPath();
       ctx.arc(m.startPoint.x, m.startPoint.y, radius, 0, Math.PI * 2);
       ctx.strokeStyle = m.color;

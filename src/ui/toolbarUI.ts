@@ -30,12 +30,29 @@ function isMobilePhone(): boolean {
 export function setupToolbarUI(engine: CanvasEngine): void {
   (window as any).vttActiveTool = engine.activeTool;
 
+  const SHAPE_ICONS: Record<typeof engine.lineShape, string> = {
+    straight: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><line x1="5" y1="19" x2="19" y2="5"/><circle cx="5" cy="19" r="1.8" fill="currentColor"/><circle cx="19" cy="5" r="1.8" fill="currentColor"/></svg>`,
+    rectangle: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="3" cy="6" r="1.5" fill="currentColor"/><circle cx="21" cy="18" r="1.5" fill="currentColor"/></svg>`,
+    circle: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>`,
+    cone: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><path d="M4 12L19 4C21.5 8 21.5 16 19 20L4 12Z"/><circle cx="4" cy="12" r="1.5" fill="currentColor"/></svg>`,
+    hexagon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><path d="M12 2L21 7.2V16.8L12 22L3 16.8V7.2L12 2Z"/></svg>`,
+    spiral: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><path d="M12 12C12 10.5 13.5 9 15 9C17.5 9 19 11 19 13.5C19 17 16 20 12 20C7 20 4 16 4 11C4 5.5 8.5 2 14 2"/></svg>`,
+    arrow: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><line x1="4" y1="20" x2="19" y2="5"/><polyline points="10 5 19 5 19 14"/></svg>`
+  };
+
+  const updateMainLineIcon = () => {
+    const lineBtn = bar.querySelector('.tool-btn[data-tool-id="line"]');
+    if (lineBtn) {
+      lineBtn.innerHTML = SHAPE_ICONS[engine.lineShape] || SHAPE_ICONS.straight;
+    }
+  };
+
   const tools: { id: ToolType; icon: string; title: string }[] = [
     { id: "select", icon: "↖️", title: "Select & Move / Resize Entities" },
     { id: "draw", icon: "✏️", title: "Freehand Sketch" },
     {
       id: "line",
-      icon: `<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="vertical-align: middle;"><line x1="5" y1="19" x2="19" y2="5" /></svg>`,
+      icon: SHAPE_ICONS[engine.lineShape] || SHAPE_ICONS.straight,
       title: "Line & Shape Tool"
     },
     {
@@ -83,13 +100,13 @@ export function setupToolbarUI(engine: CanvasEngine): void {
         const shapeGrid = document.createElement("div");
         shapeGrid.style.cssText = "display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;";
         const shapes: { id: typeof engine.lineShape; label: string; icon: string }[] = [
-          { id: "straight", label: "Straight", icon: "╱" },
-          { id: "rectangle", label: "Rectangle", icon: "▭" },
-          { id: "circle", label: "Circle", icon: "⭕" },
-          { id: "cone", label: "Cone", icon: "🍕" },
-          { id: "hexagon", label: "Hexagon", icon: "⬡" },
-          { id: "spiral", label: "Spiral", icon: "🌀" },
-          { id: "arrow", label: "Arrow", icon: "↗️" }
+          { id: "straight", label: "Straight", icon: SHAPE_ICONS.straight },
+          { id: "rectangle", label: "Rectangle", icon: SHAPE_ICONS.rectangle },
+          { id: "circle", label: "Circle", icon: SHAPE_ICONS.circle },
+          { id: "cone", label: "Cone", icon: SHAPE_ICONS.cone },
+          { id: "hexagon", label: "Hexagon", icon: SHAPE_ICONS.hexagon },
+          { id: "spiral", label: "Spiral", icon: SHAPE_ICONS.spiral },
+          { id: "arrow", label: "Arrow", icon: SHAPE_ICONS.arrow }
         ];
         shapes.forEach((s) => {
           const b = document.createElement("button");
@@ -99,6 +116,7 @@ export function setupToolbarUI(engine: CanvasEngine): void {
           b.innerHTML = `<span>${s.icon}</span><span>${s.label}</span>`;
           b.addEventListener("click", () => {
             engine.lineShape = s.id;
+            updateMainLineIcon();
             engine.notifyToolOptionsChanged();
             renderPopover(toolId);
           });
@@ -300,10 +318,13 @@ export function setupToolbarUI(engine: CanvasEngine): void {
     bar.appendChild(btn);
   });
 
+  updateMainLineIcon();
+
   engine.onToolChanged((toolId) => {
     bar.querySelectorAll(".tool-btn[data-tool-id]").forEach((b) => {
       b.classList.toggle("active", b.getAttribute("data-tool-id") === toolId);
     });
+    updateMainLineIcon();
     const curPopTool = toolPopover.getAttribute("data-popover-tool");
     if (toolPopover.style.display === "flex" && curPopTool !== toolId) {
       toolPopover.style.display = "none";
@@ -311,6 +332,7 @@ export function setupToolbarUI(engine: CanvasEngine): void {
   });
 
   engine.onToolOptionsChanged(() => {
+    updateMainLineIcon();
     const curTool = toolPopover.getAttribute("data-popover-tool") as ToolType;
     if (toolPopover.style.display === "flex" && curTool && curTool === engine.activeTool) {
       renderPopover(curTool);
