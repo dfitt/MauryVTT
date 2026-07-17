@@ -182,6 +182,33 @@ export function setupToolbarUI(engine: CanvasEngine): void {
       });
       toolPopover.appendChild(gridRow);
 
+      const modeRow = document.createElement("div");
+      modeRow.style.cssText = "display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 6px;";
+      const allBtn = document.createElement("button");
+      const allActive = !engine.eraseOnlyMine;
+      allBtn.className = `btn-glass btn-sm ${allActive ? "btn-active" : ""}`;
+      allBtn.style.cssText = `padding: 6px 4px; font-size: 12px; border-radius: 6px; cursor: pointer; ${allActive ? "background: #ef4444; color: #ffffff; font-weight: 700;" : ""}`;
+      allBtn.textContent = "all drawings";
+      allBtn.addEventListener("click", () => {
+        engine.eraseOnlyMine = false;
+        engine.notifyToolOptionsChanged();
+        renderPopover(toolId);
+      });
+      modeRow.appendChild(allBtn);
+
+      const mineBtn = document.createElement("button");
+      const mineActive = engine.eraseOnlyMine;
+      mineBtn.className = `btn-glass btn-sm ${mineActive ? "btn-active" : ""}`;
+      mineBtn.style.cssText = `padding: 6px 4px; font-size: 12px; border-radius: 6px; cursor: pointer; ${mineActive ? "background: #ef4444; color: #ffffff; font-weight: 700;" : ""}`;
+      mineBtn.textContent = "my drawings";
+      mineBtn.addEventListener("click", () => {
+        engine.eraseOnlyMine = true;
+        engine.notifyToolOptionsChanged();
+        renderPopover(toolId);
+      });
+      modeRow.appendChild(mineBtn);
+      toolPopover.appendChild(modeRow);
+
       const hint = document.createElement("div");
       hint.style.cssText = "font-size: 11px; color: #94a3b8; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 6px;";
       hint.textContent = "💡 Shortcut: [ / ] or Shift+Wheel to scale eraser";

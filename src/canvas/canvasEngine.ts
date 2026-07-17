@@ -63,6 +63,7 @@ export class CanvasEngine {
   public fillSize: number = 1;
   public fillBucket: boolean = false;
   public eraseSize: number = 1;
+  public eraseOnlyMine: boolean = false;
   private _selectedEntityId: string | null = null;
   public aligningImageEntityId: string | null = null;
   public resizingTokenId: string | null = null;

@@ -37,6 +37,13 @@ export function bindEraseTool(engine: CanvasEngine): void {
         const cellKey = `${cx},${cy}`;
         const cell = doc.gridCells?.[cellKey];
         if (cell && (cell.fillColor || cell.fogHidden)) {
+          if (engine.eraseOnlyMine) {
+            const myPeerId = sessionManager.myPeerId || "local";
+            const creator = cell.fillColor ? cell.fillCreator : cell.fogCreator;
+            if (creator && creator !== myPeerId && creator !== "local") {
+              continue;
+            }
+          }
           if (!deletedInStroke.has(`grid-${cellKey}`)) {
             deletedInStroke.add(`grid-${cellKey}`);
             sessionManager.dispatchOperation({
@@ -49,10 +56,14 @@ export function bindEraseTool(engine: CanvasEngine): void {
       }
     }
 
+    const myPeerId = sessionManager.myPeerId || "local";
     for (const ent of Object.values(doc.entities)) {
       if (deletedInStroke.has(ent.id)) continue;
 
       if (ent.type === "line") {
+        if (engine.eraseOnlyMine && ent.lastModifiedBy && ent.lastModifiedBy !== myPeerId && ent.lastModifiedBy !== "local") {
+          continue;
+        }
         const l = ent as LineEntity;
         if (!l.points || l.points.length === 0) continue;
 
