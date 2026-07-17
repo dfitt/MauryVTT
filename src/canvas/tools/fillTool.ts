@@ -52,10 +52,12 @@ export function bindFillTool(engine: CanvasEngine): void {
     }
 
     const span = engine.fillSize || 1;
+    const fillGx = Math.round((worldX - (size * span) / 2) / size) * size;
+    const fillGy = Math.round((worldY - (size * span) / 2) / size) * size;
     for (let dx = 0; dx < span; dx++) {
       for (let dy = 0; dy < span; dy++) {
-        const cx = gx + dx * size;
-        const cy = gy + dy * size;
+        const cx = fillGx + dx * size;
+        const cy = fillGy + dy * size;
         const cellKey = `${cx},${cy}`;
         if (visitedCells.has(cellKey)) continue;
         visitedCells.add(cellKey);

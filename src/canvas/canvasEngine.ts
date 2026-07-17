@@ -824,27 +824,31 @@ export class CanvasEngine {
           ctx.fillText("🪣", gx + size / 2, gy + size / 2 + 6 / this.zoom);
         } else {
           const span = this.fillSize || 1;
+          const fillX = Math.round((this.hoverWorldPos.x - (size * span) / 2) / size) * size;
+          const fillY = Math.round((this.hoverWorldPos.y - (size * span) / 2) / size) * size;
           if (this.drawColor === "fog") {
             ctx.fillStyle = "rgba(0, 0, 0, 0.45)";
           } else {
             ctx.fillStyle = this.drawColor;
           }
           ctx.globalAlpha = 0.35;
-          ctx.fillRect(gx, gy, size * span, size * span);
+          ctx.fillRect(fillX, fillY, size * span, size * span);
           ctx.globalAlpha = 1.0;
           ctx.strokeStyle = "rgba(255, 255, 255, 0.6)";
           ctx.lineWidth = 1.5 / this.zoom;
-          ctx.strokeRect(gx, gy, size * span, size * span);
+          ctx.strokeRect(fillX, fillY, size * span, size * span);
         }
       } else if (this.activeTool === "erase") {
         const span = this.eraseSize || 1;
+        const eraseX = this.hoverWorldPos.x - (size * span) / 2;
+        const eraseY = this.hoverWorldPos.y - (size * span) / 2;
         ctx.fillStyle = "#ef4444";
         ctx.globalAlpha = 0.25;
-        ctx.fillRect(gx, gy, size * span, size * span);
+        ctx.fillRect(eraseX, eraseY, size * span, size * span);
         ctx.globalAlpha = 1.0;
         ctx.strokeStyle = "#ef4444";
         ctx.lineWidth = 2 / this.zoom;
-        ctx.strokeRect(gx, gy, size * span, size * span);
+        ctx.strokeRect(eraseX, eraseY, size * span, size * span);
       } else if (this.activeTool === "draw" || this.activeTool === "line") {
         ctx.beginPath();
         ctx.arc(this.hoverWorldPos.x, this.hoverWorldPos.y, (this.drawWidth || 4) / 2, 0, Math.PI * 2);

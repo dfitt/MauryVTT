@@ -24,16 +24,20 @@ export function bindEraseTool(engine: CanvasEngine): void {
   function eraseAt(worldX: number, worldY: number): void {
     const doc = docStore.getDocument();
     const size = doc.canvasSettings.gridSizePx || 50;
-    const gx = Math.floor(worldX / size) * size;
-    const gy = Math.floor(worldY / size) * size;
     const span = engine.eraseSize || 1;
-    const endX = gx + size * span;
-    const endY = gy + size * span;
+    const boxLeft = worldX - (size * span) / 2;
+    const boxTop = worldY - (size * span) / 2;
+    const boxRight = worldX + (size * span) / 2;
+    const boxBottom = worldY + (size * span) / 2;
 
-    for (let dx = 0; dx < span; dx++) {
-      for (let dy = 0; dy < span; dy++) {
-        const cx = gx + dx * size;
-        const cy = gy + dy * size;
+    const startCellX = Math.floor(boxLeft / size) * size;
+    const endCellX = Math.floor(boxRight / size) * size;
+    const startCellY = Math.floor(boxTop / size) * size;
+    const endCellY = Math.floor(boxBottom / size) * size;
+
+    for (let cx = startCellX; cx <= endCellX; cx += size) {
+      for (let cy = startCellY; cy <= endCellY; cy += size) {
+        if (cx + size <= boxLeft || cx >= boxRight || cy + size <= boxTop || cy >= boxBottom) continue;
         const cellKey = `${cx},${cy}`;
         const cell = doc.gridCells?.[cellKey];
         if (cell && (cell.fillColor || cell.fogHidden)) {
@@ -70,8 +74,8 @@ export function bindEraseTool(engine: CanvasEngine): void {
         if (!l.points || l.points.length < 2) continue;
 
         const threshold = (size * span) * 0.5;
-        const midX = gx + (endX - gx) / 2;
-        const midY = gy + (endY - gy) / 2;
+        const midX = worldX;
+        const midY = worldY;
         const pad = size * 0.3;
 
         const subdivStep = Math.min(size * 0.4, 20);
@@ -98,8 +102,8 @@ export function bindEraseTool(engine: CanvasEngine): void {
         if (numSubSegs <= 0) continue;
 
         const segHits = (pA: [number, number], pB: [number, number]): boolean => {
-          if (pA[0] >= gx - pad && pA[0] <= endX + pad && pA[1] >= gy - pad && pA[1] <= endY + pad) return true;
-          if (pB[0] >= gx - pad && pB[0] <= endX + pad && pB[1] >= gy - pad && pB[1] <= endY + pad) return true;
+          if (pA[0] >= boxLeft - pad && pA[0] <= boxRight + pad && pA[1] >= boxTop - pad && pA[1] <= boxBottom + pad) return true;
+          if (pB[0] >= boxLeft - pad && pB[0] <= boxRight + pad && pB[1] >= boxTop - pad && pB[1] <= boxBottom + pad) return true;
           return distanceToSegment(midX, midY, pA[0], pA[1], pB[0], pB[1]) <= threshold;
         };
 
