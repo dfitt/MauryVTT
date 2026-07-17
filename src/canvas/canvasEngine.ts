@@ -60,6 +60,7 @@ export class CanvasEngine {
   public activeTool: ToolType = "select";
   public drawColor: string = "#38bdf8";
   public drawWidth: number = 8;
+  public lineShape: "straight" | "rectangle" | "circle" | "cone" | "hexagon" | "spiral" | "arrow" = "straight";
   public fillSize: number = 1;
   public fillBucket: boolean = false;
   public eraseSize: number = 1;

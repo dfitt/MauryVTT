@@ -33,7 +33,11 @@ export function setupToolbarUI(engine: CanvasEngine): void {
   const tools: { id: ToolType; icon: string; title: string }[] = [
     { id: "select", icon: "↖️", title: "Select & Move / Resize Entities" },
     { id: "draw", icon: "✏️", title: "Freehand Sketch" },
-    { id: "line", icon: "🖊️", title: "Straight Line" },
+    {
+      id: "line",
+      icon: `<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="vertical-align: middle;"><line x1="5" y1="19" x2="19" y2="5" /></svg>`,
+      title: "Line & Shape Tool"
+    },
     {
       id: "fill",
       icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle;"><rect x="4" y="4" width="16" height="16" rx="2.5" fill="currentColor" fill-opacity="0.35"/></svg>`,
@@ -70,9 +74,42 @@ export function setupToolbarUI(engine: CanvasEngine): void {
   const renderPopover = (toolId: ToolType) => {
     toolPopover.innerHTML = "";
     if (toolId === "draw" || toolId === "line") {
+      if (toolId === "line") {
+        const shapeHeader = document.createElement("div");
+        shapeHeader.style.cssText = "font-weight: 600; font-size: 13px; color: #38bdf8; margin-bottom: 4px;";
+        shapeHeader.textContent = "📐 Shape Mode";
+        toolPopover.appendChild(shapeHeader);
+
+        const shapeGrid = document.createElement("div");
+        shapeGrid.style.cssText = "display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;";
+        const shapes: { id: typeof engine.lineShape; label: string; icon: string }[] = [
+          { id: "straight", label: "Straight", icon: "╱" },
+          { id: "rectangle", label: "Rectangle", icon: "▭" },
+          { id: "circle", label: "Circle", icon: "⭕" },
+          { id: "cone", label: "Cone", icon: "🍕" },
+          { id: "hexagon", label: "Hexagon", icon: "⬡" },
+          { id: "spiral", label: "Spiral", icon: "🌀" },
+          { id: "arrow", label: "Arrow", icon: "↗️" }
+        ];
+        shapes.forEach((s) => {
+          const b = document.createElement("button");
+          const active = engine.lineShape === s.id;
+          b.className = `btn-glass btn-sm ${active ? "btn-active" : ""}`;
+          b.style.cssText = `padding: 6px 4px; font-size: 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; ${active ? "background: #38bdf8; color: #0f172a; font-weight: 700;" : ""}`;
+          b.innerHTML = `<span>${s.icon}</span><span>${s.label}</span>`;
+          b.addEventListener("click", () => {
+            engine.lineShape = s.id;
+            engine.notifyToolOptionsChanged();
+            renderPopover(toolId);
+          });
+          shapeGrid.appendChild(b);
+        });
+        toolPopover.appendChild(shapeGrid);
+      }
+
       const header = document.createElement("div");
       header.style.cssText = "font-weight: 600; font-size: 13px; color: #38bdf8; display: flex; justify-content: space-between; align-items: center;";
-      header.innerHTML = `<span>${toolId === "draw" ? "✏️ Freehand Thickness" : "🖊️ Line Thickness"}</span><span id="pop-draw-label">${engine.drawWidth}px</span>`;
+      header.innerHTML = `<span>${toolId === "draw" ? "✏️ Freehand Thickness" : "📏 Thickness"}</span><span id="pop-draw-label">${engine.drawWidth}px</span>`;
       toolPopover.appendChild(header);
 
       const presetsRow = document.createElement("div");
