@@ -7,6 +7,7 @@ import { getEffectIdForIcon } from "../effects/effectDefs.js";
 import { ALL_ROLL_ICONS, COIN_ICON_SVG } from "./rollIcons.js";
 import { openImportVttfxModal } from "./vttfxImportModal.js";
 import { openGeminiApiKeyModal } from "./enhanceModal.js";
+import { openVttfxGenerateModal } from "./vttfxGenerateModal.js";
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } {
   let c = hex.replace(/^#/, "");
@@ -111,6 +112,9 @@ export function setupChatPanel(engine?: CanvasEngine): void {
             <button id="popover-prev-btn" class="btn-glass" style="padding: 2px 10px; font-size: 0.9em; cursor: pointer; border-radius: 4px;" title="Previous Page">◀</button>
             <span id="popover-page-txt" style="font-size: 0.8em; color: #94a3b8; font-weight: 600;">Page 1</span>
             <div style="display: flex; align-items: center; gap: 4px;">
+              <button id="popover-generate-vttfx-btn" class="btn-glass" style="padding: 2px 6px; font-size: 0.9em; cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center;" title="Generate AI VTTFX Icon & Animation">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle;"><path d="M12 2L14.4 8.4L21 10.8L14.4 13.2L12 19.6L9.6 13.2L3 10.8L9.6 8.4L12 2Z" fill="url(#enhance-grad-pop)" stroke="#c084fc" stroke-width="1.5"/><path d="M19 16L20.2 19.2L23 20.4L20.2 21.6L19 24.8L17.8 21.6L15 20.4L17.8 19.2L19 16Z" fill="#e879f9"/><defs><linearGradient id="enhance-grad-pop" x1="3" y1="2" x2="21" y2="20" gradientUnits="userSpaceOnUse"><stop stop-color="#c084fc"/><stop offset="1" stop-color="#38bdf8"/></linearGradient></defs></svg>
+              </button>
               <button id="popover-upload-btn" class="btn-glass" style="padding: 2px 8px; font-size: 0.9em; cursor: pointer; border-radius: 4px; color: #38bdf8; font-weight: bold;" title="Upload & Share .vttfx VFX Bundle">+</button>
               <button id="popover-next-btn" class="btn-glass" style="padding: 2px 10px; font-size: 0.9em; cursor: pointer; border-radius: 4px;" title="Next Page">▶</button>
             </div>
@@ -121,7 +125,8 @@ export function setupChatPanel(engine?: CanvasEngine): void {
       </div>
     </div>
     <div class="chat-messages" id="chat-messages-container"></div>
-    <div class="chat-input-bar">
+    <div class="chat-input-bar" style="position: relative;">
+      <div id="whisper-quick-selector" style="display: none; position: absolute; bottom: 100%; left: 0; right: 0; background: rgba(15, 23, 42, 0.98); border: 1px solid #c084fc; border-radius: 8px 8px 0 0; padding: 8px; z-index: 100; max-height: 160px; overflow-y: auto; flex-direction: column; gap: 6px; box-shadow: 0 -4px 16px rgba(0,0,0,0.75);"></div>
       <input type="text" id="chat-input-el" class="chat-input" placeholder="Type a message or /roll (/r) 1d20..." />
     </div>
   `;
@@ -130,10 +135,73 @@ export function setupChatPanel(engine?: CanvasEngine): void {
 
   const container = panel.querySelector("#chat-messages-container")!;
   const inputEl = panel.querySelector<HTMLInputElement>("#chat-input-el")!;
+  const whisperSelectorEl = panel.querySelector<HTMLElement>("#whisper-quick-selector")!;
   const headerBar = panel.querySelector<HTMLElement>("#chat-header-bar")!;
   const toggleBtn = panel.querySelector<HTMLButtonElement>("#btn-toggle-chat")!;
   const badgeEl = panel.querySelector<HTMLElement>("#chat-unread-badge")!;
   const quickRollsContainerEl = panel.querySelector<HTMLElement>("#quickrolls-container")!;
+
+  function updateWhisperQuickSelector() {
+    const val = inputEl.value;
+    const whisperMatch = val.match(/^\/(?:whisper|w)\b(?:\s+(.*))?$/i);
+    if (!whisperMatch) {
+      whisperSelectorEl.style.display = "none";
+      return;
+    }
+    const arg = (whisperMatch[1] || "").trim();
+    const activeUsers = sessionManager.getActiveUsers();
+    let candidateUsers = activeUsers.filter((u) => u.username !== sessionManager.myUsername);
+    if (candidateUsers.length === 0) candidateUsers = activeUsers;
+
+    const firstToken = arg.split(/\s+/)[0].toLowerCase();
+    const exactMatch = candidateUsers.find((u) => u.username.toLowerCase() === firstToken && (arg.length > firstToken.length && /\s/.test(arg.charAt(firstToken.length))));
+    if (exactMatch) {
+      whisperSelectorEl.style.display = "none";
+      return;
+    }
+
+    const matchingUsers = candidateUsers.filter((u) => !firstToken || u.username.toLowerCase().includes(firstToken) || u.username.toLowerCase().startsWith(firstToken));
+    if (matchingUsers.length === 0) {
+      whisperSelectorEl.style.display = "none";
+      return;
+    }
+
+    whisperSelectorEl.style.display = "flex";
+    whisperSelectorEl.innerHTML = `
+      <div style="font-size: 11px; font-weight: 700; color: #c084fc; padding: 2px 4px; border-bottom: 1px solid rgba(192, 132, 252, 0.2); display: flex; justify-content: space-between;">
+        <span>🔮 Select user to whisper:</span>
+        <span style="color: #94a3b8; font-weight: normal; font-size: 10px;">(Click or type name)</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 6px; padding-top: 4px;">
+        ${matchingUsers.map((u) => `
+          <button class="whisper-user-pill" data-username="${u.username}" style="background: rgba(30, 41, 59, 0.95); border: 1px solid ${u.color || '#c084fc'}; color: #fff; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 6px; transition: transform 0.15s, background 0.15s;">
+            <span style="width: 8px; height: 8px; border-radius: 50%; background: ${u.color || '#c084fc'};"></span>
+            <span>${u.username}</span>
+          </button>
+        `).join("")}
+      </div>
+    `;
+
+    whisperSelectorEl.querySelectorAll<HTMLButtonElement>(".whisper-user-pill").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const uname = btn.getAttribute("data-username");
+        if (uname) {
+          inputEl.value = `/whisper ${uname} `;
+          whisperSelectorEl.style.display = "none";
+          inputEl.focus();
+        }
+      });
+    });
+  }
+
+  inputEl.addEventListener("input", updateWhisperQuickSelector);
+  inputEl.addEventListener("focus", updateWhisperQuickSelector);
+  document.addEventListener("click", (e) => {
+    if (!whisperSelectorEl.contains(e.target as Node) && e.target !== inputEl) {
+      whisperSelectorEl.style.display = "none";
+    }
+  });
 
   let unreadCount = 0;
   let lastMessageCount = 0;
@@ -247,6 +315,11 @@ export function setupChatPanel(engine?: CanvasEngine): void {
   });
 
   const vttfxFileInput = iconPopoverEl.querySelector<HTMLInputElement>("#popover-vttfx-file-input");
+  iconPopoverEl.querySelector<HTMLButtonElement>("#popover-generate-vttfx-btn")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    iconPopoverEl.style.display = "none";
+    openVttfxGenerateModal();
+  });
   iconPopoverEl.querySelector<HTMLButtonElement>("#popover-upload-btn")?.addEventListener("click", (e) => {
     e.stopPropagation();
     vttfxFileInput?.click();
@@ -662,6 +735,128 @@ export function setupChatPanel(engine?: CanvasEngine): void {
     if (e.key === "Enter" && inputEl.value.trim()) {
       const val = inputEl.value.trim();
       inputEl.value = "";
+      whisperSelectorEl.style.display = "none";
+
+      const keyMatch = val.match(/^\/key(?:\s+(.+))?$/i);
+      if (keyMatch) {
+        const arg = (keyMatch[1] || "").trim();
+        if (!arg || arg.toLowerCase() === "help") {
+          const helpMsg: ChatMessage = {
+            id: "sys-" + Date.now(),
+            timestamp: Date.now(),
+            senderPeerId: "system",
+            senderUsername: "System",
+            content: `🔑 **API Key Management:**<br/>• Type <code>/key xxxxxxxxxxxx</code> to set and save your Gemini API key.<br/>• Type <code>/key delete</code> to remove your stored API key.`,
+            type: "system"
+          };
+          sessionManager.dispatchOperation({ opType: "APPEND_CHAT_MESSAGE", message: helpMsg });
+          return;
+        }
+
+        if (arg.toLowerCase() === "delete" || arg.toLowerCase() === "remove" || arg.toLowerCase() === "clear") {
+          localStorage.removeItem("gemini_api_key");
+          localStorage.removeItem("gemini_enhance_last_failed");
+          (window as any).__geminiApiKeyInMemory = null;
+          const sysMsg: ChatMessage = {
+            id: "sys-" + Date.now(),
+            timestamp: Date.now(),
+            senderPeerId: "system",
+            senderUsername: "System",
+            content: `🗑️ **Gemini API Key Removed**<br/>Your API key has been deleted from memory and local storage.`,
+            type: "system"
+          };
+          sessionManager.dispatchOperation({ opType: "APPEND_CHAT_MESSAGE", message: sysMsg });
+          return;
+        }
+
+        localStorage.setItem("gemini_api_key", arg);
+        localStorage.removeItem("gemini_enhance_last_failed");
+        (window as any).__geminiApiKeyInMemory = arg;
+        const sysMsg: ChatMessage = {
+          id: "sys-" + Date.now(),
+          timestamp: Date.now(),
+          senderPeerId: "system",
+          senderUsername: "System",
+          content: `✅ **Gemini API Key Saved!**<br/>Your API key (ending in <code>...${arg.slice(-4)}</code>) has been securely saved in local storage and memory.`,
+          type: "system"
+        };
+        sessionManager.dispatchOperation({ opType: "APPEND_CHAT_MESSAGE", message: sysMsg });
+        return;
+      }
+
+      const whisperMatch = val.match(/^\/(?:whisper|w)\b(?:\s+(.*))?$/i);
+      if (whisperMatch) {
+        const rest = (whisperMatch[1] || "").trim();
+        const activeUsers = sessionManager.getActiveUsers();
+        const sortedUsers = [...activeUsers].sort((a, b) => b.username.length - a.username.length);
+        let targetUser: { username: string; peerId?: string; color: string } | null = null;
+        let messageContent = "";
+
+        for (const u of sortedUsers) {
+          if (rest.toLowerCase().startsWith(u.username.toLowerCase())) {
+            if (rest.length === u.username.length || /\s/.test(rest.charAt(u.username.length))) {
+              targetUser = u;
+              messageContent = rest.substring(u.username.length).trim();
+              break;
+            }
+          }
+        }
+
+        if (!targetUser && rest) {
+          const firstWord = rest.split(/\s+/)[0];
+          const firstMatch = activeUsers.find((u) => u.username.toLowerCase() === firstWord.toLowerCase());
+          if (firstMatch) {
+            targetUser = firstMatch;
+            messageContent = rest.substring(firstWord.length).trim();
+          }
+        }
+
+        if (!targetUser) {
+          const enteredName = rest ? rest.split(/\s+/)[0] : "";
+          const errMsg: ChatMessage = {
+            id: "sys-" + Date.now(),
+            timestamp: Date.now(),
+            senderPeerId: "system",
+            senderUsername: "System",
+            content: enteredName
+              ? `❌ **Whisper Error:** No connected user named '<code>${enteredName}</code>' found. Please select or enter an active username.`
+              : `❌ **Whisper Error:** Please specify a username to whisper to. (e.g. <code>/whisper Alice Hello!</code>)`,
+            type: "system"
+          };
+          sessionManager.dispatchOperation({ opType: "APPEND_CHAT_MESSAGE", message: errMsg });
+          return;
+        }
+
+        if (!messageContent) {
+          const errMsg: ChatMessage = {
+            id: "sys-" + Date.now(),
+            timestamp: Date.now(),
+            senderPeerId: "system",
+            senderUsername: "System",
+            content: `❌ **Whisper Error:** Please enter a message to whisper to <strong>${targetUser.username}</strong>. (e.g. <code>/whisper ${targetUser.username} Hello!</code>)`,
+            type: "system"
+          };
+          sessionManager.dispatchOperation({ opType: "APPEND_CHAT_MESSAGE", message: errMsg });
+          return;
+        }
+
+        const whisperMsg: ChatMessage = {
+          id: "msg-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6),
+          timestamp: Date.now(),
+          senderPeerId: sessionManager.myPeerId || "local",
+          senderUsername: sessionManager.myUsername || "Me",
+          content: messageContent,
+          type: "whisper",
+          recipientPeerId: targetUser.peerId || targetUser.username,
+          recipientUsername: targetUser.username
+        };
+
+        sessionManager.dispatchOperation({
+          opType: "APPEND_CHAT_MESSAGE",
+          message: whisperMsg
+        });
+        return;
+      }
 
       if (/^\/enhance$/i.test(val)) {
         const activate = () => {
@@ -728,6 +923,8 @@ export function setupChatPanel(engine?: CanvasEngine): void {
   <div style="font-weight: 700; color: #38bdf8; border-bottom: 1px solid rgba(56, 189, 248, 0.3); padding-bottom: 2px;">💬 Commands</div>
   <div style="display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; align-items: baseline;">
     <code>/r &lt;expr&gt;</code><span>Roll dice or trigger QuickRoll by name (e.g. <code>/r 2d6+4</code> or <code>/r Fireball</code>)</span>
+    <code>/whisper &lt;user&gt; &lt;msg&gt;</code><span>Whisper private message to connected user (shorthand <code>/w</code>)</span>
+    <code>/key &lt;apikey&gt;</code><span>Set Gemini API key in memory & storage (or <code>/key delete</code>)</span>
     <code>/enhance</code><span>AI map enhancement from selection sketch & fills</span>
     <code>/flip</code><span>Flip a coin (Heads/Tails)</span>
     <code>/me &lt;act&gt;</code><span>Roleplay emote action</span>
@@ -875,6 +1072,8 @@ export function setupChatPanel(engine?: CanvasEngine): void {
       contentHtml = `${iconToUse} ${msg.rollLabel ? `<strong>${msg.rollLabel}</strong>: ` : ""}${msg.content}`;
     } else if (msg.type === "action") {
       contentHtml = `<em>* ${msg.senderUsername} ${msg.content} *</em>`;
+    } else if (msg.type === "whisper") {
+      contentHtml = `<span style="color: #e879f9; font-weight: 800;">🔮 Whisper:</span> ${msg.content}`;
     }
 
     toastEl.innerHTML = `
@@ -891,23 +1090,26 @@ export function setupChatPanel(engine?: CanvasEngine): void {
     toastEl.style.display = "flex";
 
     if (msg.type === "roll" && msg.rollIcon) {
-      const effectId = getEffectIdForIcon(msg.rollIcon);
-      if (effectId) {
-        EffectEngine.playOverElement(toastEl, effectId);
-        playEffectAtUserToken(engine, docStore.getDocument(), msg.senderUsername, msg.senderPeerId, effectId, msg.targetTokenIds);
+      const effId = getEffectIdForIcon(msg.rollIcon);
+      if (effId && !toastEl.querySelector(".play-roll-anim-btn")) {
+        const replayBtn = document.createElement("button");
+        replayBtn.className = "play-roll-anim-btn";
+        replayBtn.setAttribute("data-effect-id", effId);
+        replayBtn.title = "Replay Animation";
+        replayBtn.style.cssText = "position: absolute; bottom: 4px; right: 8px; background: transparent; border: none; color: #38bdf8; font-size: 11px; padding: 4px 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10; transition: transform 0.15s ease, filter 0.15s ease;";
+        replayBtn.textContent = "▶";
+        replayBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          EffectEngine.playOverElement(toastEl, effId);
+          playEffectAtUserToken(engine, docStore.getDocument(), msg.senderUsername, msg.senderPeerId, effId, msg.targetTokenIds);
+        });
+        toastEl.appendChild(replayBtn);
       }
     }
 
     simpleToastTimeout = setTimeout(() => {
-      if (toastEl) {
-        toastEl.style.opacity = "0";
-        setTimeout(() => {
-          if (toastEl && toastEl.style.opacity === "0") {
-            toastEl.remove();
-          }
-        }, 200);
-      }
-    }, 2000);
+      toastEl?.remove();
+    }, 4000);
   }
 
   // Subscribe to reactive document updates
@@ -930,21 +1132,38 @@ export function setupChatPanel(engine?: CanvasEngine): void {
       if ((window as any).vttSimpleMode) {
         const latestMsg = doc.chatHistory[doc.chatHistory.length - 1];
         if (latestMsg) {
-          showSimpleModeChatToast(latestMsg);
+          const myId = sessionManager.myPeerId || "local";
+          const myName = (sessionManager.myUsername || "Me").toLowerCase();
+          const isWhisper = latestMsg.type === "whisper" || latestMsg.recipientPeerId || latestMsg.recipientUsername;
+          const canSee = !isWhisper || (latestMsg.senderPeerId === myId || latestMsg.senderUsername?.toLowerCase() === myName || latestMsg.recipientPeerId === myId || latestMsg.recipientUsername?.toLowerCase() === myName);
+          if (canSee) {
+            showSimpleModeChatToast(latestMsg);
+          }
         }
       }
     }
     lastMessageCount = newCount;
     renderQuickRolls();
 
-    if (doc.chatHistory.length === 0) {
+    const myId = sessionManager.myPeerId || "local";
+    const myName = (sessionManager.myUsername || "Me").toLowerCase();
+    const visibleHistory = doc.chatHistory.filter((msg) => {
+      if (msg.type === "whisper" || msg.recipientPeerId || msg.recipientUsername) {
+        const isSender = (msg.senderPeerId === myId) || (msg.senderUsername?.toLowerCase() === myName);
+        const isRecipient = (msg.recipientPeerId && msg.recipientPeerId === myId) || (msg.recipientUsername && msg.recipientUsername.toLowerCase() === myName);
+        return isSender || isRecipient;
+      }
+      return true;
+    });
+
+    if (visibleHistory.length === 0) {
       container.innerHTML = "";
       animatedRollMsgIds.clear();
       activeRollIntervals.forEach(clearInterval);
       activeRollIntervals.clear();
       return;
     } else {
-      const existingIds = new Set(doc.chatHistory.map((m) => m.id));
+      const existingIds = new Set(visibleHistory.map((m) => m.id));
       container.querySelectorAll(".chat-msg").forEach((el) => {
         const id = el.getAttribute("data-msg-id");
         if (id && !existingIds.has(id)) {
@@ -954,7 +1173,7 @@ export function setupChatPanel(engine?: CanvasEngine): void {
     }
 
     // Smart DOM reconciliation so active roll animations are never destroyed midway by document updates
-    doc.chatHistory.forEach((msg) => {
+    visibleHistory.forEach((msg) => {
       const existingEl = container.querySelector(`[data-msg-id="${msg.id}"]`) as HTMLElement | null;
       const hasReactions = (msg.thumbsUp || 0) > 0 || (msg.thumbsDown || 0) > 0 || (msg.laugh || 0) > 0 || (msg.celebrate || 0) > 0;
 
@@ -1030,6 +1249,10 @@ export function setupChatPanel(engine?: CanvasEngine): void {
         msgEl.style.background = `rgba(${r}, ${g}, ${b}, 0.15)`;
         msgEl.style.borderColor = `rgba(${r}, ${g}, ${b}, 0.4)`;
         msgEl.style.color = userColor;
+      } else if (msg.type === "whisper") {
+        msgEl.style.background = "rgba(168, 85, 247, 0.18)";
+        msgEl.style.borderColor = "rgba(192, 132, 252, 0.6)";
+        msgEl.style.boxShadow = "inset 0 0 12px rgba(168, 85, 247, 0.25)";
       }
 
       let displayContent = msg.content;
@@ -1056,9 +1279,14 @@ export function setupChatPanel(engine?: CanvasEngine): void {
         console.log("[DiceAnimation] Formatted new roll spans - beforeEquals:", beforeEquals, "afterEquals:", afterEquals);
       }
 
+      const isMySender = msg.senderPeerId === (sessionManager.myPeerId || "local") || msg.senderUsername?.toLowerCase() === (sessionManager.myUsername || "Me").toLowerCase();
+      const authorText = msg.type === "whisper"
+        ? `<span style="color: #e879f9; font-weight: 800;">🔮 Whisper ${isMySender ? `to <strong>${msg.recipientUsername || "user"}</strong>` : `from <strong>${msg.senderUsername}</strong>`}</span>`
+        : `<span style="color: ${userColor}">${msg.senderUsername}${msg.rollLabel ? ` - <span style="color: #cbd5e1; font-weight: normal;">${msg.rollLabel}</span>` : ""}</span>`;
+
       msgEl.innerHTML = `
-        <div class="msg-author" style="color: ${userColor}">${msg.senderUsername}${msg.rollLabel ? ` - <span style="color: #cbd5e1; font-weight: normal;">${msg.rollLabel}</span>` : ""}</div>
-        <div class="msg-text">${formattedText}</div>
+        <div class="msg-author">${authorText}</div>
+        <div class="msg-text" ${msg.type === "whisper" ? 'style="color: #f8fafc; font-style: italic;"' : ''}>${formattedText}</div>
         <div class="chat-reactions" style="display: ${hasReactions ? "flex" : "none"};">
           <button class="chat-reaction-btn" data-reaction="up" data-id="${msg.id}" title="Thumbs Up">
             👍 <span>${msg.thumbsUp || 0}</span>

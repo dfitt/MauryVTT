@@ -129,7 +129,9 @@ export interface ChatMessage {
   senderPeerId: string;
   senderUsername: string;
   content: string;
-  type: "text" | "system" | "action" | "roll";
+  type: "text" | "system" | "action" | "roll" | "whisper";
+  recipientPeerId?: string;
+  recipientUsername?: string;
   rollLabel?: string;
   rollIcon?: string;
   targetTokenIds?: string[];
@@ -261,5 +263,25 @@ export type EphemeralPayload =
       newMapImageId?: string;
       newMapImage?: any;
       assetManifestEntry?: { assetHash: string; mimeType: string; byteSize: number; widthPx: number; heightPx: number; };
+      error?: string;
+    }
+  | {
+      type: "VTTFX_PROXY_REQ";
+      reqId: string;
+      requesterPeerId: string;
+      requesterUsername: string;
+      proxyPeerId: string;
+      iconDesc: string;
+      animDesc: string;
+    }
+  | {
+      type: "VTTFX_PROXY_RES";
+      reqId: string;
+      requesterPeerId: string;
+      proxyPeerId: string;
+      status: "success" | "error";
+      vttfxItem?: any;
+      iconDesc?: string;
+      animDesc?: string;
       error?: string;
     };

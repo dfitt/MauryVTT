@@ -9,6 +9,7 @@ import { bindMeasureTool } from "./canvas/tools/measureTool.js";
 import { bindPingTool } from "./canvas/tools/pingTool.js";
 import { bindLaserTool } from "./canvas/tools/laserTool.js";
 import { bindEnhanceTool } from "./canvas/tools/enhanceTool.js";
+import { setupVttfxProxyListeners } from "./ui/vttfxGenerateModal.js";
 import { setupHeaderUI } from "./ui/userListUI.js";
 import { setupToolbarUI } from "./ui/toolbarUI.js";
 import { setupSelectionBarUI, syncPrimaryTokenOwnership } from "./ui/selectionBarUI.js";
@@ -78,6 +79,7 @@ function bootstrap(): void {
   bindPingTool(engine);
   bindLaserTool(engine);
   bindEnhanceTool(engine);
+  setupVttfxProxyListeners();
 
   // Show Welcome / Join Modal first (before displaying gameplay UI)
   renderJoinModal(() => {
