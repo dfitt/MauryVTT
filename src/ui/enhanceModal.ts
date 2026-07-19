@@ -111,7 +111,7 @@ async function callGeminiImageGeneration(base64Image: string, apiKey: string, mo
     "imagen-3.0-generate-002"
   ].filter((v, i, a) => Boolean(v) && a.indexOf(v) === i);
 
-  const premadePrompt = "You are a master virtual tabletop RPG map designer specializing in classic old-school D&D cartography. Look at the provided top-down drawing and room fills as a layout guide and blueprint. Generate a high-resolution, top-down, overhead 2D tabletop RPG battlemap designed in an oldschool D&D, OSR (Old School Renaissance), and Dungeon Crawl Classics (DCC) art style. The map MUST be drawn with crisp black ink on a solid, stark white (#FFFFFF) background with classic crosshatching, hand-drawn ink line walls, stippling, and retro dungeon cartography textures while preserving the exact spatial boundaries, room layouts, pathways, and alignments shown in the sketch guide. Even if the reference sketch has a dark background, your generated map MUST have a solid, stark white (#FFFFFF) background with black ink lines.";
+  const premadePrompt = "You are a master virtual tabletop RPG map designer specializing in classic old-school D&D cartography. Look at the provided top-down drawing and room fills as a layout guide and blueprint. Generate a high-resolution, top-down, overhead 2D tabletop RPG battlemap designed in an oldschool D&D, OSR (Old School Renaissance), and Dungeon Crawl Classics (DCC) art style. The map MUST be drawn with crisp black ink on a solid, stark white (#FFFFFF) background with classic crosshatching, hand-drawn ink line walls, stippling, and retro dungeon cartography textures while preserving the exact spatial boundaries, room layouts, pathways, and alignments shown in the sketch guide. Even if the reference sketch has a dark background, your generated map MUST have a solid, stark white (#FFFFFF) background with black ink lines. CRITICAL: Do NOT draw or include any square or hexagonal grid lines on the map itself. The virtual tabletop software renders its own dynamic grid overlay on top of the image, so your generated map must be completely grid-free without any grid lines or coordinate squares/hexes.";
   const customDesc = localStorage.getItem("gemini_enhance_custom_prompt")?.trim();
   const promptText = customDesc
     ? `${premadePrompt}\n\nCRITICAL USER OVERRIDE DESCRIPTION (Follow this user description strictly; if any instructions below or above conflict with this custom description, this user description takes overriding precedence):\n"${customDesc}"`
@@ -401,9 +401,11 @@ function showEnhanceConfirmationBar(engine: CanvasEngine, box: { x: number; y: n
       if (ent.type === "line") {
         const line = ent as any;
         if (line.points && line.points.length > 0) {
-          const inside = line.points.some((p: { x: number; y: number }) =>
-            p.x >= box.x - 10 && p.x <= box.x + box.width + 10 && p.y >= box.y - 10 && p.y <= box.y + box.height + 10
-          );
+          const inside = line.points.some((p: any) => {
+            const px = Array.isArray(p) ? p[0] : p?.x;
+            const py = Array.isArray(p) ? p[1] : p?.y;
+            return px !== undefined && py !== undefined && px >= box.x - 10 && px <= box.x + box.width + 10 && py >= box.y - 10 && py <= box.y + box.height + 10;
+          });
           if (inside) {
             drawingsToDelete.push(ent.id);
           }

@@ -122,7 +122,7 @@ export function setupChatPanel(engine?: CanvasEngine): void {
     </div>
     <div class="chat-messages" id="chat-messages-container"></div>
     <div class="chat-input-bar">
-      <input type="text" id="chat-input-el" class="chat-input" placeholder="Type a message or /roll 1d20..." />
+      <input type="text" id="chat-input-el" class="chat-input" placeholder="Type a message or /roll (/r) 1d20..." />
     </div>
   `;
 
@@ -598,7 +598,7 @@ export function setupChatPanel(engine?: CanvasEngine): void {
   });
 
   function parseAndRollDice(cmd: string, customIcon: string = ALL_ROLL_ICONS[0]): string | null {
-    const rawExpr = cmd.replace(/^\/(roll|r)\s+/i, "").replace(/\s+/g, "");
+    const rawExpr = cmd.replace(/^\/(?:roll|r)\b\s*|^\/r\s*/i, "").replace(/\s+/g, "");
     if (!rawExpr) return null;
 
     const tokenRegex = /([+-]?)([^+-]+)/g;
@@ -748,7 +748,7 @@ export function setupChatPanel(engine?: CanvasEngine): void {
       let rollLabel: string | undefined = undefined;
       let rollExpr: string | undefined = undefined;
 
-      const rollMatch = val.match(/^(.*?)(?:\/(?:roll|r)\s+)(.+)$/i);
+      const rollMatch = val.match(/^(.*?)(?:\/(?:roll|r)\b\s*|\/r\s*)(.+)$/i);
       if (rollMatch) {
         let labelText = rollMatch[1].trim();
         let expr = rollMatch[2].trim();
