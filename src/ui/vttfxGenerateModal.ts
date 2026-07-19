@@ -36,7 +36,7 @@ function openVttfxGenerateDescriptionModal(hasProxy: boolean, proxyPeerId: strin
 
   const descTxt = document.createElement("div");
   descTxt.style.cssText = "font-size: 0.9em; color: #cbd5e1; line-height: 1.4;";
-  descTxt.textContent = "Describe the icon and animation effect you want. Gemini 3.5 Flash will generate a custom SVG icon and looping CSS/SVG animation.";
+  descTxt.textContent = "Describe the icon and animation effect you want. Note: generation can take up to 30 seconds.";
 
   const iconLabel = document.createElement("label");
   iconLabel.style.cssText = "font-weight: 700; font-size: 0.85em; color: #38bdf8; display: flex; flex-direction: column; gap: 4px;";
@@ -74,8 +74,9 @@ function openVttfxGenerateDescriptionModal(hasProxy: boolean, proxyPeerId: strin
     modal.remove();
 
     if (hasProxy && proxyPeerId) {
-      showEnhanceToast("✨ Sending VTTFX generation request to proxy host...", 4000);
       const reqId = "vttfx-req-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6);
+      console.log(`[VttfxProxy] Sending VTTFX_PROXY_REQ. Request ID: ${reqId}, proxyPeerId: ${proxyPeerId}`);
+      showEnhanceToast("✨ Requesting VTTFX generation from proxy... (Note: this can take up to 30 seconds)", 30000);
       sessionManager.sendEphemeral({
         type: "VTTFX_PROXY_REQ",
         reqId,
@@ -88,10 +89,10 @@ function openVttfxGenerateDescriptionModal(hasProxy: boolean, proxyPeerId: strin
     } else {
       const apiKey = localStorage.getItem("gemini_api_key");
       if (!apiKey) {
-        showEnhanceToast("❌ No API key found. Please configure a Gemini API key.", 5000);
+        showEnhanceToast("❌ No API key found. Please configure an API key.", 5000);
         return;
       }
-      showEnhanceToast("✨ Generating VTTFX icon & animation via Gemini 3.5 Flash...", 8000);
+      showEnhanceToast("✨ Generating VTTFX icon & animation... (Note: this can take up to 30 seconds)", 30000);
       try {
         const item = await callGeminiVttfxGeneration(apiKey, iconDesc, animDesc);
         openVttfxPreviewModal(item, iconDesc, animDesc, null);
@@ -150,12 +151,6 @@ export function openVttfxPreviewModal(vttfxItem: VttfxEffectItem, iconDesc: stri
   const stage = document.createElement("div");
   stage.id = "vttfx-preview-stage";
   stage.style.cssText = "position: relative; width: 280px; height: 240px; background: radial-gradient(circle, #1e293b 0%, #0f172a 100%); border: 2px solid #c084fc; border-radius: 12px; overflow: hidden; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 0 20px rgba(0,0,0,0.8);";
-
-  // Dummy token on stage center
-  const dummyToken = document.createElement("div");
-  dummyToken.style.cssText = "width: 64px; height: 64px; border-radius: 50%; background: #334155; border: 3px solid #64748b; display: flex; align-items: center; justify-content: center; font-size: 28px; box-shadow: 0 4px 12px rgba(0,0,0,0.6); pointer-events: none;";
-  dummyToken.innerHTML = `🧙‍♂️`;
-  stage.appendChild(dummyToken);
 
   const fxContainer = document.createElement("div");
   fxContainer.style.cssText = "position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none;";
@@ -233,8 +228,9 @@ export function openVttfxPreviewModal(vttfxItem: VttfxEffectItem, iconDesc: stri
     modal.remove();
 
     if (proxyPeerId) {
-      showEnhanceToast("🔄 Retrying VTTFX generation via proxy...", 4000);
       const reqId = "vttfx-req-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6);
+      console.log(`[VttfxProxy] Retrying request by proxy. Request ID: ${reqId}, Proxy Peer ID: ${proxyPeerId}`);
+      showEnhanceToast("🔄 Retrying VTTFX generation via proxy... (Note: this can take up to 30 seconds)", 30000);
       sessionManager.sendEphemeral({
         type: "VTTFX_PROXY_REQ",
         reqId,
@@ -247,7 +243,7 @@ export function openVttfxPreviewModal(vttfxItem: VttfxEffectItem, iconDesc: stri
     } else {
       const apiKey = localStorage.getItem("gemini_api_key");
       if (apiKey) {
-        showEnhanceToast("🔄 Retrying VTTFX generation via Gemini...", 6000);
+        showEnhanceToast("🔄 Retrying VTTFX generation... (Note: this can take up to 30 seconds)", 30000);
         callGeminiVttfxGeneration(apiKey, iconDesc, animDesc)
           .then((item) => openVttfxPreviewModal(item, iconDesc, animDesc, null))
           .catch((err) => showEnhanceToast(`❌ Retry failed: ${err.message || err}`, 8000));
@@ -283,22 +279,25 @@ export function setupVttfxProxyListeners(): void {
 
     if (payload.type === "VTTFX_PROXY_REQ") {
       if (payload.proxyPeerId === myId) {
-        console.log("[VttfxProxy] Received VTTFX_PROXY_REQ from:", payload.requesterUsername);
+        console.log(`[VttfxProxy] Received VTTFX_PROXY_REQ from: ${payload.requesterUsername} (${payload.requesterPeerId}). Request ID: ${payload.reqId}`);
         const apiKey = localStorage.getItem("gemini_api_key");
         if (!apiKey) {
+          console.warn("[VttfxProxy] Denied VTTFX_PROXY_REQ: Local machine (proxy host) lacks API key configured in local storage.");
           sessionManager.sendEphemeral({
             type: "VTTFX_PROXY_RES",
             reqId: payload.reqId,
             requesterPeerId: payload.requesterPeerId,
             proxyPeerId: myId,
             status: "error",
-            error: "Proxy host no longer has a valid Gemini API key configured."
+            error: "Proxy host no longer has a valid API key configured in local storage."
           });
           return;
         }
 
+        console.log(`[VttfxProxy] Local machine is processing VTTFX proxy generation via API...`);
         try {
           const item = await callGeminiVttfxGeneration(apiKey, payload.iconDesc, payload.animDesc);
+          console.log(`[VttfxProxy] Proxy generation succeeded. Dispatching VTTFX_PROXY_RES for ID: ${payload.reqId}`);
           sessionManager.sendEphemeral({
             type: "VTTFX_PROXY_RES",
             reqId: payload.reqId,
@@ -310,21 +309,26 @@ export function setupVttfxProxyListeners(): void {
             animDesc: payload.animDesc
           });
         } catch (err: any) {
+          const errMsg = err.message || String(err);
+          console.error(`[VttfxProxy] Proxy generation failed for request ${payload.reqId} with error:`, errMsg);
           sessionManager.sendEphemeral({
             type: "VTTFX_PROXY_RES",
             reqId: payload.reqId,
             requesterPeerId: payload.requesterPeerId,
             proxyPeerId: myId,
             status: "error",
-            error: err.message || String(err)
+            error: errMsg
           });
         }
       }
     } else if (payload.type === "VTTFX_PROXY_RES") {
       if (payload.requesterPeerId === myId) {
+        console.log(`[VttfxProxy] Received VTTFX_PROXY_RES for request ID: ${payload.reqId}. Status: ${payload.status}`);
         if (payload.status === "error") {
-          showEnhanceToast(`❌ Proxy VTTFX Generation Error: ${payload.error}`, 8000);
+          console.error(`[VttfxProxy] Proxy reported error: ${payload.error}`);
+          showEnhanceToast(`❌ Proxy VTTFX Generation Error: ${payload.error}`, 10000);
         } else if (payload.status === "success" && payload.vttfxItem) {
+          console.log(`[VttfxProxy] Proxy reported success. Opening preview modal for generated VTTFX: ${payload.vttfxItem.name}`);
           openVttfxPreviewModal(payload.vttfxItem, payload.iconDesc || "", payload.animDesc || "", payload.proxyPeerId);
         }
       }
