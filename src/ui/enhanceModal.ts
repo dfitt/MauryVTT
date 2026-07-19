@@ -111,7 +111,7 @@ async function callGeminiImageGeneration(base64Image: string, apiKey: string, mo
     "imagen-3.0-generate-002"
   ].filter((v, i, a) => Boolean(v) && a.indexOf(v) === i);
 
-  const premadePrompt = "You are a master virtual tabletop RPG map designer specializing in classic old-school D&D cartography. Look at the provided top-down drawing and room fills as a layout guide and blueprint. Generate a high-resolution, top-down, overhead 2D tabletop RPG battlemap designed in an oldschool D&D, OSR (Old School Renaissance), and Dungeon Crawl Classics (DCC) art style. The map MUST be drawn with crisp black ink on a solid, stark white (#FFFFFF) background with classic crosshatching, hand-drawn ink line walls, stippling, and retro dungeon cartography textures while preserving the exact spatial boundaries, room layouts, pathways, and alignments shown in the sketch guide. Even if the reference sketch has a dark background, your generated map MUST have a solid, stark white (#FFFFFF) background with black ink lines. CRITICAL: Do NOT draw or include any square or hexagonal grid lines on the map itself. The virtual tabletop software renders its own dynamic grid overlay on top of the image, so your generated map must be completely grid-free without any grid lines or coordinate squares/hexes.";
+  const premadePrompt = "You are a master virtual tabletop RPG map designer specializing in classic old-school D&D cartography. Look at the provided top-down drawing and room fills as a layout guide and blueprint. Generate a high-resolution, top-down, overhead 2D tabletop RPG battlemap designed in an oldschool D&D, OSR (Old School Renaissance), and Dungeon Crawl Classics (DCC) art style. The map MUST be drawn with crisp black ink on a solid, stark white (#FFFFFF) background with classic crosshatching, hand-drawn ink line walls, stippling, and retro dungeon cartography textures while preserving the exact spatial boundaries, room layouts, pathways, and alignments shown in the sketch guide. Even if the reference sketch has a dark background, your generated map MUST have a solid, stark white (#FFFFFF) background with black ink lines. CRITICAL: Do NOT draw or include any square or hexagonal grid lines, map legends, text labels, titles, keys, or compass roses on the map itself. The virtual tabletop software renders its own dynamic grid overlay and UI overlays on top of the image, so your generated map must be completely clean and grid-free without any grid lines, coordinate squares/hexes, compass roses, titles, labels, or legends.";
   const customDesc = overrideDesc !== undefined ? overrideDesc.trim() : localStorage.getItem("gemini_enhance_custom_prompt")?.trim();
   const promptText = customDesc
     ? `${premadePrompt}\n\nCRITICAL USER OVERRIDE DESCRIPTION (Follow this user description strictly; if any instructions below or above conflict with this custom description, this user description takes overriding precedence):\n"${customDesc}"`
@@ -471,14 +471,20 @@ let proxyListenersSetup = false;
 export function setupEnhanceProxyListeners(engine: CanvasEngine): void {
   if (proxyListenersSetup) return;
   proxyListenersSetup = true;
+  console.log("[EnhanceProxy] setupEnhanceProxyListeners initialized.");
 
   sessionManager.onEphemeral(async (payload: any) => {
     if (!payload || typeof payload !== "object") return;
     const myId = sessionManager.myPeerId || "local";
 
     if (payload.type === "ENHANCE_CHECK_KEY_REQ") {
-      const hasKey = Boolean(localStorage.getItem("gemini_api_key")) && localStorage.getItem("gemini_enhance_last_failed") !== "true";
+      console.log(`[EnhanceProxy] Received ENHANCE_CHECK_KEY_REQ from ${payload.requesterPeerId}. Checking local API key...`);
+      const apiKey = localStorage.getItem("gemini_api_key");
+      const lastFailed = localStorage.getItem("gemini_enhance_last_failed") === "true";
+      const hasKey = Boolean(apiKey && apiKey.trim().length > 0) && !lastFailed;
+      console.log(`[EnhanceProxy] My key status: hasKey=${hasKey} (keyLength=${apiKey ? apiKey.length : 0}, lastFailed=${lastFailed}, myId=${myId})`);
       if (hasKey && payload.requesterPeerId !== myId) {
+        console.log(`[EnhanceProxy] Sending ENHANCE_CHECK_KEY_ACK to ${payload.requesterPeerId}...`);
         sessionManager.sendEphemeral({
           type: "ENHANCE_CHECK_KEY_ACK",
           peerId: myId,
@@ -486,15 +492,20 @@ export function setupEnhanceProxyListeners(engine: CanvasEngine): void {
         });
       }
     } else if (payload.type === "ENHANCE_CHECK_KEY_ACK") {
+      console.log(`[EnhanceProxy] Received ENHANCE_CHECK_KEY_ACK from peer ${payload.peerId} (hasKey=${payload.hasKey}, myId=${myId})`);
       if (payload.hasKey && payload.peerId && payload.peerId !== myId) {
         knownPeersWithApiKey.add(payload.peerId);
+        console.log(`[EnhanceProxy] Added ${payload.peerId} to knownPeersWithApiKey. Current set:`, Array.from(knownPeersWithApiKey));
       }
     } else if (payload.type === "ENHANCE_PROXY_REQ") {
+      console.log(`[EnhanceProxy] Received ENHANCE_PROXY_REQ. targetProxyId=${payload.proxyPeerId}, myId=${myId}, requester=${payload.requesterUsername} (${payload.requesterPeerId})`);
       if (payload.proxyPeerId === myId || payload.proxyPeerId === "any") {
-        console.log(`[EnhanceProxy] Received proxy enhance request from ${payload.requesterUsername} (${payload.requesterPeerId})`);
+        console.group(`[EnhanceProxy] Handling proxy enhance request from ${payload.requesterUsername} (${payload.requesterPeerId})`);
         const apiKey = localStorage.getItem("gemini_api_key");
         const lastFailed = localStorage.getItem("gemini_enhance_last_failed") === "true";
         if (!apiKey || lastFailed) {
+          console.warn("[EnhanceProxy] Cannot serve proxy request: no valid API key or lastFailed=true");
+          console.groupEnd();
           sessionManager.sendEphemeral({
             type: "ENHANCE_PROXY_RES",
             reqId: payload.reqId,
@@ -506,12 +517,16 @@ export function setupEnhanceProxyListeners(engine: CanvasEngine): void {
           return;
         }
         await runGeminiMapEnhancementForProxy(engine, payload.box, payload.description, payload.requesterPeerId, payload.requesterUsername, payload.reqId);
+        console.groupEnd();
       }
     } else if (payload.type === "ENHANCE_PROXY_RES") {
+      console.log(`[EnhanceProxy] Received ENHANCE_PROXY_RES. status=${payload.status}, requester=${payload.requesterPeerId}, myId=${myId}`);
       if (payload.requesterPeerId === myId) {
         if (payload.status === "error") {
+          console.error("[EnhanceProxy] Proxy returned error:", payload.error);
           showEnhanceToast(`❌ Proxy Generation Failed: ${payload.error || "Unknown error"}`, 8000);
         } else if (payload.status === "success" && payload.newMapImageId && payload.box) {
+          console.log(`[EnhanceProxy] Proxy generation success! Waiting for entity sync of image ID="${payload.newMapImageId}"...`);
           showEnhanceToast("✨ Proxy Map generation complete! Waiting for image sync...", 3000);
           let attempts = 0;
           const checkTimer = setInterval(() => {
@@ -520,9 +535,11 @@ export function setupEnhanceProxyListeners(engine: CanvasEngine): void {
             const ent = doc.entities[payload.newMapImageId!] as ImageEntity;
             if (ent && ent.type === "image") {
               clearInterval(checkTimer);
+              console.log("[EnhanceProxy] Map image entity arrived via P2P sync! Opening confirmation bar.");
               showEnhanceConfirmationBar(engine, payload.box!, ent, payload.proxyPeerId, payload.description);
-            } else if (attempts > 40) {
+            } else if (attempts > 60) {
               clearInterval(checkTimer);
+              console.warn("[EnhanceProxy] Timed out waiting for map image entity via P2P sync after 15 seconds.");
               showEnhanceToast("⚠️ Map entity sync timed out from proxy.", 6000);
             }
           }, 250);
@@ -534,14 +551,24 @@ export function setupEnhanceProxyListeners(engine: CanvasEngine): void {
 
 export async function checkOrFindProxyPeer(): Promise<string | null> {
   const myId = sessionManager.myPeerId || "local";
-  const activeUsers = sessionManager.getActiveUsers().map((u) => u.peerId).filter(Boolean) as string[];
-  const activePeers = Array.from(knownPeersWithApiKey).filter((p) => activeUsers.includes(p) && p !== myId);
-  if (activePeers.length > 0) {
-    return activePeers[0];
-  }
-  if (sessionManager.role === "none" || activeUsers.length <= 1) {
+  console.group("[EnhanceProxy] checkOrFindProxyPeer initiated");
+  console.log("Current sessionManager role:", sessionManager.role, "myPeerId:", myId);
+  console.log("Known peers with API key before check:", Array.from(knownPeersWithApiKey));
+
+  if (sessionManager.role === "none") {
+    console.log("[EnhanceProxy] Session role is 'none' (not connected to P2P room). Returning null.");
+    console.groupEnd();
     return null;
   }
+
+  const existingCandidate = Array.from(knownPeersWithApiKey).find((p) => p !== myId);
+  if (existingCandidate) {
+    console.log("[EnhanceProxy] Found existing candidate in knownPeersWithApiKey:", existingCandidate);
+    console.groupEnd();
+    return existingCandidate;
+  }
+
+  console.log("[EnhanceProxy] Broadcasting ENHANCE_CHECK_KEY_REQ and waiting up to 750ms for ACK...");
   sessionManager.sendEphemeral({
     type: "ENHANCE_CHECK_KEY_REQ",
     requesterPeerId: myId
@@ -549,14 +576,31 @@ export async function checkOrFindProxyPeer(): Promise<string | null> {
 
   return new Promise((resolve) => {
     let resolved = false;
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       if (!resolved) {
         resolved = true;
-        const currentActive = sessionManager.getActiveUsers().map((u) => u.peerId).filter(Boolean) as string[];
-        const found = Array.from(knownPeersWithApiKey).filter((p) => currentActive.includes(p) && p !== myId);
-        resolve(found.length > 0 ? found[0] : null);
+        const found = Array.from(knownPeersWithApiKey).find((p) => p !== myId) || null;
+        console.log("[EnhanceProxy] 750ms discovery check completed. Found proxy peer:", found);
+        console.groupEnd();
+        resolve(found);
       }
-    }, 350);
+    }, 750);
+
+    const interval = setInterval(() => {
+      if (resolved) {
+        clearInterval(interval);
+        return;
+      }
+      const found = Array.from(knownPeersWithApiKey).find((p) => p !== myId);
+      if (found) {
+        resolved = true;
+        clearInterval(interval);
+        clearTimeout(timer);
+        console.log("[EnhanceProxy] ACK received early! Found proxy peer:", found);
+        console.groupEnd();
+        resolve(found);
+      }
+    }, 50);
   });
 }
 
@@ -565,6 +609,7 @@ export function sendProxyEnhanceRequest(engine: CanvasEngine, box: { x: number; 
   const myUsername = sessionManager.myUsername || "Me";
   const reqId = "req-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6);
   showEnhanceToast(`🚀 Sending AI Map request by proxy through friend's API key... (~10-20s)`, 0);
+  console.log(`[EnhanceProxy] Sending ENHANCE_PROXY_REQ to proxyPeerId="${proxyPeerId}" (reqId="${reqId}", requester="${myUsername}" (${myId}))`);
   sessionManager.sendEphemeral({
     type: "ENHANCE_PROXY_REQ",
     reqId,
@@ -585,11 +630,15 @@ async function runGeminiMapEnhancementForProxy(
   reqId: string
 ): Promise<void> {
   const apiKey = localStorage.getItem("gemini_api_key");
-  if (!apiKey) return;
+  if (!apiKey) {
+    console.warn("[EnhanceProxy] runGeminiMapEnhancementForProxy called but no apiKey in localStorage!");
+    return;
+  }
   const modelName = localStorage.getItem("gemini_enhance_model") || "gemini-3.1-flash-image";
   const myId = sessionManager.myPeerId || "local";
 
   try {
+    console.log(`[EnhanceProxy] Executing proxy enhancement job for ${requesterUsername} (${requesterPeerId}). Box:`, box, "Desc:", description);
     const doc = docStore.getDocument();
     const maxDim = 1024;
     const scale = Math.min(maxDim / box.width, maxDim / box.height, 2.0);
@@ -615,10 +664,12 @@ async function runGeminiMapEnhancementForProxy(
     const dataUrl = offscreen.toDataURL("image/png");
     const base64Image = dataUrl.split(",")[1];
 
+    console.log(`[EnhanceProxy] Calling Gemini API (model=${modelName})...`);
     const resultBase64 = await callGeminiImageGeneration(base64Image, apiKey, modelName, description);
     if (!resultBase64) {
       throw new Error("No image output returned by Gemini API during proxy request.");
     }
+    console.log("[EnhanceProxy] Gemini returned image successfully! Processing image and saving to IDB...");
 
     const byteString = atob(resultBase64);
     const arrayBuffer = new ArrayBuffer(byteString.length);
@@ -638,6 +689,7 @@ async function runGeminiMapEnhancementForProxy(
       processed.widthPx,
       processed.heightPx
     );
+    console.log("[EnhanceProxy] Asset saved to IDB with hash:", processed.assetHash, "Dispatching CREATE_ENTITY...");
 
     const existingImages = Object.values(doc.entities).filter((e) => e.type === "image");
     let lowestZ = 0;
@@ -677,6 +729,7 @@ async function runGeminiMapEnhancementForProxy(
       }
     });
 
+    console.log("[EnhanceProxy] Sending ENHANCE_PROXY_RES success payload back to requester:", requesterPeerId);
     sessionManager.sendEphemeral({
       type: "ENHANCE_PROXY_RES",
       reqId,
