@@ -772,7 +772,7 @@ export function setupChatPanel(engine?: CanvasEngine): void {
             timestamp: Date.now(),
             senderPeerId: "system",
             senderUsername: "System",
-            content: `🔑 **API Key Management:**<br/>• Type <code>/key xxxxxxxxxxxx</code> to set and save your Gemini API key.<br/>• Type <code>/key delete</code> to remove your stored API key.`,
+            content: `🔑 **API Key Management:**<br/>• <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" style="color: #38bdf8; text-decoration: underline;">Get a free Gemini API key ↗</a><br/>• Type <code>/key xxxxxxxxxxxx</code> to set and save your Gemini API key.<br/>• Type <code>/key delete</code> to remove your stored API key.`,
             type: "system"
           };
           sessionManager.dispatchOperation({ opType: "APPEND_CHAT_MESSAGE", message: helpMsg });
@@ -1495,4 +1495,53 @@ export function setupChatPanel(engine?: CanvasEngine): void {
       }
     }
   });
+
+  function updateChatWindowOcclusion(): void {
+    if (panel.classList.contains("minimized") || window.innerWidth <= 768 || panel.style.display === "none") {
+      panel.style.bottom = "";
+      return;
+    }
+
+    const bottomToolbar = document.querySelector<HTMLElement>(".bottom-toolbar");
+    const selectionToolbar = document.querySelector<HTMLElement>("#selection-toolbar");
+
+    const panelRect = panel.getBoundingClientRect();
+    if (panelRect.width === 0 || panelRect.height === 0) return;
+
+    let maxOccludingTop = 0;
+
+    const checkToolbar = (tb: HTMLElement | null) => {
+      if (!tb || tb.style.display === "none") return;
+      const tbRect = tb.getBoundingClientRect();
+      if (tbRect.width === 0 || tbRect.height === 0) return;
+
+      const horizontalOverlap = tbRect.right > panelRect.left - 10 && tbRect.left < panelRect.right + 10;
+      if (horizontalOverlap) {
+        if (tbRect.top < maxOccludingTop || maxOccludingTop === 0) {
+          maxOccludingTop = tbRect.top;
+        }
+      }
+    };
+
+    checkToolbar(bottomToolbar);
+    checkToolbar(selectionToolbar);
+
+    if (maxOccludingTop > 0) {
+      const newBottomOffset = Math.max(24, Math.round(window.innerHeight - maxOccludingTop + 14));
+      const maxAllowedBottom = Math.max(24, window.innerHeight - 200);
+      const appliedBottom = Math.min(newBottomOffset, maxAllowedBottom);
+      panel.style.bottom = `${appliedBottom}px`;
+    } else {
+      panel.style.bottom = "";
+    }
+  }
+
+  window.addEventListener("resize", updateChatWindowOcclusion);
+  setInterval(updateChatWindowOcclusion, 200);
+  if (typeof ResizeObserver !== "undefined") {
+    const ro = new ResizeObserver(() => updateChatWindowOcclusion());
+    ro.observe(document.body);
+    ro.observe(panel);
+  }
+  updateChatWindowOcclusion();
 }

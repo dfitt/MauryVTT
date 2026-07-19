@@ -31,7 +31,10 @@ export function openGeminiApiKeyModal(onSuccess?: () => void): void {
       </p>
       
       <div style="display: flex; flex-direction: column; gap: 6px;">
-        <label style="font-size: 12px; font-weight: 600; color: #e2e8f0;">Gemini API Key</label>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <label style="font-size: 12px; font-weight: 600; color: #e2e8f0;">Gemini API Key</label>
+          <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" style="font-size: 11px; color: #38bdf8; text-decoration: underline;">Get a free API key ↗</a>
+        </div>
         <input type="password" id="gemini-apikey-input" value="${currentKey}" placeholder="AIzaSy..." style="padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(192, 132, 252, 0.4); background: rgba(30, 41, 59, 0.8); color: #ffffff; font-size: 14px; outline: none;" />
       </div>
 
@@ -81,6 +84,19 @@ export function openGeminiApiKeyModal(onSuccess?: () => void): void {
     modalEl?.remove();
     if (onSuccess) onSuccess();
   });
+}
+
+export function getPeerUsername(peerId: string | null): string {
+  if (!peerId) return "a friend";
+  const users = docStore.getDocument()?.users || {};
+  if (users[peerId]?.username) {
+    return users[peerId].username;
+  }
+  const active = sessionManager.getActiveUsers().find(u => u.peerId === peerId);
+  if (active?.username) {
+    return active.username;
+  }
+  return "a friend";
 }
 
 export function showEnhanceToast(text: string, durationMs = 8000): void {
@@ -473,10 +489,12 @@ function showEnhanceConfirmationBar(
   retryBtn.addEventListener("click", () => {
     bar.remove();
     docStore.applyOperation({ opType: "DELETE_ENTITY", id: newMapImage.id }, { incrementRevision: false });
-    showEnhanceToast("🔄 Retrying AI Map Generation...", 3000);
     if (proxyPeerId) {
+      const friendName = getPeerUsername(proxyPeerId);
+      showEnhanceToast(`🔄 Retrying AI Map Generation via ${friendName}'s API key...`, 3000);
       sendProxyEnhanceRequest(engine, box, proxyDescription || "", proxyPeerId);
     } else {
+      showEnhanceToast("🔄 Retrying AI Map Generation...", 3000);
       runGeminiMapEnhancement(engine, box, proxyDescription);
     }
   });
@@ -547,7 +565,8 @@ export function setupEnhanceProxyListeners(engine: CanvasEngine): void {
       if (payload.requesterPeerId === myId) {
         if (payload.status === "error") {
           console.error("[EnhanceProxy] Proxy returned error:", payload.error);
-          showEnhanceToast(`❌ Proxy Generation Failed: ${payload.error || "Unknown error"}`, 8000);
+          const friendName = getPeerUsername(payload.proxyPeerId);
+          showEnhanceToast(`❌ Generation via ${friendName}'s API key failed: ${payload.error || "Unknown error"}`, 8000);
         } else if (payload.status === "success" && payload.newMapImage && payload.box) {
           console.log("[EnhanceProxy] Proxy generation evaluation payload arrived! Registering asset manifest and applying entity locally ONLY while evaluating...");
           const ent = payload.newMapImage as ImageEntity;
@@ -563,7 +582,8 @@ export function setupEnhanceProxyListeners(engine: CanvasEngine): void {
           docStore.applyOperation({ opType: "CREATE_ENTITY", entity: ent }, { incrementRevision: false });
           sessionManager.syncMissingAssets();
 
-          showEnhanceToast("✨ Proxy Map generation complete! Waiting for image data transfer...", 3000);
+          const friendName = getPeerUsername(payload.proxyPeerId);
+          showEnhanceToast(`✨ Map generation via ${friendName}'s API key complete! Waiting for image data transfer...`, 3000);
           let attempts = 0;
           const checkTimer = setInterval(async () => {
             attempts++;
@@ -644,7 +664,8 @@ export function sendProxyEnhanceRequest(engine: CanvasEngine, box: { x: number; 
   const myId = sessionManager.myPeerId || "local";
   const myUsername = sessionManager.myUsername || "Me";
   const reqId = "req-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6);
-  showEnhanceToast(`🚀 Sending AI Map request by proxy through friend's API key... (~10-20s)`, 0);
+  const friendName = getPeerUsername(proxyPeerId);
+  showEnhanceToast(`🚀 Sending AI Map request by proxy through ${friendName}'s API key... (~10-20s)`, 0);
   console.log(`[EnhanceProxy] Sending ENHANCE_PROXY_REQ to proxyPeerId="${proxyPeerId}" (reqId="${reqId}", requester="${myUsername}" (${myId}))`);
   sessionManager.sendEphemeral({
     type: "ENHANCE_PROXY_REQ",
@@ -806,7 +827,7 @@ export function openGeminiDescriptionModal(
       </div>
       <p style="margin: 0; font-size: 13px; color: #cbd5e1; line-height: 1.5;">
         Enter a text description for the map you want generated over your selection box.
-        ${isProxy ? `<span style="display: block; margin-top: 6px; color: #38bdf8; font-weight: 600;">🚀 Generating via proxy through a connected friend's API key!</span>` : ""}
+        ${isProxy ? `<span style="display: block; margin-top: 6px; color: #38bdf8; font-weight: 600;">🚀 Generating via proxy through ${getPeerUsername(proxyPeerId)}'s API key!</span>` : ""}
       </p>
       <div style="display: flex; flex-direction: column; gap: 6px;">
         <label style="font-size: 12px; font-weight: 600; color: #e2e8f0;">Map Description / Details</label>

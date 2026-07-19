@@ -1,6 +1,6 @@
 import { sessionManager } from "../network/sessionManager.js";
 import { VttfxEffectItem, VttfxBundle, registerEffectFromVttfxItem } from "../effects/vttfxLoader.js";
-import { openGeminiApiKeyModal, checkOrFindProxyPeer, showEnhanceToast } from "./enhanceModal.js";
+import { openGeminiApiKeyModal, checkOrFindProxyPeer, showEnhanceToast, getPeerUsername } from "./enhanceModal.js";
 import { ChatMessage } from "../types/vtt.js";
 
 export async function openVttfxGenerateModal(): Promise<void> {
@@ -32,29 +32,20 @@ function openVttfxGenerateDescriptionModal(hasProxy: boolean, proxyPeerId: strin
 
   const title = document.createElement("div");
   title.style.cssText = "font-size: 1.3em; font-weight: 800; color: #c084fc; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid rgba(192, 132, 252, 0.3); padding-bottom: 10px;";
-  title.innerHTML = `✨ Generate AI VTTFX ${hasProxy ? '<span style="font-size: 0.7em; color: #38bdf8; background: rgba(56, 189, 248, 0.15); padding: 2px 8px; border-radius: 9999px;">Via Proxy Host</span>' : ''}`;
+  title.innerHTML = `✨ Generate AI VTTFX ${hasProxy ? `<span style="font-size: 0.7em; color: #38bdf8; background: rgba(56, 189, 248, 0.15); padding: 2px 8px; border-radius: 9999px;">Via Proxy Host (${getPeerUsername(proxyPeerId)})</span>` : ''}`;
 
   const descTxt = document.createElement("div");
   descTxt.style.cssText = "font-size: 0.9em; color: #cbd5e1; line-height: 1.4;";
-  descTxt.textContent = "Describe the icon and animation effect you want. Note: generation can take up to 30 seconds.";
+  descTxt.textContent = "Describe the VTTFX you want. The AI will generate both a matching icon and an animation fitting your description. (Note: generation can take up to 30 seconds)";
 
-  const iconLabel = document.createElement("label");
-  iconLabel.style.cssText = "font-weight: 700; font-size: 0.85em; color: #38bdf8; display: flex; flex-direction: column; gap: 4px;";
-  iconLabel.innerHTML = `Icon Description (or leave empty):`;
-  const iconInput = document.createElement("textarea");
-  iconInput.rows = 2;
-  iconInput.placeholder = "e.g. A glowing magical blue fireball icon, or a golden shield with runes...";
-  iconInput.style.cssText = "width: 100%; box-sizing: border-box; background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 8px; padding: 10px; color: #fff; font-size: 0.95em; resize: vertical;";
-  iconLabel.appendChild(iconInput);
-
-  const animLabel = document.createElement("label");
-  animLabel.style.cssText = "font-weight: 700; font-size: 0.85em; color: #e879f9; display: flex; flex-direction: column; gap: 4px;";
-  animLabel.innerHTML = `Animation Description (or leave empty):`;
-  const animInput = document.createElement("textarea");
-  animInput.rows = 3;
-  animInput.placeholder = "e.g. Expands outward and fades out while emitting golden sparkles, or spins rapidly while pulsing purple...";
-  animInput.style.cssText = "width: 100%; box-sizing: border-box; background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(232, 121, 249, 0.4); border-radius: 8px; padding: 10px; color: #fff; font-size: 0.95em; resize: vertical;";
-  animLabel.appendChild(animInput);
+  const descLabel = document.createElement("label");
+  descLabel.style.cssText = "font-weight: 700; font-size: 0.85em; color: #38bdf8; display: flex; flex-direction: column; gap: 6px;";
+  descLabel.innerHTML = `Effect Description:`;
+  const descInput = document.createElement("textarea");
+  descInput.rows = 4;
+  descInput.placeholder = "e.g. A crackling blue lightning bolt that bursts into electric sparks, or a golden spinning shield of divine protection...";
+  descInput.style.cssText = "width: 100%; box-sizing: border-box; background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(192, 132, 252, 0.5); border-radius: 8px; padding: 12px; color: #fff; font-size: 0.95em; resize: vertical;";
+  descLabel.appendChild(descInput);
 
   const buttons = document.createElement("div");
   buttons.style.cssText = "display: flex; justify-content: flex-end; gap: 12px; margin-top: 8px;";
@@ -69,22 +60,26 @@ function openVttfxGenerateDescriptionModal(hasProxy: boolean, proxyPeerId: strin
   generateBtn.style.cssText = "padding: 8px 20px; border-radius: 9999px; background: linear-gradient(135deg, #c084fc, #38bdf8); border: none; color: #0f172a; font-weight: 800; cursor: pointer; box-shadow: 0 0 15px rgba(192, 132, 252, 0.4);";
   
   generateBtn.addEventListener("click", async () => {
-    const iconDesc = iconInput.value.trim();
-    const animDesc = animInput.value.trim();
+    const desc = descInput.value.trim();
+    if (!desc) {
+      showEnhanceToast("⚠️ Please enter a description for the effect.", 4000);
+      return;
+    }
     modal.remove();
 
     if (hasProxy && proxyPeerId) {
+      const friendName = getPeerUsername(proxyPeerId);
       const reqId = "vttfx-req-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6);
       console.log(`[VttfxProxy] Sending VTTFX_PROXY_REQ. Request ID: ${reqId}, proxyPeerId: ${proxyPeerId}`);
-      showEnhanceToast("✨ Requesting VTTFX generation from proxy... (Note: this can take up to 30 seconds)", 30000);
+      showEnhanceToast(`✨ Requesting VTTFX generation using ${friendName}'s API key... (Note: this can take up to 30 seconds)`, 30000);
       sessionManager.sendEphemeral({
         type: "VTTFX_PROXY_REQ",
         reqId,
         requesterPeerId: sessionManager.myPeerId || "client",
         requesterUsername: sessionManager.myUsername || "Requester",
         proxyPeerId,
-        iconDesc,
-        animDesc
+        iconDesc: desc,
+        animDesc: desc
       });
     } else {
       const apiKey = localStorage.getItem("gemini_api_key");
@@ -94,8 +89,8 @@ function openVttfxGenerateDescriptionModal(hasProxy: boolean, proxyPeerId: strin
       }
       showEnhanceToast("✨ Generating VTTFX icon & animation... (Note: this can take up to 30 seconds)", 30000);
       try {
-        const item = await callGeminiVttfxGeneration(apiKey, iconDesc, animDesc);
-        openVttfxPreviewModal(item, iconDesc, animDesc, null);
+        const item = await callGeminiVttfxGeneration(apiKey, desc, desc);
+        openVttfxPreviewModal(item, desc, desc, null);
       } catch (err: any) {
         console.error("[VttfxGen] Generation failed:", err);
         showEnhanceToast(`❌ VTTFX Generation failed: ${err.message || err}`, 8000);
@@ -108,8 +103,7 @@ function openVttfxGenerateDescriptionModal(hasProxy: boolean, proxyPeerId: strin
 
   windowEl.appendChild(title);
   windowEl.appendChild(descTxt);
-  windowEl.appendChild(iconLabel);
-  windowEl.appendChild(animLabel);
+  windowEl.appendChild(descLabel);
   windowEl.appendChild(buttons);
   modal.appendChild(windowEl);
   document.body.appendChild(modal);
@@ -234,9 +228,10 @@ export function openVttfxPreviewModal(vttfxItem: VttfxEffectItem, iconDesc: stri
     modal.remove();
 
     if (proxyPeerId) {
+      const friendName = getPeerUsername(proxyPeerId);
       const reqId = "vttfx-req-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6);
       console.log(`[VttfxProxy] Retrying request by proxy. Request ID: ${reqId}, Proxy Peer ID: ${proxyPeerId}`);
-      showEnhanceToast("🔄 Retrying VTTFX generation via proxy... (Note: this can take up to 30 seconds)", 30000);
+      showEnhanceToast(`🔄 Retrying VTTFX generation via ${friendName}'s API key... (Note: this can take up to 30 seconds)`, 30000);
       sessionManager.sendEphemeral({
         type: "VTTFX_PROXY_REQ",
         reqId,
@@ -332,7 +327,8 @@ export function setupVttfxProxyListeners(): void {
         console.log(`[VttfxProxy] Received VTTFX_PROXY_RES for request ID: ${payload.reqId}. Status: ${payload.status}`);
         if (payload.status === "error") {
           console.error(`[VttfxProxy] Proxy reported error: ${payload.error}`);
-          showEnhanceToast(`❌ Proxy VTTFX Generation Error: ${payload.error}`, 10000);
+          const friendName = getPeerUsername(payload.proxyPeerId);
+          showEnhanceToast(`❌ VTTFX generation via ${friendName}'s API key failed: ${payload.error}`, 10000);
         } else if (payload.status === "success" && payload.vttfxItem) {
           console.log(`[VttfxProxy] Proxy reported success. Opening preview modal for generated VTTFX: ${payload.vttfxItem.name}`);
           openVttfxPreviewModal(payload.vttfxItem, payload.iconDesc || "", payload.animDesc || "", payload.proxyPeerId);
@@ -376,8 +372,8 @@ CRITICAL RULES:
 3. "effectSvg": When appropriate, make the visual animation RICH and MULTI-LAYERED! Include a <style> block with multiple distinct @keyframes prefixed with vttGen (e.g. vttGenSlash, vttGenRing, vttGenImpact), followed by a centered wrapper <div> containing MULTIPLE animated <svg> elements and/or animated <div> rings, shockwaves, slashes, beams, or magical runes layered over each other. The combined effect must begin at 0% scale/opacity, reach dynamic full impact around 25%-45%, and smoothly fade out by 100%.
 4. "durationMs": Between 650 and 1200.
 5. "particles": Optional but strongly encouraged for impactful effects! When appropriate for spells, explosions, or powerful weapon hits, use a HIGHER particle count (count between 40 and 90), dynamic speedRange ([70, 260]), and sizeRangePx ([2, 8]) where shape can be "circle", "sparkle", "ember", "splinter", or "note".
-6. User Icon Request: "${iconDesc || 'A dynamic fantasy RPG icon'}"
-7. User Animation Request: "${animDesc || 'A magical animated burst and glowing aura'}"
+6. User Effect Description: "${iconDesc || animDesc || 'A dynamic fantasy RPG visual effect with matching icon and animation'}"
+${animDesc && animDesc !== iconDesc ? `7. Additional Animation Notes: "${animDesc}"` : '7. Note: Generate both a high-quality 64x64 iconSvg and a multi-layered effectSvg + particles fitting the single description.'}
 
 Return ONLY valid JSON without any markdown formatting or commentary.`;
 
