@@ -21,6 +21,12 @@ function bootstrap(): void {
   registerTroubleshootingUtilities();
   loadVttfxManifestFromUrl("vttfx/manifest.json");
 
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("/sw.js").catch((err) => console.log("SW Reg Error:", err));
+    });
+  }
+
 
 
   // Global mobile/touch haptic feedback (using capturing listeners so e.stopPropagation() never blocks it)

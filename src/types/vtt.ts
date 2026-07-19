@@ -131,6 +131,7 @@ export interface ChatMessage {
   type: "text" | "system" | "action" | "roll";
   rollLabel?: string;
   rollIcon?: string;
+  targetTokenIds?: string[];
   thumbsUp?: number;
   thumbsDown?: number;
   laugh?: number;

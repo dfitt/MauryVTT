@@ -87,7 +87,10 @@ export class CanvasEngine {
   private drawingSelectionListeners: Set<() => void> = new Set();
   private toolOptionsListeners: Set<() => void> = new Set();
   private panViewListeners: Set<() => void> = new Set();
-  private pingTriggerListeners: Set<() => void> = new Set();
+  private pingTriggerListeners: Set<(isLocal: boolean) => void> = new Set();
+  public isRollTargetingMode: boolean = false;
+  public rollTargetTokenIds: Set<string> = new Set();
+  private rollTargetingListeners: Set<(active: boolean, targets: Set<string>) => void> = new Set();
   private accumulatedUserPanDistance: number = 0;
 
   // Hover cursor state for tool previews
@@ -224,13 +227,39 @@ export class CanvasEngine {
     for (const l of this.panViewListeners) l();
   }
 
-  public onPingTriggered(listener: () => void): () => void {
+  public onPingTriggered(listener: (isLocal: boolean) => void): () => void {
     this.pingTriggerListeners.add(listener);
     return () => this.pingTriggerListeners.delete(listener);
   }
 
-  public notifyPingTriggered(): void {
-    for (const l of this.pingTriggerListeners) l();
+  public notifyPingTriggered(isLocal = false): void {
+    for (const l of this.pingTriggerListeners) l(isLocal);
+  }
+
+  public onRollTargetingChanged(listener: (active: boolean, targets: Set<string>) => void): () => void {
+    this.rollTargetingListeners.add(listener);
+    return () => this.rollTargetingListeners.delete(listener);
+  }
+
+  public notifyRollTargetingChanged(): void {
+    for (const l of this.rollTargetingListeners) l(this.isRollTargetingMode, this.rollTargetTokenIds);
+  }
+
+  public toggleRollTargetingMode(force?: boolean): void {
+    this.isRollTargetingMode = force !== undefined ? force : !this.isRollTargetingMode;
+    if (!this.isRollTargetingMode) {
+      this.rollTargetTokenIds.clear();
+    }
+    this.notifyRollTargetingChanged();
+  }
+
+  public toggleRollTargetToken(tokenId: string): void {
+    if (this.rollTargetTokenIds.has(tokenId)) {
+      this.rollTargetTokenIds.delete(tokenId);
+    } else {
+      this.rollTargetTokenIds.add(tokenId);
+    }
+    this.notifyRollTargetingChanged();
   }
 
   public triggerPing(worldX: number, worldY: number): void {
@@ -261,7 +290,7 @@ export class CanvasEngine {
       ttlMs
     });
 
-    this.notifyPingTriggered();
+    this.notifyPingTriggered(true);
   }
 
   public stepToolSize(step: number): void {
@@ -344,6 +373,32 @@ export class CanvasEngine {
 
       if (e.code === "Space" && !isTyping) {
         isSpacePressed = true;
+      }
+
+      if (!isTyping && (e.code === "Delete" || e.code === "Backspace")) {
+        let didDelete = false;
+        if (this.selectedEntityId) {
+          sessionManager.dispatchOperation({
+            opType: "DELETE_ENTITY",
+            id: this.selectedEntityId
+          });
+          this.selectedEntityId = null;
+          didDelete = true;
+        }
+        if (this.selectedDrawingIds.size > 0) {
+          for (const id of this.selectedDrawingIds) {
+            sessionManager.dispatchOperation({
+              opType: "DELETE_ENTITY",
+              id
+            });
+          }
+          this.selectedDrawingIds.clear();
+          this.notifyDrawingSelectionChanged();
+          didDelete = true;
+        }
+        if (didDelete) {
+          e.preventDefault();
+        }
       }
 
       if (!isTyping) {
@@ -722,7 +777,8 @@ export class CanvasEngine {
         createdAt: Date.now(),
         ttlMs: payload.ttlMs
       });
-      this.notifyPingTriggered();
+      const isLocal = payload.peerId === (sessionManager.myPeerId || "local");
+      this.notifyPingTriggered(isLocal);
 
       const doc = docStore.getDocument();
       const entities = Object.values(doc.entities);
@@ -909,8 +965,69 @@ export class CanvasEngine {
     }
 
     // 6. Draw Tokens on top of everything (including drawings and fills)
+    const gridSizePx = doc.canvasSettings.gridSizePx || 50;
+    const cellStackCounts = new Map<string, number>();
+    const tokenOffsets = new Map<string, { x: number; y: number }>();
+
+    const sortedTokens = [...tokens].sort((a, b) => a.zIndex - b.zIndex);
+    for (const ent of sortedTokens) {
+      const tok = ent as TokenEntity;
+      const gx = Math.floor(tok.position.x / gridSizePx);
+      const gy = Math.floor(tok.position.y / gridSizePx);
+      const cellKey = `${gx},${gy}`;
+      const count = cellStackCounts.get(cellKey) || 0;
+      cellStackCounts.set(cellKey, count + 1);
+      if (count > 0) {
+        const stepX = Math.max(10, tok.size.width * 0.22);
+        const stepY = -Math.max(10, tok.size.height * 0.22);
+        tokenOffsets.set(tok.id, { x: count * stepX, y: count * stepY });
+      }
+    }
+
     for (const ent of tokens) {
-      this.drawEntity(ctx, ent);
+      this.drawEntity(ctx, ent, tokenOffsets.get(ent.id));
+    }
+
+    if (this.rollTargetTokenIds.size > 0) {
+      ctx.save();
+      for (const ent of tokens) {
+        if (this.rollTargetTokenIds.has(ent.id)) {
+          const tok = ent as TokenEntity;
+          const pos = tokenOffsets.get(tok.id) || { x: 0, y: 0 };
+          const cur = this.renderPositions.get(tok.id) || { x: tok.position.x + pos.x, y: tok.position.y + pos.y };
+
+          ctx.save();
+          ctx.translate(cur.x, cur.y);
+          const halfW = tok.size.width / 2;
+          const halfH = tok.size.height / 2;
+          const radius = Math.max(halfW, halfH) + (6 / this.zoom);
+
+          const pulse = 0.65 + 0.35 * Math.sin(now / 150);
+          ctx.strokeStyle = `rgba(244, 63, 94, ${pulse})`;
+          ctx.lineWidth = Math.max(2.5, 3.5 / this.zoom);
+          ctx.shadowColor = "#f43f5e";
+          ctx.shadowBlur = 10 / this.zoom;
+
+          ctx.beginPath();
+          ctx.arc(0, 0, radius, 0, Math.PI * 2);
+          ctx.stroke();
+
+          const notchLen = Math.max(8, 12 / this.zoom);
+          ctx.beginPath();
+          ctx.moveTo(0, -radius - notchLen); ctx.lineTo(0, -radius + notchLen * 0.5);
+          ctx.moveTo(0, radius - notchLen * 0.5); ctx.lineTo(0, radius + notchLen);
+          ctx.moveTo(-radius - notchLen, 0); ctx.lineTo(-radius + notchLen * 0.5, 0);
+          ctx.moveTo(radius - notchLen * 0.5, 0); ctx.lineTo(radius + notchLen, 0);
+          ctx.stroke();
+
+          ctx.font = `${Math.max(14, 18 / this.zoom)}px sans-serif`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText("🎯", radius * 0.7, -radius * 0.7);
+          ctx.restore();
+        }
+      }
+      ctx.restore();
     }
 
     if (this.aligningImageEntityId) {
@@ -1211,7 +1328,7 @@ export class CanvasEngine {
     }
   }
 
-  private drawEntity(ctx: CanvasRenderingContext2D, ent: CanvasEntity): void {
+  private drawEntity(ctx: CanvasRenderingContext2D, ent: CanvasEntity, stackOffset?: { x: number; y: number }): void {
     const now = Date.now();
     ctx.save();
     if (ent.type === "line") {
@@ -1262,8 +1379,10 @@ export class CanvasEngine {
       this.ensureImageLoaded(imgEnt.assetHash);
       const img = this.imageElements.get(imgEnt.assetHash);
 
-      let renderX = imgEnt.position.x;
-      let renderY = imgEnt.position.y;
+      const targetX = imgEnt.position.x + (stackOffset?.x || 0);
+      const targetY = imgEnt.position.y + (stackOffset?.y || 0);
+      let renderX = targetX;
+      let renderY = targetY;
 
       if (ent.type === "token") {
         if (this.draggingEntityId === ent.id) {
@@ -1273,15 +1392,15 @@ export class CanvasEngine {
         } else {
           const cur = this.renderPositions.get(ent.id);
           if (!cur) {
-            renderX = imgEnt.position.x;
-            renderY = imgEnt.position.y;
+            renderX = targetX;
+            renderY = targetY;
             this.renderPositions.set(ent.id, { x: renderX, y: renderY });
           } else {
-            cur.x += (imgEnt.position.x - cur.x) * 0.35;
-            cur.y += (imgEnt.position.y - cur.y) * 0.35;
-            if (Math.abs(imgEnt.position.x - cur.x) < 0.1 && Math.abs(imgEnt.position.y - cur.y) < 0.1) {
-              cur.x = imgEnt.position.x;
-              cur.y = imgEnt.position.y;
+            cur.x += (targetX - cur.x) * 0.35;
+            cur.y += (targetY - cur.y) * 0.35;
+            if (Math.abs(targetX - cur.x) < 0.1 && Math.abs(targetY - cur.y) < 0.1) {
+              cur.x = targetX;
+              cur.y = targetY;
             }
             renderX = cur.x;
             renderY = cur.y;

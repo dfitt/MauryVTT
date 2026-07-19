@@ -63,7 +63,9 @@ export function setupHeaderUI(engine?: CanvasEngine): void {
       }
     };
     engine.onPanView(() => hidePanHint());
-    engine.onPingTriggered(() => hidePingHint());
+    engine.onPingTriggered((isLocal) => {
+      if (isLocal) hidePingHint();
+    });
   }
 
   if (window.innerWidth <= 768) {

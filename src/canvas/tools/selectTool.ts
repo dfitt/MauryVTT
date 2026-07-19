@@ -104,6 +104,10 @@ export function bindSelectTool(engine: CanvasEngine): void {
     }
 
     if (found) {
+      if (engine.isRollTargetingMode && found.type === "token") {
+        engine.toggleRollTargetToken(found.id);
+        return;
+      }
       engine.selectedEntityId = found.id;
       if (!found.locked) {
         draggingEntity = found;
@@ -123,21 +127,7 @@ export function bindSelectTool(engine: CanvasEngine): void {
         const dist = Math.hypot(worldX - lastSimpleTapPos.x, worldY - lastSimpleTapPos.y);
         const maxDist = Math.max(30, 40 / engine.zoom);
         if (now - lastSimpleTapTime < 450 && dist <= maxDist) {
-          const pingId = "ping-" + Math.random().toString(36).substring(2, 7);
-          const ttlMs = 2000;
-          const pingPayload = {
-            type: "PING" as const,
-            pingId,
-            peerId: sessionManager.myPeerId || "local",
-            username: sessionManager.myUsername || "Me",
-            color: sessionManager.myColor || "#eab308",
-            x: worldX,
-            y: worldY,
-            pingStyle: "ripple" as const,
-            ttlMs
-          };
-          engine.handleEphemeralPayload(pingPayload);
-          sessionManager.sendEphemeral(pingPayload);
+          engine.triggerPing(worldX, worldY);
           lastSimpleTapTime = 0;
         } else {
           lastSimpleTapTime = now;

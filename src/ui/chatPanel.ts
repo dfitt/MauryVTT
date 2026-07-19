@@ -20,8 +20,22 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
   };
 }
 
-function playEffectAtUserToken(engine: CanvasEngine | undefined, doc: VTTDocument, senderUsername?: string, senderPeerId?: string, effectId?: string): void {
+function playEffectAtUserToken(engine: CanvasEngine | undefined, doc: VTTDocument, senderUsername?: string, senderPeerId?: string, effectId?: string, targetTokenIds?: string[]): void {
   if (!effectId || !engine || !doc || !doc.entities) return;
+
+  if (targetTokenIds && targetTokenIds.length > 0) {
+    for (const tid of targetTokenIds) {
+      const ent = doc.entities[tid];
+      if (ent && ent.type === "token") {
+        const tok = ent as TokenEntity;
+        const screenPos = engine.worldToScreen(tok.position.x, tok.position.y);
+        const sizePx = Math.max(140, tok.size.width * engine.zoom * 1.6);
+        console.log("[DiceAnimation] Playing roll animation at target token:", tok.id, "effectId:", effectId, "screenPos:", screenPos);
+        EffectEngine.playAtScreenCoord(screenPos.x, screenPos.y, effectId, sizePx);
+      }
+    }
+    return;
+  }
 
   let userToken: TokenEntity | undefined;
 
@@ -87,6 +101,7 @@ export function setupChatPanel(engine?: CanvasEngine): void {
         <input type="text" id="dice-builder-label" class="dice-builder-label-input" placeholder="Label (e.g. Attack or Holy Damage)..." />
         <div class="dice-builder-actions" style="position: relative; display: flex; gap: 6px; align-items: center;">
           <button class="btn-glass" id="dice-builder-icon-btn" data-tooltip="Choose Icon for this Roll & QuickRoll" style="padding: 6px 10px; font-size: 1.1em; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 6px;">${ALL_ROLL_ICONS[0]}</button>
+          <button class="btn-glass" id="dice-builder-target-btn" data-tooltip="Token Targets: Click to select target tokens on the map" style="padding: 6px 10px; font-size: 1.1em; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 6px;">🎯</button>
           <button class="btn-glass btn-primary" id="dice-builder-roll-btn" style="flex: 1; padding: 6px;">Roll</button>
           <button class="btn-glass" id="dice-builder-clear-btn" style="flex: 1; padding: 6px;">Clear</button>
         </div>
@@ -165,6 +180,7 @@ export function setupChatPanel(engine?: CanvasEngine): void {
   const detailsEl = panel.querySelector<HTMLElement>("#dice-builder-details")!;
   const exprTxtEl = panel.querySelector<HTMLElement>("#dice-builder-expr-txt")!;
   const labelInputEl = panel.querySelector<HTMLInputElement>("#dice-builder-label")!;
+  const targetBtnEl = panel.querySelector<HTMLButtonElement>("#dice-builder-target-btn")!;
   const rollBtnEl = panel.querySelector<HTMLButtonElement>("#dice-builder-roll-btn")!;
   const clearBtnEl = panel.querySelector<HTMLButtonElement>("#dice-builder-clear-btn")!;
 
@@ -310,6 +326,23 @@ export function setupChatPanel(engine?: CanvasEngine): void {
     renderQuickRolls();
   }
 
+  function showTargetingToast(text: string): void {
+    let toastEl = document.getElementById("vtt-targeting-toast");
+    if (!toastEl) {
+      toastEl = document.createElement("div");
+      toastEl.id = "vtt-targeting-toast";
+      toastEl.style.cssText = "position: fixed; top: 18px; left: 50%; transform: translateX(-50%); background: rgba(244, 63, 94, 0.95); color: #ffffff; padding: 8px 16px; border-radius: 9999px; font-size: 13px; font-weight: 700; z-index: 10000; box-shadow: 0 4px 20px rgba(244, 63, 94, 0.4); pointer-events: none; transition: opacity 0.3s ease;";
+      document.body.appendChild(toastEl);
+    }
+    toastEl.textContent = text;
+    toastEl.style.opacity = "1";
+    toastEl.style.display = "block";
+    if ((showTargetingToast as any).timer) clearTimeout((showTargetingToast as any).timer);
+    (showTargetingToast as any).timer = setTimeout(() => {
+      if (toastEl) toastEl.style.opacity = "0";
+    }, 3500);
+  }
+
   function renderQuickRolls(): void {
     if (!quickRollsContainerEl) return;
     const doc = docStore.getDocument();
@@ -334,15 +367,53 @@ export function setupChatPanel(engine?: CanvasEngine): void {
       )
       .join("");
 
+    let longPressTimer: any = null;
+    let isLongPressTriggered = false;
+
     quickRollsContainerEl.querySelectorAll<HTMLButtonElement>(".quickroll-btn").forEach((btn) => {
+      btn.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      });
+
+      btn.addEventListener("pointerdown", () => {
+        isLongPressTriggered = false;
+        longPressTimer = setTimeout(() => {
+          isLongPressTriggered = true;
+          if (engine) {
+            engine.toggleRollTargetingMode(true);
+            const idx = parseInt(btn.getAttribute("data-idx") || "-1", 10);
+            const qr = list[idx];
+            if (qr) {
+              showTargetingToast(`Targeting mode active for ${qr.label}! Click tokens to mark targets, then click this quickroll to launch.`);
+            }
+          }
+        }, 450);
+      });
+
+      btn.addEventListener("pointerup", () => {
+        if (longPressTimer) clearTimeout(longPressTimer);
+      });
+      btn.addEventListener("pointerleave", () => {
+        if (longPressTimer) clearTimeout(longPressTimer);
+      });
+
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
+        if (longPressTimer) clearTimeout(longPressTimer);
+        if (isLongPressTriggered) {
+          isLongPressTriggered = false;
+          return;
+        }
+
         const idx = parseInt(btn.getAttribute("data-idx") || "-1", 10);
         const qr = list[idx];
         if (!qr) return;
 
         const rollRes = parseAndRollDice(qr.expr, qr.icon || ALL_ROLL_ICONS[0]);
         if (!rollRes) return;
+
+        const targetTokenIds = engine && engine.rollTargetTokenIds.size > 0 ? Array.from(engine.rollTargetTokenIds) : undefined;
 
         const newMsg: ChatMessage = {
           id: "msg-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6),
@@ -352,7 +423,8 @@ export function setupChatPanel(engine?: CanvasEngine): void {
           content: rollRes,
           type: "roll",
           rollLabel: qr.label,
-          rollIcon: qr.icon || ALL_ROLL_ICONS[0]
+          rollIcon: qr.icon || ALL_ROLL_ICONS[0],
+          targetTokenIds
         };
 
         sessionManager.dispatchOperation({
@@ -361,6 +433,9 @@ export function setupChatPanel(engine?: CanvasEngine): void {
         });
 
         saveQuickRoll(qr.label, qr.expr, qr.icon || ALL_ROLL_ICONS[0]);
+        if (engine && engine.isRollTargetingMode) {
+          engine.toggleRollTargetingMode(false);
+        }
       });
     });
   }
@@ -394,6 +469,9 @@ export function setupChatPanel(engine?: CanvasEngine): void {
     if (iconPopoverEl) {
       iconPopoverEl.style.display = "none";
       renderPopoverPage();
+    }
+    if (engine && engine.isRollTargetingMode) {
+      engine.toggleRollTargetingMode(false);
     }
     updateBuilderUI();
   }
@@ -436,6 +514,38 @@ export function setupChatPanel(engine?: CanvasEngine): void {
     });
   });
 
+  targetBtnEl.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (engine) {
+      engine.toggleRollTargetingMode();
+      if (engine.isRollTargetingMode) {
+        showTargetingToast("Token Targeting ON: Click tokens on the map to target for the next roll");
+      }
+    }
+  });
+
+  if (engine) {
+    engine.onRollTargetingChanged((active, targets) => {
+      if (active || targets.size > 0) {
+        targetBtnEl.style.background = "rgba(244, 63, 94, 0.45)";
+        targetBtnEl.style.borderColor = "#f43f5e";
+        targetBtnEl.style.color = "#ffffff";
+        targetBtnEl.style.boxShadow = "0 0 10px rgba(244, 63, 94, 0.5)";
+        if (targets.size > 0) {
+          targetBtnEl.textContent = `🎯 (${targets.size})`;
+        } else {
+          targetBtnEl.textContent = "🎯";
+        }
+      } else {
+        targetBtnEl.style.background = "";
+        targetBtnEl.style.borderColor = "";
+        targetBtnEl.style.color = "";
+        targetBtnEl.style.boxShadow = "";
+        targetBtnEl.textContent = "🎯";
+      }
+    });
+  }
+
   clearBtnEl.addEventListener("click", (e) => {
     e.stopPropagation();
     resetBuilderState();
@@ -456,6 +566,8 @@ export function setupChatPanel(engine?: CanvasEngine): void {
     const rollRes = parseAndRollDice(expr, selectedRollIcon);
     if (!rollRes) return;
 
+    const targetTokenIds = engine && engine.rollTargetTokenIds.size > 0 ? Array.from(engine.rollTargetTokenIds) : undefined;
+
     const newMsg: ChatMessage = {
       id: "msg-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6),
       timestamp: Date.now(),
@@ -464,7 +576,8 @@ export function setupChatPanel(engine?: CanvasEngine): void {
       content: rollRes,
       type: "roll",
       rollLabel: label || undefined,
-      rollIcon: selectedRollIcon
+      rollIcon: selectedRollIcon,
+      targetTokenIds
     };
 
     sessionManager.dispatchOperation({
@@ -734,7 +847,7 @@ export function setupChatPanel(engine?: CanvasEngine): void {
       const effectId = getEffectIdForIcon(msg.rollIcon);
       if (effectId) {
         EffectEngine.playOverElement(toastEl, effectId);
-        playEffectAtUserToken(engine, docStore.getDocument(), msg.senderUsername, msg.senderPeerId, effectId);
+        playEffectAtUserToken(engine, docStore.getDocument(), msg.senderUsername, msg.senderPeerId, effectId, msg.targetTokenIds);
       }
     }
 
@@ -839,7 +952,7 @@ export function setupChatPanel(engine?: CanvasEngine): void {
             replayBtn.addEventListener("click", (e) => {
               e.stopPropagation();
               EffectEngine.playOverElement(existingEl, effId);
-              playEffectAtUserToken(engine, docStore.getDocument(), msg.senderUsername, msg.senderPeerId, effId);
+              playEffectAtUserToken(engine, docStore.getDocument(), msg.senderUsername, msg.senderPeerId, effId, msg.targetTokenIds);
             });
             existingEl.appendChild(replayBtn);
           }
@@ -931,7 +1044,7 @@ export function setupChatPanel(engine?: CanvasEngine): void {
             const effId = replayBtn.getAttribute("data-effect-id");
             if (effId) {
               EffectEngine.playOverElement(msgEl, effId);
-              playEffectAtUserToken(engine, docStore.getDocument(), msg.senderUsername, msg.senderPeerId, effId);
+              playEffectAtUserToken(engine, docStore.getDocument(), msg.senderUsername, msg.senderPeerId, effId, msg.targetTokenIds);
             }
           });
         }
@@ -947,7 +1060,7 @@ export function setupChatPanel(engine?: CanvasEngine): void {
             const effectId = getEffectIdForIcon(msg.rollIcon);
             if (effectId) {
               EffectEngine.playOverElement(msgEl, effectId);
-              playEffectAtUserToken(engine, docStore.getDocument(), msg.senderUsername, msg.senderPeerId, effectId);
+              playEffectAtUserToken(engine, docStore.getDocument(), msg.senderUsername, msg.senderPeerId, effectId, msg.targetTokenIds);
             }
           }
           return;
@@ -966,7 +1079,7 @@ export function setupChatPanel(engine?: CanvasEngine): void {
           const effectId = getEffectIdForIcon(msg.rollIcon);
           if (effectId) {
             EffectEngine.playOverElement(msgEl, effectId);
-            playEffectAtUserToken(engine, docStore.getDocument(), msg.senderUsername, msg.senderPeerId, effectId);
+            playEffectAtUserToken(engine, docStore.getDocument(), msg.senderUsername, msg.senderPeerId, effectId, msg.targetTokenIds);
           }
         }
 
