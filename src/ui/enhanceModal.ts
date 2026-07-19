@@ -103,84 +103,152 @@ async function callGeminiImageGeneration(base64Image: string, apiKey: string, mo
 
   const promptText = "You are a master virtual tabletop RPG map designer specializing in classic old-school D&D cartography. Look at the provided top-down drawing and room fills as a layout guide and blueprint. Generate a high-resolution, top-down, overhead 2D tabletop RPG battlemap designed in an oldschool D&D, OSR (Old School Renaissance), and Dungeon Crawl Classics (DCC) art style. The map MUST be drawn in crisp black and white ink with classic crosshatching, hand-drawn ink line walls, stippling, and retro dungeon cartography textures while preserving the exact spatial boundaries, room layouts, pathways, and alignments shown in the sketch guide.";
 
+  console.group("[Enhance] Starting Gemini Image Generation Pipeline");
+  console.log("Models queue in order:", modelsToTry);
+  console.log("Input sketch size (base64 length):", base64Image.length);
+  console.log("API Key present:", Boolean(apiKey), "Length:", apiKey ? apiKey.length : 0);
+
+  const errorsCollected: string[] = [];
+
   for (const model of modelsToTry) {
-    console.log(`[Enhance] Attempting map generation with model: ${model}`);
+    console.group(`[Enhance] Attempting model: ${model}`);
     try {
       if (model.includes("imagen")) {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${encodeURIComponent(apiKey)}`;
+        console.log(`Endpoint: https://generativelanguage.googleapis.com/v1beta/models/${model}:predict`);
+        const requestPayload = {
+          instances: [
+            {
+              prompt: promptText,
+              image: {
+                bytesBase64Encoded: base64Image
+              }
+            }
+          ],
+          parameters: {
+            sampleCount: 1
+          }
+        };
+
         const resp = await fetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            instances: [
-              {
-                prompt: promptText,
-                image: {
-                  bytesBase64Encoded: base64Image
-                }
-              }
-            ],
-            parameters: {
-              sampleCount: 1
-            }
-          })
+          body: JSON.stringify(requestPayload)
         });
+
+        console.log(`HTTP Status: ${resp.status} ${resp.statusText}`);
         if (!resp.ok) {
           const errTxt = await resp.text();
-          console.warn(`[Enhance] Model ${model} returned ${resp.status}: ${errTxt}`);
+          console.warn(`[Enhance] HTTP Error from ${model}:`, errTxt);
+          errorsCollected.push(`[${model}] HTTP ${resp.status}: ${errTxt.substring(0, 300)}`);
+          console.groupEnd();
           continue;
         }
+
         const data = await resp.json();
+        console.log(`[Enhance] Response JSON object from ${model}:`, data);
+
         const base64Out = data.predictions?.[0]?.bytesBase64Encoded || data.predictions?.[0]?.mimeTypeBase64;
-        if (base64Out) return base64Out;
+        if (base64Out) {
+          console.log(`[Enhance] Successfully extracted base64 image output from ${model} (${base64Out.length} chars)`);
+          console.groupEnd();
+          console.groupEnd();
+          return base64Out;
+        } else {
+          const warnMsg = `No predictions[0].bytesBase64Encoded found in JSON response from ${model}`;
+          console.warn(`[Enhance] ${warnMsg}`, data);
+          errorsCollected.push(`[${model}] ${warnMsg}`);
+        }
       } else {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+        console.log(`Endpoint: https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`);
+        const requestPayload = {
+          contents: [
+            {
+              parts: [
+                { text: promptText },
+                {
+                  inline_data: {
+                    mime_type: "image/png",
+                    data: base64Image
+                  }
+                }
+              ]
+            }
+          ],
+          generationConfig: {
+            responseMimeType: "image/png"
+          }
+        };
+
         const resp = await fetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  { text: promptText },
-                  {
-                    inline_data: {
-                      mime_type: "image/png",
-                      data: base64Image
-                    }
-                  }
-                ]
-              }
-            ],
-            generationConfig: {
-              responseMimeType: "image/png"
-            }
-          })
+          body: JSON.stringify(requestPayload)
         });
+
+        console.log(`HTTP Status: ${resp.status} ${resp.statusText}`);
         if (!resp.ok) {
           const errTxt = await resp.text();
-          console.warn(`[Enhance] Model ${model} returned ${resp.status}: ${errTxt}`);
+          console.warn(`[Enhance] HTTP Error from ${model}:`, errTxt);
+          errorsCollected.push(`[${model}] HTTP ${resp.status}: ${errTxt.substring(0, 300)}`);
+          console.groupEnd();
           continue;
         }
+
         const data = await resp.json();
-        const parts = data.candidates?.[0]?.content?.parts || [];
+        console.log(`[Enhance] Response JSON object from ${model}:`, data);
+
+        const candidate = data.candidates?.[0];
+        if (candidate?.finishReason && candidate.finishReason !== "STOP") {
+          console.warn(`[Enhance] Candidate finishReason is not STOP (${candidate.finishReason}). Safety ratings or block summary:`, candidate);
+        }
+
+        const parts = candidate?.content?.parts || [];
         for (const p of parts) {
-          if (p.inlineData?.data) return p.inlineData.data;
-          if (p.inline_data?.data) return p.inline_data.data;
+          if (p.inlineData?.data) {
+            console.log(`[Enhance] Successfully extracted inlineData.data from ${model} (${p.inlineData.data.length} chars)`);
+            console.groupEnd();
+            console.groupEnd();
+            return p.inlineData.data;
+          }
+          if (p.inline_data?.data) {
+            console.log(`[Enhance] Successfully extracted inline_data.data from ${model} (${p.inline_data.data.length} chars)`);
+            console.groupEnd();
+            console.groupEnd();
+            return p.inline_data.data;
+          }
         }
         for (const p of parts) {
           if (p.text && p.text.includes("data:image/png;base64,")) {
             const m = p.text.match(/data:image\/[^;]+;base64,([A-Za-z0-9+/=]+)/);
-            if (m) return m[1];
+            if (m) {
+              console.log(`[Enhance] Successfully extracted base64 image from text part in ${model} (${m[1].length} chars)`);
+              console.groupEnd();
+              console.groupEnd();
+              return m[1];
+            }
+          }
+          if (p.text) {
+            console.log(`[Enhance] Model ${model} returned text instead of image:`, p.text.substring(0, 500));
           }
         }
+
+        const warnMsg = `200 OK received but response contained no valid image data. finishReason: ${candidate?.finishReason || "unknown"}`;
+        console.warn(`[Enhance] ${warnMsg}`, candidate);
+        errorsCollected.push(`[${model}] ${warnMsg}`);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.warn(`[Enhance] Exception during fetch with model ${model}:`, e);
+      errorsCollected.push(`[${model}] Exception: ${e.message || e}`);
     }
+    console.groupEnd();
   }
 
-  throw new Error("Could not generate image output with Gemini API. Verify your API key and permissions.");
+  console.groupEnd();
+  console.error("[Enhance] All model generation attempts failed:", errorsCollected);
+  const detailedErrorSummary = errorsCollected.length > 0 ? errorsCollected[0] : "No model succeeded.";
+  throw new Error(`Generation failed. Details: ${detailedErrorSummary}`);
 }
 
 export async function runGeminiMapEnhancement(engine: CanvasEngine, box: { x: number; y: number; width: number; height: number }): Promise<void> {
@@ -276,6 +344,6 @@ export async function runGeminiMapEnhancement(engine: CanvasEngine, box: { x: nu
   } catch (err: any) {
     console.error("[Enhance] Error during Gemini Map Enhancement:", err);
     localStorage.setItem("gemini_enhance_last_failed", "true");
-    showEnhanceToast(`❌ Enhance Error: ${err.message || err}`, 8000);
+    showEnhanceToast(`❌ Enhance Error: ${err.message || err}`, 14000);
   }
 }

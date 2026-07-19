@@ -344,6 +344,35 @@ export function setupChatPanel(engine?: CanvasEngine): void {
     }, 3500);
   }
 
+  function executeQuickRollItem(qr: { label: string; expr: string; icon?: string }): void {
+    const rollRes = parseAndRollDice(qr.expr, qr.icon || ALL_ROLL_ICONS[0]);
+    if (!rollRes) return;
+
+    const targetTokenIds = engine && engine.rollTargetTokenIds.size > 0 ? Array.from(engine.rollTargetTokenIds) : undefined;
+
+    const newMsg: ChatMessage = {
+      id: "msg-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6),
+      timestamp: Date.now(),
+      senderPeerId: sessionManager.myPeerId || "local",
+      senderUsername: sessionManager.myUsername || "Me",
+      content: rollRes,
+      type: "roll",
+      rollLabel: qr.label,
+      rollIcon: qr.icon || ALL_ROLL_ICONS[0],
+      targetTokenIds
+    };
+
+    sessionManager.dispatchOperation({
+      opType: "APPEND_CHAT_MESSAGE",
+      message: newMsg
+    });
+
+    saveQuickRoll(qr.label, qr.expr, qr.icon || ALL_ROLL_ICONS[0]);
+    if (engine && engine.isRollTargetingMode) {
+      engine.toggleRollTargetingMode(false);
+    }
+  }
+
   function renderQuickRolls(): void {
     if (!quickRollsContainerEl) return;
     const doc = docStore.getDocument();
@@ -411,32 +440,7 @@ export function setupChatPanel(engine?: CanvasEngine): void {
         const qr = list[idx];
         if (!qr) return;
 
-        const rollRes = parseAndRollDice(qr.expr, qr.icon || ALL_ROLL_ICONS[0]);
-        if (!rollRes) return;
-
-        const targetTokenIds = engine && engine.rollTargetTokenIds.size > 0 ? Array.from(engine.rollTargetTokenIds) : undefined;
-
-        const newMsg: ChatMessage = {
-          id: "msg-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6),
-          timestamp: Date.now(),
-          senderPeerId: sessionManager.myPeerId || "local",
-          senderUsername: sessionManager.myUsername || "Me",
-          content: rollRes,
-          type: "roll",
-          rollLabel: qr.label,
-          rollIcon: qr.icon || ALL_ROLL_ICONS[0],
-          targetTokenIds
-        };
-
-        sessionManager.dispatchOperation({
-          opType: "APPEND_CHAT_MESSAGE",
-          message: newMsg
-        });
-
-        saveQuickRoll(qr.label, qr.expr, qr.icon || ALL_ROLL_ICONS[0]);
-        if (engine && engine.isRollTargetingMode) {
-          engine.toggleRollTargetingMode(false);
-        }
+        executeQuickRollItem(qr);
       });
     });
   }
@@ -726,7 +730,19 @@ export function setupChatPanel(engine?: CanvasEngine): void {
           timestamp: Date.now(),
           senderPeerId: "system",
           senderUsername: "System",
-          content: `**Commands:**<br/>• <code>/roll &lt;expr&gt;</code> (or <code>/r</code>): Roll dice (e.g. <code>/r 1d6+3d4+12</code> or <code>/r d20+5</code>)<br/>• <code>/flip</code>: Flip a coin (Heads/Tails)<br/>• <code>/me &lt;action&gt;</code>: Roleplay emote action<br/>• <code>/room</code>: Show room code link<br/>• <code>/clear</code>: Clear local chat view<br/>• <code>/resync</code>: Resync full state with peers`,
+          content: `<div style="font-size: 12px; line-height: 1.4; display: flex; flex-direction: column; gap: 6px;">
+  <div style="font-weight: 700; color: #38bdf8; border-bottom: 1px solid rgba(56, 189, 248, 0.3); padding-bottom: 2px;">💬 Commands</div>
+  <div style="display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; align-items: baseline;">
+    <code>/r &lt;expr&gt;</code><span>Roll dice or trigger QuickRoll by name (e.g. <code>/r 2d6+4</code> or <code>/r Fireball</code>)</span>
+    <code>/enhance</code><span>AI map enhancement from selection sketch & fills</span>
+    <code>/flip</code><span>Flip a coin (Heads/Tails)</span>
+    <code>/me &lt;act&gt;</code><span>Roleplay emote action</span>
+    <code>/room</code><span>Show room code link &nbsp;•&nbsp; <code>/clear</code>: Clear view &nbsp;•&nbsp; <code>/resync</code>: Resync state</span>
+  </div>
+  <div style="font-weight: 700; color: #38bdf8; border-bottom: 1px solid rgba(56, 189, 248, 0.3); padding-bottom: 2px; margin-top: 4px;">🎯 QuickRolls & Target Selection</div>
+  <div>• Click <strong>🎯</strong> before rolling to select map target tokens.</div>
+  <div>• <strong>Long-press</strong> any QuickRoll button to enter targeting mode for that saved roll!</div>
+</div>`,
           type: "system"
         };
         sessionManager.dispatchOperation({ opType: "APPEND_CHAT_MESSAGE", message: helpMsg });
@@ -742,7 +758,17 @@ export function setupChatPanel(engine?: CanvasEngine): void {
       if (rollMatch) {
         let labelText = rollMatch[1].trim();
         let expr = rollMatch[2].trim();
+
         if (!labelText) {
+          const doc = docStore.getDocument();
+          const username = sessionManager.myUsername || "Me";
+          const userQuickRolls = doc.quickRolls?.[username] || [];
+          const matchedQr = userQuickRolls.find((qr) => qr.label.trim().toLowerCase() === expr.trim().toLowerCase());
+          if (matchedQr) {
+            executeQuickRollItem(matchedQr);
+            return;
+          }
+
           const commentMatch = expr.match(/^([0-9dD+\-\s]+?)\s*(?:[#:\-]|--)\s*(.+)$/);
           if (commentMatch) {
             expr = commentMatch[1].trim();
