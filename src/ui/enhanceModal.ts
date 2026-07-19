@@ -364,7 +364,7 @@ export async function runGeminiMapEnhancement(engine: CanvasEngine, box: { x: nu
       opacity: 1.0
     };
 
-    sessionManager.dispatchOperation({ opType: "CREATE_ENTITY", entity: newMapImage });
+    docStore.applyOperation({ opType: "CREATE_ENTITY", entity: newMapImage }, { incrementRevision: false });
     engine.setTool("select");
     localStorage.removeItem("gemini_enhance_last_failed");
     showEnhanceToast("✨ AI Map Enhancement complete! Review alignment below and Accept, Retry, or Abort.", 6000);
@@ -406,6 +406,21 @@ function showEnhanceConfirmationBar(
 
   acceptBtn.addEventListener("click", () => {
     bar.remove();
+    sessionManager.dispatchOperation({ opType: "CREATE_ENTITY", entity: newMapImage });
+    if (proxyPeerId) {
+      sessionManager.dispatchOperation({
+        opType: "APPEND_CHAT_MESSAGE",
+        message: {
+          id: "msg-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6),
+          timestamp: Date.now(),
+          senderPeerId: sessionManager.myPeerId || "local",
+          senderUsername: sessionManager.myUsername || "Requester",
+          content: `✨ AI Map generated via proxy accepted and added to canvas!`,
+          type: "system"
+        }
+      });
+    }
+
     const doc = docStore.getDocument();
     const drawingsToDelete: string[] = [];
     for (const ent of Object.values(doc.entities)) {
@@ -449,7 +464,7 @@ function showEnhanceConfirmationBar(
 
   retryBtn.addEventListener("click", () => {
     bar.remove();
-    sessionManager.dispatchOperation({ opType: "DELETE_ENTITY", id: newMapImage.id });
+    docStore.applyOperation({ opType: "DELETE_ENTITY", id: newMapImage.id }, { incrementRevision: false });
     showEnhanceToast("🔄 Retrying AI Map Generation...", 3000);
     if (proxyPeerId) {
       sendProxyEnhanceRequest(engine, box, proxyDescription || "", proxyPeerId);
@@ -460,7 +475,7 @@ function showEnhanceConfirmationBar(
 
   abortBtn.addEventListener("click", () => {
     bar.remove();
-    sessionManager.dispatchOperation({ opType: "DELETE_ENTITY", id: newMapImage.id });
+    docStore.applyOperation({ opType: "DELETE_ENTITY", id: newMapImage.id }, { incrementRevision: false });
     showEnhanceToast("🛑 AI Map Enhancement aborted.", 3000);
   });
 }
@@ -525,22 +540,35 @@ export function setupEnhanceProxyListeners(engine: CanvasEngine): void {
         if (payload.status === "error") {
           console.error("[EnhanceProxy] Proxy returned error:", payload.error);
           showEnhanceToast(`❌ Proxy Generation Failed: ${payload.error || "Unknown error"}`, 8000);
-        } else if (payload.status === "success" && payload.newMapImageId && payload.box) {
-          console.log(`[EnhanceProxy] Proxy generation success! Waiting for entity sync of image ID="${payload.newMapImageId}"...`);
-          showEnhanceToast("✨ Proxy Map generation complete! Waiting for image sync...", 3000);
+        } else if (payload.status === "success" && payload.newMapImage && payload.box) {
+          console.log("[EnhanceProxy] Proxy generation evaluation payload arrived! Registering asset manifest and applying entity locally ONLY while evaluating...");
+          const ent = payload.newMapImage as ImageEntity;
+          if (payload.assetManifestEntry) {
+            docStore.registerAssetManifest(
+              payload.assetManifestEntry.assetHash,
+              payload.assetManifestEntry.mimeType,
+              payload.assetManifestEntry.byteSize,
+              payload.assetManifestEntry.widthPx,
+              payload.assetManifestEntry.heightPx
+            );
+          }
+          docStore.applyOperation({ opType: "CREATE_ENTITY", entity: ent }, { incrementRevision: false });
+          sessionManager.syncMissingAssets();
+
+          showEnhanceToast("✨ Proxy Map generation complete! Waiting for image data transfer...", 3000);
           let attempts = 0;
-          const checkTimer = setInterval(() => {
+          const checkTimer = setInterval(async () => {
             attempts++;
-            const doc = docStore.getDocument();
-            const ent = doc.entities[payload.newMapImageId!] as ImageEntity;
-            if (ent && ent.type === "image") {
+            const hasBlob = await assetStore.hasAsset(ent.assetHash);
+            if (hasBlob) {
               clearInterval(checkTimer);
-              console.log("[EnhanceProxy] Map image entity arrived via P2P sync! Opening confirmation bar.");
+              console.log("[EnhanceProxy] Map image blob arrived! Opening confirmation bar locally without sharing to other peers until accepted.");
+              docStore.applyOperation({ opType: "CREATE_ENTITY", entity: ent }, { incrementRevision: false });
               showEnhanceConfirmationBar(engine, payload.box!, ent, payload.proxyPeerId, payload.description);
-            } else if (attempts > 60) {
+            } else if (attempts > 80) {
               clearInterval(checkTimer);
-              console.warn("[EnhanceProxy] Timed out waiting for map image entity via P2P sync after 15 seconds.");
-              showEnhanceToast("⚠️ Map entity sync timed out from proxy.", 6000);
+              console.warn("[EnhanceProxy] Timed out waiting for map image blob transfer from proxy.");
+              showEnhanceToast("⚠️ Map image transfer timed out from proxy.", 6000);
             }
           }, 250);
         }
@@ -715,21 +743,7 @@ async function runGeminiMapEnhancementForProxy(
       opacity: 1.0
     };
 
-    sessionManager.dispatchOperation({ opType: "CREATE_ENTITY", entity: newMapImage });
-
-    sessionManager.dispatchOperation({
-      opType: "APPEND_CHAT_MESSAGE",
-      message: {
-        id: "msg-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6),
-        timestamp: Date.now(),
-        senderPeerId: myId,
-        senderUsername: sessionManager.myUsername || "Host",
-        content: `✨ AI Map generated by proxy for <strong>${requesterUsername}</strong>!`,
-        type: "system"
-      }
-    });
-
-    console.log("[EnhanceProxy] Sending ENHANCE_PROXY_RES success payload back to requester:", requesterPeerId);
+    console.log("[EnhanceProxy] Sending ENHANCE_PROXY_RES success payload back to requester (without broadcasting entity):", requesterPeerId);
     sessionManager.sendEphemeral({
       type: "ENHANCE_PROXY_RES",
       reqId,
@@ -737,7 +751,15 @@ async function runGeminiMapEnhancementForProxy(
       proxyPeerId: myId,
       status: "success",
       box,
-      newMapImageId: newMapImage.id
+      newMapImageId: newMapImage.id,
+      newMapImage,
+      assetManifestEntry: doc.assetManifest[processed.assetHash] || {
+        assetHash: processed.assetHash,
+        mimeType: processed.mimeType,
+        byteSize: processed.byteSize,
+        widthPx: processed.widthPx,
+        heightPx: processed.heightPx
+      }
     });
   } catch (err: any) {
     console.error("[EnhanceProxy] Error during Gemini Map Enhancement proxy job:", err);

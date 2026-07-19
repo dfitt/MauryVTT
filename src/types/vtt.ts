@@ -259,5 +259,7 @@ export type EphemeralPayload =
       status: "success" | "error";
       box?: { x: number; y: number; width: number; height: number };
       newMapImageId?: string;
+      newMapImage?: any;
+      assetManifestEntry?: { assetHash: string; mimeType: string; byteSize: number; widthPx: number; heightPx: number; };
       error?: string;
     };

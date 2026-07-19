@@ -2,6 +2,7 @@ import JSZip from "jszip";
 import { docStore } from "../state/documentStore.js";
 import { assetStore } from "../state/idbAssetStore.js";
 import { VTTDocument } from "../types/vtt.js";
+import { sessionManager } from "../network/sessionManager.js";
 
 export async function exportVTTDocArchive(): Promise<void> {
   const doc = docStore.getDocument();
@@ -83,4 +84,9 @@ export async function importVTTDocArchive(file: File): Promise<void> {
   }
 
   docStore.loadSnapshot(parsedDoc);
+  if (sessionManager.role === "host") {
+    console.log("[vttdocArchive] Host imported .vttdoc; forcing resync to all connected clients...");
+    await sessionManager.resyncState();
+  }
 }
+
