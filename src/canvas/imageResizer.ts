@@ -49,15 +49,14 @@ export async function processImageFile(
 
   URL.revokeObjectURL(imgUrl);
 
-  const mimeType = file.type.startsWith("image/") ? file.type : "image/png";
   const blob: Blob = await new Promise((resolve, reject) => {
     canvas.toBlob(
       (result) => {
         if (result) resolve(result);
         else reject(new Error("Canvas toBlob conversion failed"));
       },
-      mimeType === "image/jpeg" || mimeType === "image/webp" ? mimeType : "image/png",
-      0.92
+      "image/webp",
+      0.85
     );
   });
 
@@ -129,7 +128,8 @@ export async function processTokenImageFile(
         if (result) resolve(result);
         else reject(new Error("Canvas toBlob conversion failed"));
       },
-      "image/png"
+      "image/webp",
+      0.85
     );
   });
 
@@ -141,7 +141,7 @@ export async function processTokenImageFile(
   return {
     assetHash,
     blob,
-    mimeType: "image/png",
+    mimeType: "image/webp",
     widthPx: size,
     heightPx: size,
     byteSize: blob.size
@@ -182,7 +182,8 @@ export async function generatePlainTokenImage(
         if (result) resolve(result);
         else reject(new Error("Canvas toBlob conversion failed"));
       },
-      "image/png"
+      "image/webp",
+      0.85
     );
   });
 
@@ -194,7 +195,7 @@ export async function generatePlainTokenImage(
   return {
     assetHash,
     blob,
-    mimeType: "image/png",
+    mimeType: "image/webp",
     widthPx: size,
     heightPx: size,
     byteSize: blob.size
