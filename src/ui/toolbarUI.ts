@@ -88,6 +88,11 @@ export function setupToolbarUI(engine: CanvasEngine): void {
       id: "ephemeral",
       icon: EPHEMERAL_ICONS[engine.ephemeralTool] || EPHEMERAL_ICONS.laser,
       title: "Ephemeral Tools (Ping, Measure, Laser)"
+    },
+    {
+      id: "enhance",
+      icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle;"><path d="M12 2L14.4 8.4L21 10.8L14.4 13.2L12 19.6L9.6 13.2L3 10.8L9.6 8.4L12 2Z" fill="url(#enhance-grad)" stroke="#c084fc" stroke-width="1.5"/><path d="M19 16L20.2 19.2L23 20.4L20.2 21.6L19 24.8L17.8 21.6L15 20.4L17.8 19.2L19 16Z" fill="#e879f9"/><defs><linearGradient id="enhance-grad" x1="3" y1="2" x2="21" y2="20" gradientUnits="userSpaceOnUse"><stop stop-color="#c084fc"/><stop offset="1" stop-color="#38bdf8"/></linearGradient></defs></svg>`,
+      title: "AI Map Enhancement (/enhance - Draw selection box to generate map)"
     }
   ];
 

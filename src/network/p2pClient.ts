@@ -187,10 +187,10 @@ export class P2PClient {
 
       if ("type" in raw) {
         const type = raw.type;
-        if (type === "CURSOR" || type === "PING" || type === "MEASURE_LINE" || type === "LASER_LINE") {
+        if (type === "CURSOR" || type === "PING" || type === "MEASURE_LINE" || type === "LASER_LINE" || typeof type === "string" && type.startsWith("ENHANCE_")) {
           const payload = raw as EphemeralPayload;
-          if (payload.peerId) {
-            sessionManager.recordActivity(payload.peerId);
+          if ("peerId" in payload && typeof (payload as any).peerId === "string") {
+            sessionManager.recordActivity((payload as any).peerId);
           }
           for (const l of this.ephemeralListeners) {
             l(payload);

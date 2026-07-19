@@ -102,7 +102,7 @@ export function showEnhanceToast(text: string, durationMs = 8000): void {
   }
 }
 
-async function callGeminiImageGeneration(base64Image: string, apiKey: string, modelName: string): Promise<string | null> {
+async function callGeminiImageGeneration(base64Image: string, apiKey: string, modelName: string, overrideDesc?: string): Promise<string | null> {
   const modelsToTry = [
     modelName,
     "gemini-3.1-flash-image",
@@ -112,7 +112,7 @@ async function callGeminiImageGeneration(base64Image: string, apiKey: string, mo
   ].filter((v, i, a) => Boolean(v) && a.indexOf(v) === i);
 
   const premadePrompt = "You are a master virtual tabletop RPG map designer specializing in classic old-school D&D cartography. Look at the provided top-down drawing and room fills as a layout guide and blueprint. Generate a high-resolution, top-down, overhead 2D tabletop RPG battlemap designed in an oldschool D&D, OSR (Old School Renaissance), and Dungeon Crawl Classics (DCC) art style. The map MUST be drawn with crisp black ink on a solid, stark white (#FFFFFF) background with classic crosshatching, hand-drawn ink line walls, stippling, and retro dungeon cartography textures while preserving the exact spatial boundaries, room layouts, pathways, and alignments shown in the sketch guide. Even if the reference sketch has a dark background, your generated map MUST have a solid, stark white (#FFFFFF) background with black ink lines. CRITICAL: Do NOT draw or include any square or hexagonal grid lines on the map itself. The virtual tabletop software renders its own dynamic grid overlay on top of the image, so your generated map must be completely grid-free without any grid lines or coordinate squares/hexes.";
-  const customDesc = localStorage.getItem("gemini_enhance_custom_prompt")?.trim();
+  const customDesc = overrideDesc !== undefined ? overrideDesc.trim() : localStorage.getItem("gemini_enhance_custom_prompt")?.trim();
   const promptText = customDesc
     ? `${premadePrompt}\n\nCRITICAL USER OVERRIDE DESCRIPTION (Follow this user description strictly; if any instructions below or above conflict with this custom description, this user description takes overriding precedence):\n"${customDesc}"`
     : premadePrompt;
@@ -272,11 +272,16 @@ async function callGeminiImageGeneration(base64Image: string, apiKey: string, mo
   throw new Error(`Generation failed. Details: ${detailedErrorSummary}`);
 }
 
-export async function runGeminiMapEnhancement(engine: CanvasEngine, box: { x: number; y: number; width: number; height: number }): Promise<void> {
+export async function runGeminiMapEnhancement(engine: CanvasEngine, box: { x: number; y: number; width: number; height: number }, overrideDesc?: string): Promise<void> {
   const apiKey = localStorage.getItem("gemini_api_key");
   const lastFailed = localStorage.getItem("gemini_enhance_last_failed") === "true";
   if (!apiKey || lastFailed) {
-    openGeminiApiKeyModal(() => runGeminiMapEnhancement(engine, box));
+    const proxyId = await checkOrFindProxyPeer();
+    if (proxyId) {
+      openGeminiDescriptionModal(engine, box, true, proxyId);
+    } else {
+      openGeminiApiKeyModal(() => openGeminiDescriptionModal(engine, box, false, null));
+    }
     return;
   }
 
@@ -311,7 +316,7 @@ export async function runGeminiMapEnhancement(engine: CanvasEngine, box: { x: nu
 
     console.log("[Enhance] Captured offscreen sketch area:", box, "size:", canvasW, canvasH);
 
-    const resultBase64 = await callGeminiImageGeneration(base64Image, apiKey, modelName);
+    const resultBase64 = await callGeminiImageGeneration(base64Image, apiKey, modelName, overrideDesc);
     if (!resultBase64) {
       throw new Error("No image output returned by Gemini API.");
     }
@@ -371,7 +376,13 @@ export async function runGeminiMapEnhancement(engine: CanvasEngine, box: { x: nu
   }
 }
 
-function showEnhanceConfirmationBar(engine: CanvasEngine, box: { x: number; y: number; width: number; height: number }, newMapImage: ImageEntity): void {
+function showEnhanceConfirmationBar(
+  engine: CanvasEngine,
+  box: { x: number; y: number; width: number; height: number },
+  newMapImage: ImageEntity,
+  proxyPeerId?: string,
+  proxyDescription?: string
+): void {
   let oldBar = document.getElementById("vtt-enhance-confirm-bar");
   if (oldBar) oldBar.remove();
 
@@ -440,7 +451,11 @@ function showEnhanceConfirmationBar(engine: CanvasEngine, box: { x: number; y: n
     bar.remove();
     sessionManager.dispatchOperation({ opType: "DELETE_ENTITY", id: newMapImage.id });
     showEnhanceToast("🔄 Retrying AI Map Generation...", 3000);
-    runGeminiMapEnhancement(engine, box);
+    if (proxyPeerId) {
+      sendProxyEnhanceRequest(engine, box, proxyDescription || "", proxyPeerId);
+    } else {
+      runGeminiMapEnhancement(engine, box, proxyDescription);
+    }
   });
 
   abortBtn.addEventListener("click", () => {
@@ -449,3 +464,300 @@ function showEnhanceConfirmationBar(engine: CanvasEngine, box: { x: number; y: n
     showEnhanceToast("🛑 AI Map Enhancement aborted.", 3000);
   });
 }
+
+const knownPeersWithApiKey = new Set<string>();
+let proxyListenersSetup = false;
+
+export function setupEnhanceProxyListeners(engine: CanvasEngine): void {
+  if (proxyListenersSetup) return;
+  proxyListenersSetup = true;
+
+  sessionManager.onEphemeral(async (payload: any) => {
+    if (!payload || typeof payload !== "object") return;
+    const myId = sessionManager.myPeerId || "local";
+
+    if (payload.type === "ENHANCE_CHECK_KEY_REQ") {
+      const hasKey = Boolean(localStorage.getItem("gemini_api_key")) && localStorage.getItem("gemini_enhance_last_failed") !== "true";
+      if (hasKey && payload.requesterPeerId !== myId) {
+        sessionManager.sendEphemeral({
+          type: "ENHANCE_CHECK_KEY_ACK",
+          peerId: myId,
+          hasKey: true
+        });
+      }
+    } else if (payload.type === "ENHANCE_CHECK_KEY_ACK") {
+      if (payload.hasKey && payload.peerId && payload.peerId !== myId) {
+        knownPeersWithApiKey.add(payload.peerId);
+      }
+    } else if (payload.type === "ENHANCE_PROXY_REQ") {
+      if (payload.proxyPeerId === myId || payload.proxyPeerId === "any") {
+        console.log(`[EnhanceProxy] Received proxy enhance request from ${payload.requesterUsername} (${payload.requesterPeerId})`);
+        const apiKey = localStorage.getItem("gemini_api_key");
+        const lastFailed = localStorage.getItem("gemini_enhance_last_failed") === "true";
+        if (!apiKey || lastFailed) {
+          sessionManager.sendEphemeral({
+            type: "ENHANCE_PROXY_RES",
+            reqId: payload.reqId,
+            requesterPeerId: payload.requesterPeerId,
+            proxyPeerId: myId,
+            status: "error",
+            error: "Proxy host no longer has a valid Gemini API key configured."
+          });
+          return;
+        }
+        await runGeminiMapEnhancementForProxy(engine, payload.box, payload.description, payload.requesterPeerId, payload.requesterUsername, payload.reqId);
+      }
+    } else if (payload.type === "ENHANCE_PROXY_RES") {
+      if (payload.requesterPeerId === myId) {
+        if (payload.status === "error") {
+          showEnhanceToast(`❌ Proxy Generation Failed: ${payload.error || "Unknown error"}`, 8000);
+        } else if (payload.status === "success" && payload.newMapImageId && payload.box) {
+          showEnhanceToast("✨ Proxy Map generation complete! Waiting for image sync...", 3000);
+          let attempts = 0;
+          const checkTimer = setInterval(() => {
+            attempts++;
+            const doc = docStore.getDocument();
+            const ent = doc.entities[payload.newMapImageId!] as ImageEntity;
+            if (ent && ent.type === "image") {
+              clearInterval(checkTimer);
+              showEnhanceConfirmationBar(engine, payload.box!, ent, payload.proxyPeerId, payload.description);
+            } else if (attempts > 40) {
+              clearInterval(checkTimer);
+              showEnhanceToast("⚠️ Map entity sync timed out from proxy.", 6000);
+            }
+          }, 250);
+        }
+      }
+    }
+  });
+}
+
+export async function checkOrFindProxyPeer(): Promise<string | null> {
+  const myId = sessionManager.myPeerId || "local";
+  const activeUsers = sessionManager.getActiveUsers().map((u) => u.peerId).filter(Boolean) as string[];
+  const activePeers = Array.from(knownPeersWithApiKey).filter((p) => activeUsers.includes(p) && p !== myId);
+  if (activePeers.length > 0) {
+    return activePeers[0];
+  }
+  if (sessionManager.role === "none" || activeUsers.length <= 1) {
+    return null;
+  }
+  sessionManager.sendEphemeral({
+    type: "ENHANCE_CHECK_KEY_REQ",
+    requesterPeerId: myId
+  });
+
+  return new Promise((resolve) => {
+    let resolved = false;
+    setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        const currentActive = sessionManager.getActiveUsers().map((u) => u.peerId).filter(Boolean) as string[];
+        const found = Array.from(knownPeersWithApiKey).filter((p) => currentActive.includes(p) && p !== myId);
+        resolve(found.length > 0 ? found[0] : null);
+      }
+    }, 350);
+  });
+}
+
+export function sendProxyEnhanceRequest(engine: CanvasEngine, box: { x: number; y: number; width: number; height: number }, description: string, proxyPeerId: string): void {
+  const myId = sessionManager.myPeerId || "local";
+  const myUsername = sessionManager.myUsername || "Me";
+  const reqId = "req-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6);
+  showEnhanceToast(`🚀 Sending AI Map request by proxy through friend's API key... (~10-20s)`, 0);
+  sessionManager.sendEphemeral({
+    type: "ENHANCE_PROXY_REQ",
+    reqId,
+    requesterPeerId: myId,
+    requesterUsername: myUsername,
+    proxyPeerId,
+    box,
+    description
+  });
+}
+
+async function runGeminiMapEnhancementForProxy(
+  engine: CanvasEngine,
+  box: { x: number; y: number; width: number; height: number },
+  description: string,
+  requesterPeerId: string,
+  requesterUsername: string,
+  reqId: string
+): Promise<void> {
+  const apiKey = localStorage.getItem("gemini_api_key");
+  if (!apiKey) return;
+  const modelName = localStorage.getItem("gemini_enhance_model") || "gemini-3.1-flash-image";
+  const myId = sessionManager.myPeerId || "local";
+
+  try {
+    const doc = docStore.getDocument();
+    const maxDim = 1024;
+    const scale = Math.min(maxDim / box.width, maxDim / box.height, 2.0);
+    const canvasW = Math.max(64, Math.round(box.width * scale));
+    const canvasH = Math.max(64, Math.round(box.height * scale));
+
+    const offscreen = document.createElement("canvas");
+    offscreen.width = canvasW;
+    offscreen.height = canvasH;
+    const offCtx = offscreen.getContext("2d");
+    if (!offCtx) throw new Error("Could not create 2D canvas context");
+
+    offCtx.fillStyle = doc.canvasSettings?.backgroundColor || "#0f172a";
+    offCtx.fillRect(0, 0, canvasW, canvasH);
+
+    offCtx.save();
+    offCtx.scale(scale, scale);
+    offCtx.translate(-box.x, -box.y);
+
+    engine.drawAreaDrawingsAndFills(offCtx, doc, box);
+    offCtx.restore();
+
+    const dataUrl = offscreen.toDataURL("image/png");
+    const base64Image = dataUrl.split(",")[1];
+
+    const resultBase64 = await callGeminiImageGeneration(base64Image, apiKey, modelName, description);
+    if (!resultBase64) {
+      throw new Error("No image output returned by Gemini API during proxy request.");
+    }
+
+    const byteString = atob(resultBase64);
+    const arrayBuffer = new ArrayBuffer(byteString.length);
+    const uint8Array = new Uint8Array(arrayBuffer);
+    for (let i = 0; i < byteString.length; i++) {
+      uint8Array[i] = byteString.charCodeAt(i);
+    }
+    const blob = new Blob([uint8Array], { type: "image/png" });
+    const file = new File([blob], "gemini_enhanced_map.png", { type: "image/png" });
+
+    const processed = await processImageFile(file, 4096);
+    await assetStore.saveAsset(processed.assetHash, processed.blob);
+    docStore.registerAssetManifest(
+      processed.assetHash,
+      processed.mimeType,
+      processed.byteSize,
+      processed.widthPx,
+      processed.heightPx
+    );
+
+    const existingImages = Object.values(doc.entities).filter((e) => e.type === "image");
+    let lowestZ = 0;
+    for (const img of existingImages) {
+      if (img.zIndex < lowestZ) lowestZ = img.zIndex;
+    }
+
+    const newMapImage: ImageEntity = {
+      id: "img-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6),
+      type: "image",
+      layerId: "map-layer",
+      isMap: true,
+      blendMode: "multiply" as any,
+      zIndex: lowestZ - 10,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      lastModifiedBy: requesterPeerId,
+      locked: false,
+      assetHash: processed.assetHash,
+      position: { x: box.x + box.width / 2, y: box.y + box.height / 2 },
+      size: { width: box.width, height: box.height },
+      rotation: 0,
+      opacity: 1.0
+    };
+
+    sessionManager.dispatchOperation({ opType: "CREATE_ENTITY", entity: newMapImage });
+
+    sessionManager.dispatchOperation({
+      opType: "APPEND_CHAT_MESSAGE",
+      message: {
+        id: "msg-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6),
+        timestamp: Date.now(),
+        senderPeerId: myId,
+        senderUsername: sessionManager.myUsername || "Host",
+        content: `✨ AI Map generated by proxy for <strong>${requesterUsername}</strong>!`,
+        type: "system"
+      }
+    });
+
+    sessionManager.sendEphemeral({
+      type: "ENHANCE_PROXY_RES",
+      reqId,
+      requesterPeerId,
+      proxyPeerId: myId,
+      status: "success",
+      box,
+      newMapImageId: newMapImage.id
+    });
+  } catch (err: any) {
+    console.error("[EnhanceProxy] Error during Gemini Map Enhancement proxy job:", err);
+    sessionManager.sendEphemeral({
+      type: "ENHANCE_PROXY_RES",
+      reqId,
+      requesterPeerId,
+      proxyPeerId: myId,
+      status: "error",
+      error: err.message || String(err)
+    });
+  }
+}
+
+export function openGeminiDescriptionModal(
+  engine: CanvasEngine,
+  box: { x: number; y: number; width: number; height: number },
+  isProxy: boolean = false,
+  proxyPeerId: string | null = null
+): void {
+  let modalEl = document.getElementById("vtt-gemini-desc-modal");
+  if (modalEl) modalEl.remove();
+
+  modalEl = document.createElement("div");
+  modalEl.id = "vtt-gemini-desc-modal";
+  modalEl.style.cssText = "position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; z-index: 99999;";
+  document.body.appendChild(modalEl);
+
+  const savedPrompt = localStorage.getItem("gemini_enhance_custom_prompt") || "";
+
+  modalEl.innerHTML = `
+    <div style="background: rgba(15, 23, 42, 0.96); border: 1px solid rgba(192, 132, 252, 0.6); border-radius: 14px; padding: 24px; max-width: 480px; width: 90%; box-shadow: 0 16px 48px rgba(0,0,0,0.85); color: #f8fafc; font-family: Outfit, sans-serif; display: flex; flex-direction: column; gap: 16px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 24px;">🎨</span>
+        <h3 style="margin: 0; font-size: 18px; font-weight: 700; color: #c084fc;">AI Map Description</h3>
+      </div>
+      <p style="margin: 0; font-size: 13px; color: #cbd5e1; line-height: 1.5;">
+        Enter a text description for the map you want generated over your selection box.
+        ${isProxy ? `<span style="display: block; margin-top: 6px; color: #38bdf8; font-weight: 600;">🚀 Generating via proxy through a connected friend's API key!</span>` : ""}
+      </p>
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <label style="font-size: 12px; font-weight: 600; color: #e2e8f0;">Map Description / Details</label>
+        <textarea id="gemini-desc-textarea" rows="4" placeholder="e.g. A dark gothic stone chapel with cracked floorboards, ancient altars, and glowing candles around the perimeter..." style="padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(192, 132, 252, 0.4); background: rgba(30, 41, 59, 0.8); color: #ffffff; font-size: 13px; outline: none; resize: vertical;">${savedPrompt}</textarea>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px;">
+        <button id="btn-cancel-desc" class="btn-glass" style="padding: 8px 16px; border-radius: 8px; cursor: pointer; color: #cbd5e1;">Cancel</button>
+        <button id="btn-submit-desc" class="btn-glass" style="padding: 8px 20px; border-radius: 8px; cursor: pointer; background: rgba(192, 132, 252, 0.35); border: 1px solid #c084fc; color: #ffffff; font-weight: 700; box-shadow: 0 0 14px rgba(192, 132, 252, 0.4);">✨ Generate Map</button>
+      </div>
+    </div>
+  `;
+
+  const textareaEl = modalEl.querySelector<HTMLTextAreaElement>("#gemini-desc-textarea")!;
+  const cancelBtn = modalEl.querySelector<HTMLButtonElement>("#btn-cancel-desc")!;
+  const submitBtn = modalEl.querySelector<HTMLButtonElement>("#btn-submit-desc")!;
+
+  cancelBtn.addEventListener("click", () => {
+    modalEl?.remove();
+  });
+
+  submitBtn.addEventListener("click", () => {
+    const desc = textareaEl.value.trim();
+    if (!isProxy) {
+      localStorage.setItem("gemini_enhance_custom_prompt", desc);
+    }
+    modalEl?.remove();
+
+    if (isProxy && proxyPeerId) {
+      sendProxyEnhanceRequest(engine, box, desc, proxyPeerId);
+    } else {
+      runGeminiMapEnhancement(engine, box, desc);
+    }
+  });
+
+  textareaEl.focus();
+}
+

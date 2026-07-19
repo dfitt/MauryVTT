@@ -232,4 +232,32 @@ export type EphemeralPayload =
       color: string;
       points: [number, number][];
       ttlMs: number;
+    }
+  | {
+      type: "ENHANCE_CHECK_KEY_REQ";
+      requesterPeerId: string;
+    }
+  | {
+      type: "ENHANCE_CHECK_KEY_ACK";
+      peerId: string;
+      hasKey: boolean;
+    }
+  | {
+      type: "ENHANCE_PROXY_REQ";
+      reqId: string;
+      requesterPeerId: string;
+      requesterUsername: string;
+      proxyPeerId: string;
+      box: { x: number; y: number; width: number; height: number };
+      description: string;
+    }
+  | {
+      type: "ENHANCE_PROXY_RES";
+      reqId: string;
+      requesterPeerId: string;
+      proxyPeerId: string;
+      status: "success" | "error";
+      box?: { x: number; y: number; width: number; height: number };
+      newMapImageId?: string;
+      error?: string;
     };

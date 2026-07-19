@@ -1,7 +1,9 @@
 import { CanvasEngine } from "../canvasEngine.js";
-import { openGeminiApiKeyModal, runGeminiMapEnhancement } from "../../ui/enhanceModal.js";
+import { openGeminiApiKeyModal, openGeminiDescriptionModal, setupEnhanceProxyListeners, checkOrFindProxyPeer } from "../../ui/enhanceModal.js";
 
 export function bindEnhanceTool(engine: CanvasEngine): void {
+  setupEnhanceProxyListeners(engine);
+
   let isSelecting = false;
   let startPt = { x: 0, y: 0 };
 
@@ -35,15 +37,24 @@ export function bindEnhanceTool(engine: CanvasEngine): void {
       return; // too small
     }
 
+    const selectionBox = { x: box.x1, y: box.y1, width, height };
     const apiKey = localStorage.getItem("gemini_api_key");
     const lastFailed = localStorage.getItem("gemini_enhance_last_failed") === "true";
+
     if (!apiKey || lastFailed) {
-      openGeminiApiKeyModal(() => {
-        runGeminiMapEnhancement(engine, { x: box.x1, y: box.y1, width, height });
+      checkOrFindProxyPeer().then((proxyId) => {
+        if (proxyId) {
+          openGeminiDescriptionModal(engine, selectionBox, true, proxyId);
+        } else {
+          openGeminiApiKeyModal(() => {
+            openGeminiDescriptionModal(engine, selectionBox, false, null);
+          });
+        }
       });
       return;
     }
 
-    runGeminiMapEnhancement(engine, { x: box.x1, y: box.y1, width, height });
+    openGeminiDescriptionModal(engine, selectionBox, false, null);
   });
 }
+
