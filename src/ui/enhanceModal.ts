@@ -111,7 +111,7 @@ async function callGeminiImageGeneration(base64Image: string, apiKey: string, mo
     "imagen-3.0-generate-002"
   ].filter((v, i, a) => Boolean(v) && a.indexOf(v) === i);
 
-  const premadePrompt = "You are a master virtual tabletop RPG map designer specializing in classic old-school D&D cartography. Look at the provided top-down drawing and room fills as a layout guide and blueprint. Generate a high-resolution, top-down, overhead 2D tabletop RPG battlemap designed in an oldschool D&D, OSR (Old School Renaissance), and Dungeon Crawl Classics (DCC) art style. The map MUST be drawn with crisp black ink on a solid, stark white (#FFFFFF) background with classic crosshatching, hand-drawn ink line walls, stippling, and retro dungeon cartography textures while preserving the exact spatial boundaries, room layouts, pathways, and alignments shown in the sketch guide. Even if the reference sketch has a dark background, your generated map MUST have a solid, stark white (#FFFFFF) background with black ink lines. CRITICAL: Do NOT draw or include any square or hexagonal grid lines, map legends, text labels, titles, keys, or compass roses on the map itself. The virtual tabletop software renders its own dynamic grid overlay and UI overlays on top of the image, so your generated map must be completely clean and grid-free without any grid lines, coordinate squares/hexes, compass roses, titles, labels, or legends.";
+  const premadePrompt = "You are a master virtual tabletop RPG map designer specializing in classic old-school D&D cartography. Look at the provided top-down drawing and room fills as a layout guide and blueprint. Generate a high-resolution, top-down, overhead 2D tabletop RPG battlemap designed in an oldschool D&D, OSR (Old School Renaissance), and Dungeon Crawl Classics (DCC) art style. The map MUST be drawn with crisp black ink on a solid, stark white (#FFFFFF) background with classic crosshatching, hand-drawn ink line walls, stippling, and retro dungeon cartography textures while preserving the exact spatial boundaries, room layouts, pathways, and alignments shown in the sketch guide. Even if the reference sketch has a dark background, your generated map MUST have a solid, stark white (#FFFFFF) background with black ink lines. CRITICAL INSTRUCTIONS:\n1. Do NOT draw or include any square or hexagonal grid lines, floor tile grids, flagstone grids, floor patterns, map legends, text labels, titles, keys, or compass roses on the map itself.\n2. Floors MUST be mostly empty, plain, and stark white (#FFFFFF) except for important objects, furniture, debris, rubble, and decorations. Absolutely NO regular floor patterns, tiles, checkers, parquet, or grid textures are allowed on the floor because they conflict directly with the virtual tabletop software's built-in dynamic grid lines.";
   const customDesc = overrideDesc !== undefined ? overrideDesc.trim() : localStorage.getItem("gemini_enhance_custom_prompt")?.trim();
   const promptText = customDesc
     ? `${premadePrompt}\n\nCRITICAL USER OVERRIDE DESCRIPTION (Follow this user description strictly; if any instructions below or above conflict with this custom description, this user description takes overriding precedence):\n"${customDesc}"`
@@ -406,7 +406,15 @@ function showEnhanceConfirmationBar(
 
   acceptBtn.addEventListener("click", () => {
     bar.remove();
-    sessionManager.dispatchOperation({ opType: "CREATE_ENTITY", entity: newMapImage });
+    const currentEnt = (docStore.getDocument().entities[newMapImage.id] as ImageEntity) || newMapImage;
+    const lockedMapEntity: ImageEntity = {
+      ...currentEnt,
+      locked: true,
+      updatedAt: Date.now(),
+      lastModifiedBy: sessionManager.myPeerId || "local"
+    };
+    docStore.applyOperation({ opType: "UPDATE_ENTITY", id: lockedMapEntity.id, patch: { locked: true } }, { incrementRevision: false });
+    sessionManager.dispatchOperation({ opType: "CREATE_ENTITY", entity: lockedMapEntity });
     if (proxyPeerId) {
       sessionManager.dispatchOperation({
         opType: "APPEND_CHAT_MESSAGE",
@@ -802,7 +810,7 @@ export function openGeminiDescriptionModal(
       </p>
       <div style="display: flex; flex-direction: column; gap: 6px;">
         <label style="font-size: 12px; font-weight: 600; color: #e2e8f0;">Map Description / Details</label>
-        <textarea id="gemini-desc-textarea" rows="4" placeholder="e.g. A dark gothic stone chapel with cracked floorboards, ancient altars, and glowing candles around the perimeter..." style="padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(192, 132, 252, 0.4); background: rgba(30, 41, 59, 0.8); color: #ffffff; font-size: 13px; outline: none; resize: vertical;">${savedPrompt}</textarea>
+        <textarea id="gemini-desc-textarea" rows="4" placeholder="e.g. A gothic chapel with ancient altars, rubble, and glowing candles around the perimeter (keep floor mostly plain without grid patterns)..." style="padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(192, 132, 252, 0.4); background: rgba(30, 41, 59, 0.8); color: #ffffff; font-size: 13px; outline: none; resize: vertical;">${savedPrompt}</textarea>
       </div>
       <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px;">
         <button id="btn-cancel-desc" class="btn-glass" style="padding: 8px 16px; border-radius: 8px; cursor: pointer; color: #cbd5e1;">Cancel</button>

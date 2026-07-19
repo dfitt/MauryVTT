@@ -75,6 +75,18 @@ export function setupChatPanel(engine?: CanvasEngine): void {
     panel.classList.add("minimized");
   }
 
+  sessionManager.onEphemeral((payload: any) => {
+    if (payload && payload.type === "REPLAY_ANIMATION" && payload.effectId) {
+      if (payload.msgId) {
+        const elList = document.querySelectorAll(`[data-msg-id="${payload.msgId}"]`);
+        elList.forEach((el) => {
+          EffectEngine.playOverElement(el as HTMLElement, payload.effectId);
+        });
+      }
+      playEffectAtUserToken(engine, docStore.getDocument(), payload.senderUsername, payload.senderPeerId, payload.effectId, payload.targetTokenIds);
+    }
+  });
+
   panel.innerHTML = `
     <div class="chat-header" id="chat-header-bar" data-tooltip="Click to Minimize / Expand Chat">
       <div style="display: flex; align-items: center; gap: 8px;">
@@ -536,6 +548,20 @@ export function setupChatPanel(engine?: CanvasEngine): void {
     }
     renderQuickRolls();
   }
+
+  (window as any).__selectIconIfRollBuilding = (iconSvg: string): boolean => {
+    const expr = formatBuilderExpression();
+    if (expr && detailsEl && detailsEl.style.display !== "none") {
+      selectedRollIcon = iconSvg;
+      if (iconBtnEl) iconBtnEl.innerHTML = iconSvg;
+      if (iconPopoverEl) {
+        iconPopoverEl.style.display = "none";
+        renderPopoverPage();
+      }
+      return true;
+    }
+    return false;
+  };
 
   function resetBuilderState(): void {
     for (const key of Object.keys(builderState)) {
@@ -1086,6 +1112,7 @@ export function setupChatPanel(engine?: CanvasEngine): void {
       </div>
     `;
 
+    toastEl.setAttribute("data-msg-id", msg.id);
     toastEl.style.opacity = "1";
     toastEl.style.display = "flex";
 
@@ -1102,6 +1129,14 @@ export function setupChatPanel(engine?: CanvasEngine): void {
           e.stopPropagation();
           EffectEngine.playOverElement(toastEl, effId);
           playEffectAtUserToken(engine, docStore.getDocument(), msg.senderUsername, msg.senderPeerId, effId, msg.targetTokenIds);
+          sessionManager.sendEphemeral({
+            type: "REPLAY_ANIMATION",
+            msgId: msg.id,
+            effectId: effId,
+            senderUsername: msg.senderUsername,
+            senderPeerId: msg.senderPeerId,
+            targetTokenIds: msg.targetTokenIds
+          });
         });
         toastEl.appendChild(replayBtn);
       }
@@ -1219,6 +1254,14 @@ export function setupChatPanel(engine?: CanvasEngine): void {
               e.stopPropagation();
               EffectEngine.playOverElement(existingEl, effId);
               playEffectAtUserToken(engine, docStore.getDocument(), msg.senderUsername, msg.senderPeerId, effId, msg.targetTokenIds);
+              sessionManager.sendEphemeral({
+                type: "REPLAY_ANIMATION",
+                msgId: msg.id,
+                effectId: effId,
+                senderUsername: msg.senderUsername,
+                senderPeerId: msg.senderPeerId,
+                targetTokenIds: msg.targetTokenIds
+              });
             });
             existingEl.appendChild(replayBtn);
           }
@@ -1320,6 +1363,14 @@ export function setupChatPanel(engine?: CanvasEngine): void {
             if (effId) {
               EffectEngine.playOverElement(msgEl, effId);
               playEffectAtUserToken(engine, docStore.getDocument(), msg.senderUsername, msg.senderPeerId, effId, msg.targetTokenIds);
+              sessionManager.sendEphemeral({
+                type: "REPLAY_ANIMATION",
+                msgId: msg.id,
+                effectId: effId,
+                senderUsername: msg.senderUsername,
+                senderPeerId: msg.senderPeerId,
+                targetTokenIds: msg.targetTokenIds
+              });
             }
           });
         }

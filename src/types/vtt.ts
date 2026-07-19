@@ -284,4 +284,12 @@ export type EphemeralPayload =
       iconDesc?: string;
       animDesc?: string;
       error?: string;
+    }
+  | {
+      type: "REPLAY_ANIMATION";
+      msgId: string;
+      effectId: string;
+      senderUsername?: string;
+      senderPeerId?: string;
+      targetTokenIds?: string[];
     };

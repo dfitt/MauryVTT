@@ -208,16 +208,22 @@ export function openVttfxPreviewModal(vttfxItem: VttfxEffectItem, iconDesc: stri
       bundle: finalBundle
     } as any);
 
+    const wasSelectedForRoll = typeof (window as any).__selectIconIfRollBuilding === "function" && (window as any).__selectIconIfRollBuilding(vttfxItem.iconSvg || "");
+
     const newMsg: ChatMessage = {
       id: "sys-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6),
       timestamp: Date.now(),
       senderPeerId: sessionManager.myPeerId || "local",
       senderUsername: sessionManager.myUsername || "System",
-      content: `✨ Imported AI-Generated VFX <strong>${vttfxItem.name}</strong> into session!`,
+      content: `✨ Imported AI-Generated VFX <strong>${vttfxItem.name}</strong> into session!${wasSelectedForRoll ? " (Selected for active dice roll)" : ""}`,
       type: "system"
     };
     sessionManager.dispatchOperation({ opType: "APPEND_CHAT_MESSAGE", message: newMsg });
-    showEnhanceToast(`✅ VTTFX '${vttfxItem.name}' imported and available to all users!`, 5000);
+    if (wasSelectedForRoll) {
+      showEnhanceToast(`✅ VTTFX '${vttfxItem.name}' imported and selected for your active dice roll!`, 5000);
+    } else {
+      showEnhanceToast(`✅ VTTFX '${vttfxItem.name}' imported and available to all users!`, 5000);
+    }
   });
 
   const retryBtn = document.createElement("button");
@@ -345,31 +351,31 @@ export async function callGeminiVttfxGeneration(apiKey: string, iconDesc: string
   ];
 
   const instructions = `You are a master SVG icon designer and CSS animation engineer for a dark-fantasy Virtual Tabletop (VTT).
-Your task is to generate exactly ONE single VTTFX item consisting of 1 clean SVG icon and 1 looping CSS animation effect.
+Your task is to generate exactly ONE single VTTFX item consisting of 1 clean SVG icon and 1 rich, multi-layered visual animation effect.
 You MUST output a single valid JSON object strictly adhering to the following structure:
 {
   "id": "unique_snake_case_effect_id",
   "name": "Short Display Name",
   "iconSvg": "<svg viewBox='0 0 64 64' width='1.25em' height='1.25em' data-vtt-icon='unique_snake_case_effect_id' style='vertical-align:-0.25em; display:inline-block; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.85));'>...</svg>",
-  "durationMs": 850,
-  "effectSvg": "<style>@keyframes vttGenAnimName { ... }</style><div style='position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;'><svg viewBox='0 0 100 100' width='90' height='90' style='position: absolute; animation: vttGenAnimName 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;'>...</svg></div>",
+  "durationMs": 900,
+  "effectSvg": "<style>@keyframes vttGenSlash { ... } @keyframes vttGenRing { ... } @keyframes vttGenGlow { ... }</style><div style='position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;'><div style='position: absolute; width: 140%; height: 140%; animation: vttGenRing 0.9s ease forwards;'>...</div><svg viewBox='0 0 100 100' width='90' height='90' style='position: absolute; animation: vttGenSlash 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;'>...</svg><svg viewBox='0 0 100 100' width='90' height='90' style='position: absolute; animation: vttGenGlow 0.9s ease-out forwards;'>...</svg></div>",
   "particles": {
-    "count": 24,
-    "colors": ["#38bdf8", "#c084fc", "#ffffff"],
-    "speedRange": [50, 150],
-    "sizeRangePx": [2, 6],
+    "count": 50,
+    "colors": ["#38bdf8", "#c084fc", "#ffffff", "#0284c7"],
+    "speedRange": [80, 240],
+    "sizeRangePx": [2, 8],
     "gravity": -40,
     "shape": "sparkle",
-    "lifeMs": 700
+    "lifeMs": 750
   }
 }
 
 CRITICAL RULES:
 1. "id" must be a clean, unique snake_case string.
 2. "iconSvg": Must be a high-quality 64x64 SVG (viewBox="0 0 64 64") suitable for dark backgrounds. Must contain data-vtt-icon="unique_snake_case_effect_id".
-3. "effectSvg": Must contain a <style> block with custom @keyframes prefixed with vttGen, followed by a centered wrapper <div> containing animated <svg> or <div> shockwaves/rings. The effect must begin at 0% scale/opacity, reach dynamic full impact around 25%-45%, and smoothly fade out by 100%.
-4. "durationMs": Between 650 and 1100.
-5. "particles": Optional particle configuration where shape can be "circle", "sparkle", "ember", "splinter", or "note".
+3. "effectSvg": When appropriate, make the visual animation RICH and MULTI-LAYERED! Include a <style> block with multiple distinct @keyframes prefixed with vttGen (e.g. vttGenSlash, vttGenRing, vttGenImpact), followed by a centered wrapper <div> containing MULTIPLE animated <svg> elements and/or animated <div> rings, shockwaves, slashes, beams, or magical runes layered over each other. The combined effect must begin at 0% scale/opacity, reach dynamic full impact around 25%-45%, and smoothly fade out by 100%.
+4. "durationMs": Between 650 and 1200.
+5. "particles": Optional but strongly encouraged for impactful effects! When appropriate for spells, explosions, or powerful weapon hits, use a HIGHER particle count (count between 40 and 90), dynamic speedRange ([70, 260]), and sizeRangePx ([2, 8]) where shape can be "circle", "sparkle", "ember", "splinter", or "note".
 6. User Icon Request: "${iconDesc || 'A dynamic fantasy RPG icon'}"
 7. User Animation Request: "${animDesc || 'A magical animated burst and glowing aura'}"
 
