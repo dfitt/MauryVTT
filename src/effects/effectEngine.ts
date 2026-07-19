@@ -109,7 +109,7 @@ export class EffectEngine {
     }, effect.durationMs + 150);
   }
 
-  private static runParticleSystem(canvas: HTMLCanvasElement, config: ParticleConfig, durationMs: number): void {
+  public static runParticleSystem(canvas: HTMLCanvasElement, config: ParticleConfig, durationMs: number): void {
     const rect = canvas.getBoundingClientRect();
     const w = rect.width || 300;
     const h = rect.height || 80;

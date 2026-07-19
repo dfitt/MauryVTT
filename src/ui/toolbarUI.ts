@@ -4,6 +4,7 @@ import { assetStore } from "../state/idbAssetStore.js";
 import { docStore } from "../state/documentStore.js";
 import { sessionManager } from "../network/sessionManager.js";
 import { ImageEntity, TokenEntity } from "../types/vtt.js";
+import { openImportVttfxModal } from "./vttfxImportModal.js";
 
 const PALETTE_COLORS = [
   "#38bdf8", // Cyan
@@ -45,7 +46,7 @@ export function setupToolbarUI(engine: CanvasEngine): void {
   const EPHEMERAL_ICONS: Record<string, string> = {
     ping: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; overflow: visible;"><circle cx="12" cy="12" r="2.5" fill="currentColor"/><circle cx="12" cy="12" r="6" stroke="currentColor" stroke-width="2" class="ping-circle-1"/><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" class="ping-circle-2"/></svg>`,
     measure: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle;"><rect x="2" y="7" width="11" height="11" rx="3" fill="#eab308" stroke="currentColor" stroke-width="1.6"/><circle cx="7.5" cy="12.5" r="2" fill="#fef08a" stroke="currentColor" stroke-width="1.2"/><path d="M13 15H22V10H13" fill="#fef9c3" stroke="currentColor" stroke-width="1.4"/><line x1="16" y1="10" x2="16" y2="12.5" stroke="currentColor" stroke-width="1.4"/><line x1="19" y1="10" x2="19" y2="12.5" stroke="currentColor" stroke-width="1.4"/></svg>`,
-    laser: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; overflow: visible;"><path d="M4 20L8 16L11 19L7 23C6 24 4 24 3 23C2 22 2 20 4 20Z" fill="currentColor" fill-opacity="0.25" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M8 16L13 11L16 14L11 19L8 16Z" fill="currentColor" fill-opacity="0.1" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M13 11L15 9L18 12L16 14L13 11Z" fill="#f43f5e" fill-opacity="0.3" stroke="#f43f5e" stroke-width="1.8" stroke-linejoin="round"/><line x1="16.5" y1="10.5" x2="22" y2="5" stroke="#f43f5e" stroke-width="2.5" stroke-linecap="round"/><line x1="16.5" y1="10.5" x2="22" y2="5" stroke="#ffffff" stroke-width="1.2" stroke-linecap="round"/><circle cx="22" cy="5" r="3.5" fill="#f43f5e" fill-opacity="0.4"/><circle cx="22" cy="5" r="1.5" fill="#ffffff"/><path d="M18.5 2.5C19.5 1.5 21 1.5 22 2.5" stroke="#f43f5e" stroke-width="1.5" stroke-linecap="round"/><path d="M21.5 8.5C22.5 7.5 22.5 6 21.5 5" stroke="#f43f5e" stroke-width="1.5" stroke-linecap="round"/></svg>`
+    laser: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; overflow: visible;"><defs><style>@keyframes laserBeamPulse{0%,100%{opacity:0.45;stroke-width:4.5px;}50%{opacity:0.85;stroke-width:6px;}}@keyframes laserSparkle1{0%{transform:rotate(0deg) scale(0.9);}50%{transform:rotate(180deg) scale(1.35);}100%{transform:rotate(360deg) scale(0.9);}}@keyframes laserSparkle2{0%{transform:rotate(45deg) scale(1.2);}50%{transform:rotate(-135deg) scale(0.8);}100%{transform:rotate(-315deg) scale(1.2);}}.laser-glow{animation:laserBeamPulse 1.6s infinite ease-in-out;transform-origin:center;}.sparkle-start{animation:laserSparkle1 3s infinite linear;transform-origin:4px 20px;}.sparkle-end{animation:laserSparkle2 2.5s infinite linear;transform-origin:20px 4px;}</style></defs><line x1="4" y1="20" x2="20" y2="4" stroke="#f43f5e" stroke-width="5" stroke-linecap="round" class="laser-glow"/><line x1="4" y1="20" x2="20" y2="4" stroke="#fb7185" stroke-width="2.8" stroke-linecap="round"/><line x1="4" y1="20" x2="20" y2="4" stroke="#ffffff" stroke-width="1.3" stroke-linecap="round"/><g class="sparkle-start"><path d="M 4 13 Q 4 20 11 20 Q 4 20 4 27 Q 4 20 -3 20 Q 4 20 4 13 Z" fill="#f43f5e" opacity="0.65"/><path d="M 4 15.5 Q 4 20 8.5 20 Q 4 20 4 24.5 Q 4 20 -0.5 20 Q 4 20 4 15.5 Z" fill="#ffffff"/></g><g class="sparkle-end"><path d="M 20 -3 Q 20 4 27 4 Q 20 4 20 11 Q 20 4 13 4 Q 20 4 20 -3 Z" fill="#f43f5e" opacity="0.65"/><path d="M 20 -0.5 Q 20 4 24.5 4 Q 20 4 20 8.5 Q 20 4 15.5 4 Q 20 4 20 -0.5 Z" fill="#ffffff"/></g></svg>`
   };
 
   const updateMainLineIcon = () => {
@@ -638,29 +639,78 @@ export function setupToolbarUI(engine: CanvasEngine): void {
 
   window.addEventListener("paste", async (e: ClipboardEvent) => {
     const target = e.target as HTMLElement;
-    if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) {
-      return;
-    }
-    const items = e.clipboardData?.items;
-    if (items) {
-      for (let i = 0; i < items.length; i++) {
-        if (items[i].type.indexOf("image") !== -1) {
-          const file = items[i].getAsFile();
-          if (file) {
+    const isEditingText = target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
+
+    // 1. Check files in clipboard first
+    const files = e.clipboardData?.files;
+    if (files && files.length > 0) {
+      for (let i = 0; i < files.length; i++) {
+        const f = files[i];
+        if (f.name.endsWith(".vttfx") || (f.name.endsWith(".json") && !f.type.startsWith("image/"))) {
+          e.preventDefault();
+          try {
+            const text = await f.text();
+            const bundle = JSON.parse(text);
+            if (bundle && Array.isArray(bundle.effects)) {
+              openImportVttfxModal(bundle, bundle.bundleName || f.name);
+              return;
+            }
+          } catch (err) {
+            console.error("Failed to parse pasted vttfx/json file:", err);
+          }
+        }
+      }
+      if (!isEditingText) {
+        for (let i = 0; i < files.length; i++) {
+          if (files[i].type.indexOf("image") !== -1) {
             e.preventDefault();
-            await createAndDispatchImage(file);
+            await createAndDispatchImage(files[i]);
             return;
           }
         }
       }
     }
-    const files = e.clipboardData?.files;
-    if (files && files.length > 0) {
-      for (let i = 0; i < files.length; i++) {
-        if (files[i].type.indexOf("image") !== -1) {
-          e.preventDefault();
-          await createAndDispatchImage(files[i]);
-          return;
+
+    // 2. Check items in clipboard for files or images
+    const items = e.clipboardData?.items;
+    if (items) {
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].kind === "file") {
+          const f = items[i].getAsFile();
+          if (f && (f.name.endsWith(".vttfx") || f.name.endsWith(".json"))) {
+            e.preventDefault();
+            try {
+              const text = await f.text();
+              const bundle = JSON.parse(text);
+              if (bundle && Array.isArray(bundle.effects)) {
+                openImportVttfxModal(bundle, bundle.bundleName || f.name);
+                return;
+              }
+            } catch (err) {
+              console.error("Failed to parse pasted item file:", err);
+            }
+          } else if (f && f.type.indexOf("image") !== -1 && !isEditingText) {
+            e.preventDefault();
+            await createAndDispatchImage(f);
+            return;
+          }
+        }
+      }
+    }
+
+    // 3. If not inside an input box, check if pasted raw text is a valid .vttfx JSON bundle
+    if (!isEditingText) {
+      const text = e.clipboardData?.getData("text");
+      if (text && text.trim().startsWith("{") && text.includes('"effects"')) {
+        try {
+          const bundle = JSON.parse(text);
+          if (bundle && Array.isArray(bundle.effects)) {
+            e.preventDefault();
+            openImportVttfxModal(bundle, bundle.bundleName || "Pasted VFX Bundle");
+            return;
+          }
+        } catch (err) {
+          // Not valid JSON or VTTFX, ignore and let default happen if any
         }
       }
     }

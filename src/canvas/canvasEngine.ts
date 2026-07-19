@@ -17,8 +17,9 @@ export interface ActiveLaser {
   peerId: string;
   username: string;
   color: string;
-  points: [number, number][];
+  points: [number, number, number][]; // [worldX, worldY, localTimestampMs]
   createdAt: number;
+  lastUpdateTime: number;
   ttlMs: number;
 }
 
@@ -783,15 +784,26 @@ export class CanvasEngine {
         }
       }
     } else if (payload.type === "LASER_LINE") {
-      this.activeLasers.set(payload.laserId, {
-        laserId: payload.laserId,
-        peerId: payload.peerId,
-        username: payload.username,
-        color: payload.color,
-        points: payload.points,
-        createdAt: Date.now(),
-        ttlMs: payload.ttlMs
-      });
+      const now = Date.now();
+      const existing = this.activeLasers.get(payload.laserId);
+      if (existing) {
+        for (let i = existing.points.length; i < payload.points.length; i++) {
+          const pt = payload.points[i];
+          existing.points.push([pt[0], pt[1], now]);
+        }
+        existing.lastUpdateTime = now;
+      } else {
+        this.activeLasers.set(payload.laserId, {
+          laserId: payload.laserId,
+          peerId: payload.peerId,
+          username: payload.username,
+          color: payload.color,
+          points: payload.points.map((pt) => [pt[0], pt[1], now]),
+          createdAt: now,
+          lastUpdateTime: now,
+          ttlMs: payload.ttlMs || 750
+        });
+      }
     }
   }
 
@@ -1048,11 +1060,11 @@ export class CanvasEngine {
     }
 
     for (const [id, laser] of this.activeLasers.entries()) {
-      const elapsed = now - laser.createdAt;
-      if (elapsed > laser.ttlMs) {
+      const elapsed = now - laser.lastUpdateTime;
+      if (elapsed > (laser.ttlMs || 750)) {
         this.activeLasers.delete(id);
       } else if (laser.points && laser.points.length >= 2) {
-        this.drawLaser(ctx, laser, elapsed / laser.ttlMs);
+        this.drawLaser(ctx, laser, now);
       }
     }
 
@@ -1622,6 +1634,54 @@ export class CanvasEngine {
           ctx.restore();
         }
 
+        if (effects.includes("concentrating")) {
+          ctx.save();
+          const pulse = 0.55 + 0.35 * Math.sin(now / 250);
+          ctx.strokeStyle = `rgba(168, 85, 247, ${pulse})`;
+          ctx.lineWidth = Math.max(3, 4.5 / this.zoom);
+          ctx.shadowColor = "#a855f7";
+          ctx.shadowBlur = 12 / this.zoom;
+          const auraRadius = Math.max(displayW, displayH) * 0.55;
+          ctx.beginPath();
+          ctx.arc(0, 0, auraRadius, 0, Math.PI * 2);
+          ctx.stroke();
+
+          ctx.shadowBlur = 6 / this.zoom;
+          ctx.font = `${Math.max(13, 16 / this.zoom)}px sans-serif`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          const orbitTime = now / 700;
+          for (let i = 0; i < 3; i++) {
+            const ang = orbitTime + (i * Math.PI * 2) / 3;
+            const ox = Math.cos(ang) * auraRadius;
+            const oy = Math.sin(ang) * auraRadius;
+            ctx.fillText("✨", ox, oy);
+          }
+          ctx.restore();
+        }
+
+        if (effects.includes("bloodied")) {
+          ctx.save();
+          const bloodPulse = 0.55 + 0.4 * Math.sin(now / 180);
+          ctx.strokeStyle = `rgba(220, 38, 38, ${bloodPulse})`;
+          ctx.lineWidth = Math.max(3, 5 / this.zoom);
+          ctx.shadowColor = "#b91c1c";
+          ctx.shadowBlur = 10 / this.zoom;
+          ctx.strokeRect(-halfW, -halfH, displayW, displayH);
+
+          ctx.shadowBlur = 0;
+          ctx.font = `${Math.max(13, 17 / this.zoom)}px sans-serif`;
+          ctx.textAlign = "center";
+          for (let i = 0; i < 3; i++) {
+            const cycle = (now / 1400 + i * 0.33) % 1;
+            const dx = (i - 1) * (halfW * 0.5);
+            const dy = -halfH * 0.2 + cycle * (displayH * 0.85);
+            ctx.globalAlpha = Math.sin(cycle * Math.PI);
+            ctx.fillText("🩸", dx, dy);
+          }
+          ctx.restore();
+        }
+
         const isHoveredOrSelected = hoverScale > 1.05 || this.selectedEntityId === ent.id;
         if (token.label && isHoveredOrSelected) {
           ctx.font = `600 ${Math.max(12, 14 / this.zoom)}px Outfit, sans-serif`;
@@ -1738,36 +1798,45 @@ export class CanvasEngine {
     ctx.restore();
   }
 
-  private drawLaser(ctx: CanvasRenderingContext2D, laser: ActiveLaser, progress: number): void {
+  private drawLaser(ctx: CanvasRenderingContext2D, laser: ActiveLaser, now: number): void {
+    if (!laser.points || laser.points.length < 2) return;
+
     ctx.save();
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
-    const opacity = Math.max(0, 1 - progress);
+    const ttl = laser.ttlMs || 750;
 
-    // Outer glow
-    ctx.beginPath();
-    ctx.moveTo(laser.points[0][0], laser.points[0][1]);
-    for (let i = 1; i < laser.points.length; i++) {
-      ctx.lineTo(laser.points[i][0], laser.points[i][1]);
-    }
-    ctx.strokeStyle = laser.color;
-    ctx.globalAlpha = opacity * 0.45;
-    ctx.lineWidth = Math.max(10, 14 / this.zoom);
-    ctx.shadowColor = laser.color;
-    ctx.shadowBlur = 16 / this.zoom;
-    ctx.stroke();
+    for (let i = 0; i < laser.points.length - 1; i++) {
+      const p1 = laser.points[i];
+      const p2 = laser.points[i + 1];
 
-    // Inner bright core
-    ctx.beginPath();
-    ctx.moveTo(laser.points[0][0], laser.points[0][1]);
-    for (let i = 1; i < laser.points.length; i++) {
-      ctx.lineTo(laser.points[i][0], laser.points[i][1]);
+      const age = now - p2[2];
+      if (age >= ttl) continue;
+
+      const progress = Math.max(0, Math.min(1, age / ttl));
+      const opacity = Math.max(0, 1 - progress);
+
+      // Outer glow
+      ctx.beginPath();
+      ctx.moveTo(p1[0], p1[1]);
+      ctx.lineTo(p2[0], p2[1]);
+      ctx.strokeStyle = laser.color;
+      ctx.globalAlpha = opacity * 0.45;
+      ctx.lineWidth = Math.max(10, 14 / this.zoom);
+      ctx.shadowColor = laser.color;
+      ctx.shadowBlur = 16 / this.zoom;
+      ctx.stroke();
+
+      // Inner bright core
+      ctx.beginPath();
+      ctx.moveTo(p1[0], p1[1]);
+      ctx.lineTo(p2[0], p2[1]);
+      ctx.strokeStyle = "#ffffff";
+      ctx.globalAlpha = opacity;
+      ctx.lineWidth = Math.max(3, 4 / this.zoom);
+      ctx.shadowBlur = 0;
+      ctx.stroke();
     }
-    ctx.globalAlpha = opacity;
-    ctx.lineWidth = Math.max(3, 4 / this.zoom);
-    ctx.strokeStyle = "#ffffff";
-    ctx.shadowBlur = 0;
-    ctx.stroke();
 
     ctx.restore();
   }

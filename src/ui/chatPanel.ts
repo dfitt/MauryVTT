@@ -5,6 +5,7 @@ import { CanvasEngine } from "../canvas/canvasEngine.js";
 import { EffectEngine } from "../effects/effectEngine.js";
 import { getEffectIdForIcon } from "../effects/effectDefs.js";
 import { ALL_ROLL_ICONS, COIN_ICON_SVG } from "./rollIcons.js";
+import { openImportVttfxModal } from "./vttfxImportModal.js";
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } {
   let c = hex.replace(/^#/, "");
@@ -234,37 +235,24 @@ export function setupChatPanel(engine?: CanvasEngine): void {
     vttfxFileInput?.click();
   });
 
-  vttfxFileInput?.addEventListener("change", async (e) => {
-    e.stopPropagation();
-    const file = vttfxFileInput.files?.[0];
-    if (file) {
-      try {
-        const text = await file.text();
-        const bundle = JSON.parse(text);
-        if (bundle && Array.isArray(bundle.effects)) {
-          sessionManager.dispatchOperation({
-            opType: "REGISTER_VTTFX_BUNDLE",
-            bundle
-          } as any);
-          renderPopoverPage();
-          const newMsg: ChatMessage = {
-            id: "sys-" + Date.now(),
-            timestamp: Date.now(),
-            senderPeerId: sessionManager.myPeerId || "local",
-            senderUsername: sessionManager.myUsername || "System",
-            content: `✨ Uploaded VFX bundle <strong>${bundle.bundleName || file.name}</strong> (${bundle.effects.length} effects) and shared with session!`,
-            type: "system"
-          };
-          sessionManager.dispatchOperation({ opType: "APPEND_CHAT_MESSAGE", message: newMsg });
-        } else {
-          alert("Invalid .vttfx bundle format (missing effects array).");
+    vttfxFileInput?.addEventListener("change", async (e) => {
+      e.stopPropagation();
+      const file = vttfxFileInput.files?.[0];
+      if (file) {
+        try {
+          const text = await file.text();
+          const bundle = JSON.parse(text);
+          if (bundle && Array.isArray(bundle.effects)) {
+            openImportVttfxModal(bundle, bundle.bundleName || file.name);
+          } else {
+            alert("Invalid .vttfx bundle format (missing effects array).");
+          }
+        } catch (err) {
+          alert("Could not parse .vttfx file: " + (err as Error).message);
         }
-      } catch (err) {
-        alert("Could not parse .vttfx file: " + (err as Error).message);
+        vttfxFileInput.value = "";
       }
-      vttfxFileInput.value = "";
-    }
-  });
+    });
 
   iconBtnEl.addEventListener("click", (e) => {
     e.stopPropagation();

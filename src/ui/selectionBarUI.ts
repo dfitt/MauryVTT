@@ -182,6 +182,8 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
 
       // Conditions Selector
       const AVAILABLE_CONDITIONS = [
+        { id: "concentrating", label: "🧘 Concentrating" },
+        { id: "bloodied", label: "🩸 Bloodied" },
         { id: "restrained", label: "⛓️ Restrained" },
         { id: "stunned", label: "💫 Stunned" },
         { id: "exhausted", label: "🥱 Exhausted" },

@@ -187,7 +187,7 @@ export class P2PClient {
 
       if ("type" in raw) {
         const type = raw.type;
-        if (type === "CURSOR" || type === "PING" || type === "MEASURE_LINE") {
+        if (type === "CURSOR" || type === "PING" || type === "MEASURE_LINE" || type === "LASER_LINE") {
           const payload = raw as EphemeralPayload;
           if (payload.peerId) {
             sessionManager.recordActivity(payload.peerId);
