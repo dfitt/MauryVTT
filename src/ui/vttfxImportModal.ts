@@ -236,26 +236,6 @@ export function openImportVttfxModal(bundle: VttfxBundle, defaultBundleName?: st
         }
       });
 
-      // Top check row
-      const checkRow = document.createElement("div");
-      checkRow.style.cssText = "display: flex; align-items: center; gap: 8px; font-size: 0.95em; font-weight: 600; color: #f1f5f9;";
-      const cb = document.createElement("input");
-      cb.type = "checkbox";
-      cb.checked = isSelected;
-      cb.style.cssText = "cursor: pointer; width: 16px; height: 16px; accent-color: #38bdf8;";
-      cb.addEventListener("change", () => {
-        if (cb.checked) selectedIndices.add(i);
-        else selectedIndices.delete(i);
-        renderGrid();
-      });
-      checkRow.appendChild(cb);
-
-      const labelSpan = document.createElement("span");
-      labelSpan.style.cssText = "white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;";
-      labelSpan.textContent = item.name || item.id;
-      checkRow.appendChild(labelSpan);
-      card.appendChild(checkRow);
-
       // Preview box
       const previewBox = document.createElement("div");
       previewBox.style.cssText = `
@@ -269,6 +249,21 @@ export function openImportVttfxModal(bundle: VttfxBundle, defaultBundleName?: st
         justify-content: center;
         border: 1px solid rgba(255, 255, 255, 0.05);
       `;
+
+      // Checkbox in top-right corner
+      const cbContainer = document.createElement("div");
+      cbContainer.style.cssText = "position: absolute; top: 8px; right: 8px; z-index: 10; display: flex; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.75); border-radius: 4px; padding: 4px;";
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = isSelected;
+      cb.style.cssText = "cursor: pointer; width: 16px; height: 16px; accent-color: #38bdf8; margin: 0;";
+      cb.addEventListener("change", () => {
+        if (cb.checked) selectedIndices.add(i);
+        else selectedIndices.delete(i);
+        renderGrid();
+      });
+      cbContainer.appendChild(cb);
+      previewBox.appendChild(cbContainer);
 
       // Background looping animation container
       const loopBg = document.createElement("div");

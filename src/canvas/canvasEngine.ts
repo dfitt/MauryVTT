@@ -10,7 +10,7 @@ import {
 } from "../types/vtt.js";
 import { sessionManager } from "../network/sessionManager.js";
 
-export type ToolType = "select" | "pan" | "draw" | "line" | "fill" | "erase" | "hide" | "unhide" | "measure" | "ping" | "token" | "ephemeral" | "laser";
+export type ToolType = "select" | "pan" | "draw" | "line" | "fill" | "erase" | "hide" | "unhide" | "measure" | "ping" | "token" | "ephemeral" | "laser" | "enhance";
 
 export interface ActiveLaser {
   laserId: string;
@@ -80,6 +80,7 @@ export class CanvasEngine {
   public eraseOnlyMine: boolean = false;
   public selectedDrawingIds: Set<string> = new Set();
   public drawingSelectionBox: { x1: number; y1: number; x2: number; y2: number } | null = null;
+  public enhanceSelectionBox: { x1: number; y1: number; x2: number; y2: number } | null = null;
   private _selectedEntityId: string | null = null;
   public aligningImageEntityId: string | null = null;
   public resizingTokenId: string | null = null;
@@ -198,6 +199,13 @@ export class CanvasEngine {
       }
       this.activeTool = tool;
       (window as any).vttActiveTool = tool;
+      if (tool === "enhance" || tool === "draw" || tool === "line" || tool === "fill" || tool === "erase") {
+        this.canvas.style.cursor = "crosshair";
+      } else if (tool === "pan") {
+        this.canvas.style.cursor = "grab";
+      } else {
+        this.canvas.style.cursor = "default";
+      }
       for (const l of this.toolChangeListeners) {
         l(tool);
       }
@@ -978,8 +986,8 @@ export class CanvasEngine {
       const count = cellStackCounts.get(cellKey) || 0;
       cellStackCounts.set(cellKey, count + 1);
       if (count > 0) {
-        const stepX = Math.max(10, tok.size.width * 0.22);
-        const stepY = -Math.max(10, tok.size.height * 0.22);
+        const stepX = Math.max(5, tok.size.width * 0.11);
+        const stepY = -Math.max(5, tok.size.height * 0.11);
         tokenOffsets.set(tok.id, { x: count * stepX, y: count * stepY });
       }
     }
@@ -1151,6 +1159,32 @@ export class CanvasEngine {
       ctx.restore();
     }
 
+    if (this.enhanceSelectionBox) {
+      ctx.save();
+      const minX = Math.min(this.enhanceSelectionBox.x1, this.enhanceSelectionBox.x2);
+      const minY = Math.min(this.enhanceSelectionBox.y1, this.enhanceSelectionBox.y2);
+      const w = Math.abs(this.enhanceSelectionBox.x2 - this.enhanceSelectionBox.x1);
+      const h = Math.abs(this.enhanceSelectionBox.y2 - this.enhanceSelectionBox.y1);
+
+      ctx.strokeStyle = "#c084fc";
+      ctx.lineWidth = Math.max(2, 3 / this.zoom);
+      ctx.setLineDash([8 / this.zoom, 6 / this.zoom]);
+      ctx.lineDashOffset = -(Date.now() / 30) % (14 / this.zoom);
+      ctx.shadowColor = "#c084fc";
+      ctx.shadowBlur = 12 / this.zoom;
+      ctx.strokeRect(minX, minY, w, h);
+
+      ctx.fillStyle = "rgba(192, 132, 252, 0.18)";
+      ctx.fillRect(minX, minY, w, h);
+
+      ctx.font = `bold ${Math.max(13, 16 / this.zoom)}px sans-serif`;
+      ctx.fillStyle = "#ffffff";
+      ctx.shadowColor = "#000000";
+      ctx.shadowBlur = 4 / this.zoom;
+      ctx.fillText("✨ AI Enhance Area (Nano Banana 2)", minX + 8 / this.zoom, minY + 22 / this.zoom);
+      ctx.restore();
+    }
+
     if (this.selectedDrawingIds.size > 0) {
       let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
       for (const id of this.selectedDrawingIds) {
@@ -1220,6 +1254,36 @@ export class CanvasEngine {
         ctx.lineTo(endX, y + 0.5);
       }
       ctx.stroke();
+    }
+  }
+
+  public drawAreaDrawingsAndFills(ctx: CanvasRenderingContext2D, doc: VTTDocument, box: { x: number; y: number; width: number; height: number }): void {
+    if (!doc) return;
+    const size = doc.canvasSettings?.gridSizePx || 50;
+
+    if (doc.gridCells) {
+      for (const [key, cell] of Object.entries(doc.gridCells)) {
+        if (!cell || !cell.fillColor || cell.fillColor === "fog" || cell.fogHidden) continue;
+        const commaIdx = key.indexOf(",");
+        if (commaIdx === -1) continue;
+        const gx = Number(key.substring(0, commaIdx));
+        const gy = Number(key.substring(commaIdx + 1));
+
+        if (gx + size < box.x || gx > box.x + box.width || gy + size < box.y || gy > box.y + box.height) {
+          continue;
+        }
+
+        ctx.fillStyle = cell.fillColor;
+        ctx.fillRect(gx, gy, size, size);
+      }
+    }
+
+    const sortedDrawings = Object.values(doc.entities)
+      .filter((e) => e.type === "line")
+      .sort((a, b) => a.zIndex - b.zIndex);
+
+    for (const ent of sortedDrawings) {
+      this.drawEntity(ctx, ent);
     }
   }
 

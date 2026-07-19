@@ -1049,6 +1049,15 @@ body.simple-mode-active.token-selected-in-simple #selection-toolbar {
   transition: opacity 0.15s ease 250ms, transform 0.15s ease 250ms, visibility 0s 250ms;
 }
 
+[data-tooltip][data-tooltip-align="left"]::after {
+  left: 0;
+  transform: translateX(0) translateY(4px);
+}
+
+[data-tooltip][data-tooltip-align="left"]:hover::after {
+  transform: translateX(0) translateY(0);
+}
+
 /* Animated Ping Toolbar Icon */
 @keyframes pingCircle1 {
   0% { transform: scale(0.5); opacity: 0.95; }

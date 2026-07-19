@@ -6,6 +6,7 @@ import { EffectEngine } from "../effects/effectEngine.js";
 import { getEffectIdForIcon } from "../effects/effectDefs.js";
 import { ALL_ROLL_ICONS, COIN_ICON_SVG } from "./rollIcons.js";
 import { openImportVttfxModal } from "./vttfxImportModal.js";
+import { openGeminiApiKeyModal } from "./enhanceModal.js";
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } {
   let c = hex.replace(/^#/, "");
@@ -100,8 +101,8 @@ export function setupChatPanel(engine?: CanvasEngine): void {
         </div>
         <input type="text" id="dice-builder-label" class="dice-builder-label-input" placeholder="Label (e.g. Attack or Holy Damage)..." />
         <div class="dice-builder-actions" style="position: relative; display: flex; gap: 6px; align-items: center;">
-          <button class="btn-glass" id="dice-builder-icon-btn" data-tooltip="Choose Icon for this Roll & QuickRoll" style="padding: 6px 10px; font-size: 1.1em; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 6px;">${ALL_ROLL_ICONS[0]}</button>
-          <button class="btn-glass" id="dice-builder-target-btn" data-tooltip="Token Targets: Click to select target tokens on the map" style="padding: 6px 10px; font-size: 1.1em; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 6px;">🎯</button>
+          <button class="btn-glass" id="dice-builder-icon-btn" data-tooltip="Choose Animation" data-tooltip-align="left" style="padding: 6px 10px; font-size: 1.1em; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 6px;">${ALL_ROLL_ICONS[0]}</button>
+          <button class="btn-glass" id="dice-builder-target-btn" data-tooltip="Token Targets: Click to select target tokens on the map" data-tooltip-align="left" style="padding: 6px 10px; font-size: 1.1em; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 6px;">🎯</button>
           <button class="btn-glass btn-primary" id="dice-builder-roll-btn" style="flex: 1; padding: 6px;">Roll</button>
           <button class="btn-glass" id="dice-builder-clear-btn" style="flex: 1; padding: 6px;">Clear</button>
         </div>
@@ -657,6 +658,31 @@ export function setupChatPanel(engine?: CanvasEngine): void {
     if (e.key === "Enter" && inputEl.value.trim()) {
       const val = inputEl.value.trim();
       inputEl.value = "";
+
+      if (/^\/enhance$/i.test(val)) {
+        const activate = () => {
+          if (engine) {
+            engine.setTool("enhance");
+            const sysMsg: ChatMessage = {
+              id: "sys-" + Date.now(),
+              timestamp: Date.now(),
+              senderPeerId: "system",
+              senderUsername: "System",
+              content: `✨ <strong>AI Map Enhancement (/enhance) Activated!</strong><br/>Drag a rectangle on the canvas over your sketch and fills to generate a stunning AI battlemap.`,
+              type: "system"
+            };
+            sessionManager.dispatchOperation({ opType: "APPEND_CHAT_MESSAGE", message: sysMsg });
+          }
+        };
+
+        const apiKey = localStorage.getItem("gemini_api_key");
+        if (!apiKey) {
+          openGeminiApiKeyModal(activate);
+        } else {
+          activate();
+        }
+        return;
+      }
 
       if (/^\/clear$/i.test(val)) {
         if (sessionManager.role === "host" || sessionManager.myPeerId === docStore.getDocument().documentId) {
