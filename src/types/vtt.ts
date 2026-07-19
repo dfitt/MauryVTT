@@ -69,6 +69,7 @@ export interface ImageEntity extends BaseEntity {
   opacity: number;
   hiddenCells?: string[];
   isMap?: boolean;
+  blendMode?: "multiply" | "normal";
 }
 
 export interface TokenEntity extends BaseEntity {

@@ -1520,7 +1520,14 @@ export class CanvasEngine {
       }
 
       if (img && img.complete && img.naturalWidth > 0) {
-        ctx.drawImage(img, -halfW, -halfH, displayW, displayH);
+        if (ent.type === "image" && ((imgEnt as any).isMap || (imgEnt as any).blendMode === "multiply")) {
+          const prevComp = ctx.globalCompositeOperation;
+          ctx.globalCompositeOperation = "multiply";
+          ctx.drawImage(img, -halfW, -halfH, displayW, displayH);
+          ctx.globalCompositeOperation = prevComp;
+        } else {
+          ctx.drawImage(img, -halfW, -halfH, displayW, displayH);
+        }
       } else {
         ctx.fillStyle = "rgba(100, 116, 139, 0.35)";
         ctx.fillRect(-halfW, -halfH, displayW, displayH);

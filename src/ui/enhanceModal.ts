@@ -16,6 +16,7 @@ export function openGeminiApiKeyModal(onSuccess?: () => void): void {
 
   const currentKey = localStorage.getItem("gemini_api_key") || "";
   const currentModel = localStorage.getItem("gemini_enhance_model") || "gemini-3.1-flash-image";
+  const currentCustomPrompt = localStorage.getItem("gemini_enhance_custom_prompt") || "";
 
   modalEl.innerHTML = `
     <div style="background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(192, 132, 252, 0.5); border-radius: 12px; padding: 24px; max-width: 480px; width: 90%; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.8); color: #f8fafc; font-family: sans-serif; display: flex; flex-direction: column; gap: 16px;">
@@ -24,7 +25,7 @@ export function openGeminiApiKeyModal(onSuccess?: () => void): void {
         <h3 style="margin: 0; font-size: 18px; font-weight: 700; color: #c084fc;">AI Map Enhancement (/enhance)</h3>
       </div>
       <p style="margin: 0; font-size: 13px; color: #cbd5e1; line-height: 1.5;">
-        To generate enhanced tabletop battlemaps from your sketches and fills, please enter your Google Gemini API Key.
+        To generate enhanced tabletop battlemaps from your sketches and fills, please verify your configuration below.
         <br/><br/>
         <strong style="color: #38bdf8;">Privacy Guarantee:</strong> Your key is stored exclusively in your browser's local storage (<code>localStorage</code>) and is <strong>NEVER</strong> transmitted over P2P connections or saved to any VTT document.
       </p>
@@ -32,6 +33,12 @@ export function openGeminiApiKeyModal(onSuccess?: () => void): void {
       <div style="display: flex; flex-direction: column; gap: 6px;">
         <label style="font-size: 12px; font-weight: 600; color: #e2e8f0;">Gemini API Key</label>
         <input type="password" id="gemini-apikey-input" value="${currentKey}" placeholder="AIzaSy..." style="padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(192, 132, 252, 0.4); background: rgba(30, 41, 59, 0.8); color: #ffffff; font-size: 14px; outline: none;" />
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <label style="font-size: 12px; font-weight: 600; color: #e2e8f0;">Map Description / Custom Prompt (Optional Override)</label>
+        <textarea id="gemini-custom-prompt-input" rows="3" placeholder="e.g. A frozen dwarven tomb with icy pillars, glowing runes, and a chasm crossing the center..." style="padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(192, 132, 252, 0.4); background: rgba(30, 41, 59, 0.8); color: #ffffff; font-size: 13px; outline: none; resize: vertical;">${currentCustomPrompt}</textarea>
+        <span style="font-size: 11px; color: #94a3b8;">If provided, your description overrides any conflicting defaults when generating the map.</span>
       </div>
 
       <div style="display: flex; flex-direction: column; gap: 6px;">
@@ -50,6 +57,7 @@ export function openGeminiApiKeyModal(onSuccess?: () => void): void {
   modalEl.style.display = "flex";
 
   const inputEl = modalEl.querySelector<HTMLInputElement>("#gemini-apikey-input")!;
+  const promptInputEl = modalEl.querySelector<HTMLTextAreaElement>("#gemini-custom-prompt-input")!;
   const modelEl = modalEl.querySelector<HTMLInputElement>("#gemini-model-input")!;
   const cancelBtn = modalEl.querySelector<HTMLButtonElement>("#btn-cancel-gemini-apikey")!;
   const saveBtn = modalEl.querySelector<HTMLButtonElement>("#btn-save-gemini-apikey")!;
@@ -61,12 +69,14 @@ export function openGeminiApiKeyModal(onSuccess?: () => void): void {
   saveBtn.addEventListener("click", () => {
     const keyVal = inputEl.value.trim();
     const modelVal = modelEl.value.trim() || "gemini-2.5-flash-image";
+    const customPromptVal = promptInputEl.value.trim();
     if (!keyVal) {
       alert("Please enter a valid Gemini API Key.");
       return;
     }
     localStorage.setItem("gemini_api_key", keyVal);
     localStorage.setItem("gemini_enhance_model", modelVal);
+    localStorage.setItem("gemini_enhance_custom_prompt", customPromptVal);
     localStorage.removeItem("gemini_enhance_last_failed");
     modalEl?.remove();
     if (onSuccess) onSuccess();
@@ -101,7 +111,11 @@ async function callGeminiImageGeneration(base64Image: string, apiKey: string, mo
     "imagen-3.0-generate-002"
   ].filter((v, i, a) => Boolean(v) && a.indexOf(v) === i);
 
-  const promptText = "You are a master virtual tabletop RPG map designer specializing in classic old-school D&D cartography. Look at the provided top-down drawing and room fills as a layout guide and blueprint. Generate a high-resolution, top-down, overhead 2D tabletop RPG battlemap designed in an oldschool D&D, OSR (Old School Renaissance), and Dungeon Crawl Classics (DCC) art style. The map MUST be drawn in crisp black and white ink with classic crosshatching, hand-drawn ink line walls, stippling, and retro dungeon cartography textures while preserving the exact spatial boundaries, room layouts, pathways, and alignments shown in the sketch guide.";
+  const premadePrompt = "You are a master virtual tabletop RPG map designer specializing in classic old-school D&D cartography. Look at the provided top-down drawing and room fills as a layout guide and blueprint. Generate a high-resolution, top-down, overhead 2D tabletop RPG battlemap designed in an oldschool D&D, OSR (Old School Renaissance), and Dungeon Crawl Classics (DCC) art style. The map MUST be drawn with crisp black ink on a solid, stark white (#FFFFFF) background with classic crosshatching, hand-drawn ink line walls, stippling, and retro dungeon cartography textures while preserving the exact spatial boundaries, room layouts, pathways, and alignments shown in the sketch guide. Even if the reference sketch has a dark background, your generated map MUST have a solid, stark white (#FFFFFF) background with black ink lines.";
+  const customDesc = localStorage.getItem("gemini_enhance_custom_prompt")?.trim();
+  const promptText = customDesc
+    ? `${premadePrompt}\n\nCRITICAL USER OVERRIDE DESCRIPTION (Follow this user description strictly; if any instructions below or above conflict with this custom description, this user description takes overriding precedence):\n"${customDesc}"`
+    : premadePrompt;
 
   console.group("[Enhance] Starting Gemini Image Generation Pipeline");
   console.log("Models queue in order:", modelsToTry);
@@ -332,13 +346,14 @@ export async function runGeminiMapEnhancement(engine: CanvasEngine, box: { x: nu
       type: "image",
       layerId: "map-layer",
       isMap: true,
+      blendMode: "multiply" as any,
       zIndex: lowestZ - 10,
       createdAt: Date.now(),
       updatedAt: Date.now(),
       lastModifiedBy: sessionManager.myPeerId || "local",
       locked: false,
       assetHash: processed.assetHash,
-      position: { x: box.x, y: box.y },
+      position: { x: box.x + box.width / 2, y: box.y + box.height / 2 },
       size: { width: box.width, height: box.height },
       rotation: 0,
       opacity: 1.0
@@ -347,10 +362,88 @@ export async function runGeminiMapEnhancement(engine: CanvasEngine, box: { x: nu
     sessionManager.dispatchOperation({ opType: "CREATE_ENTITY", entity: newMapImage });
     engine.setTool("select");
     localStorage.removeItem("gemini_enhance_last_failed");
-    showEnhanceToast("✨ AI Map Enhancement complete! Map placed aligned underneath your drawings.", 6000);
+    showEnhanceToast("✨ AI Map Enhancement complete! Review alignment below and Accept, Retry, or Abort.", 6000);
+    showEnhanceConfirmationBar(engine, box, newMapImage);
   } catch (err: any) {
     console.error("[Enhance] Error during Gemini Map Enhancement:", err);
     localStorage.setItem("gemini_enhance_last_failed", "true");
     showEnhanceToast(`❌ Enhance Error: ${err.message || err}`, 14000);
   }
+}
+
+function showEnhanceConfirmationBar(engine: CanvasEngine, box: { x: number; y: number; width: number; height: number }, newMapImage: ImageEntity): void {
+  let oldBar = document.getElementById("vtt-enhance-confirm-bar");
+  if (oldBar) oldBar.remove();
+
+  const bar = document.createElement("div");
+  bar.id = "vtt-enhance-confirm-bar";
+  bar.style.cssText = "position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: rgba(15, 23, 42, 0.95); border: 2px solid #c084fc; border-radius: 9999px; padding: 12px 24px; display: flex; align-items: center; gap: 16px; box-shadow: 0 12px 36px rgba(0,0,0,0.85); z-index: 100000; color: #f8fafc; font-family: sans-serif;";
+  bar.innerHTML = `
+    <span style="font-weight: 700; color: #c084fc; font-size: 14px;">✨ AI Map Imported!</span>
+    <span style="font-size: 13px; color: #cbd5e1;">Review alignment on canvas below:</span>
+    <div style="display: flex; gap: 10px;">
+      <button id="btn-enhance-accept" style="padding: 6px 16px; border-radius: 9999px; background: #22c55e; border: none; color: #fff; font-weight: 700; cursor: pointer; box-shadow: 0 0 10px rgba(34, 197, 94, 0.4);">Accept & Clear Sketches</button>
+      <button id="btn-enhance-retry" style="padding: 6px 16px; border-radius: 9999px; background: #eab308; border: none; color: #fff; font-weight: 700; cursor: pointer; box-shadow: 0 0 10px rgba(234, 179, 8, 0.4);">Retry</button>
+      <button id="btn-enhance-abort" style="padding: 6px 16px; border-radius: 9999px; background: #ef4444; border: none; color: #fff; font-weight: 700; cursor: pointer; box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);">Abort</button>
+    </div>
+  `;
+  document.body.appendChild(bar);
+
+  const acceptBtn = bar.querySelector<HTMLButtonElement>("#btn-enhance-accept")!;
+  const retryBtn = bar.querySelector<HTMLButtonElement>("#btn-enhance-retry")!;
+  const abortBtn = bar.querySelector<HTMLButtonElement>("#btn-enhance-abort")!;
+
+  acceptBtn.addEventListener("click", () => {
+    bar.remove();
+    const doc = docStore.getDocument();
+    const drawingsToDelete: string[] = [];
+    for (const ent of Object.values(doc.entities)) {
+      if (ent.type === "line") {
+        const line = ent as any;
+        if (line.points && line.points.length > 0) {
+          const inside = line.points.some((p: { x: number; y: number }) =>
+            p.x >= box.x - 10 && p.x <= box.x + box.width + 10 && p.y >= box.y - 10 && p.y <= box.y + box.height + 10
+          );
+          if (inside) {
+            drawingsToDelete.push(ent.id);
+          }
+        }
+      }
+    }
+    for (const id of drawingsToDelete) {
+      sessionManager.dispatchOperation({ opType: "DELETE_ENTITY", id });
+    }
+
+    if (doc.gridCells) {
+      const size = doc.canvasSettings?.gridSizePx || 50;
+      for (const [key, cell] of Object.entries(doc.gridCells)) {
+        if (!cell || !cell.fillColor || cell.fillColor === "fog" || cell.fogHidden) continue;
+        const commaIdx = key.indexOf(",");
+        if (commaIdx === -1) continue;
+        const gx = Number(key.substring(0, commaIdx));
+        const gy = Number(key.substring(commaIdx + 1));
+        if (gx + size >= box.x && gx <= box.x + box.width && gy + size >= box.y && gy <= box.y + box.height) {
+          sessionManager.dispatchOperation({
+            opType: "UPDATE_GRID_CELL",
+            cellKey: key,
+            patch: { fillColor: undefined, fillCreator: undefined }
+          });
+        }
+      }
+    }
+    showEnhanceToast("✅ AI Map Accepted and reference drawings cleared!", 4000);
+  });
+
+  retryBtn.addEventListener("click", () => {
+    bar.remove();
+    sessionManager.dispatchOperation({ opType: "DELETE_ENTITY", id: newMapImage.id });
+    showEnhanceToast("🔄 Retrying AI Map Generation...", 3000);
+    runGeminiMapEnhancement(engine, box);
+  });
+
+  abortBtn.addEventListener("click", () => {
+    bar.remove();
+    sessionManager.dispatchOperation({ opType: "DELETE_ENTITY", id: newMapImage.id });
+    showEnhanceToast("🛑 AI Map Enhancement aborted.", 3000);
+  });
 }

@@ -679,13 +679,7 @@ export function setupChatPanel(engine?: CanvasEngine): void {
           }
         };
 
-        const apiKey = localStorage.getItem("gemini_api_key");
-        const lastFailed = localStorage.getItem("gemini_enhance_last_failed") === "true";
-        if (!apiKey || lastFailed) {
-          openGeminiApiKeyModal(activate);
-        } else {
-          activate();
-        }
+        openGeminiApiKeyModal(activate);
         return;
       }
 
