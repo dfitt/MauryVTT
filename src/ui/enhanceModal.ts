@@ -162,7 +162,8 @@ async function callGeminiImageGeneration(base64Image: string, apiKey: string, mo
       } else {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
         console.log(`Endpoint: https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`);
-        const requestPayload = {
+        
+        const basePayload = {
           contents: [
             {
               parts: [
@@ -175,68 +176,74 @@ async function callGeminiImageGeneration(base64Image: string, apiKey: string, mo
                 }
               ]
             }
-          ],
-          generationConfig: {
-            responseMimeType: "image/png"
-          }
+          ]
         };
 
-        const resp = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(requestPayload)
-        });
+        const configsToTry = [
+          { responseModalities: ["IMAGE", "TEXT"] },
+          { responseModalities: ["IMAGE"] },
+          null // try without generationConfig if model rejects responseModalities
+        ];
 
-        console.log(`HTTP Status: ${resp.status} ${resp.statusText}`);
-        if (!resp.ok) {
-          const errTxt = await resp.text();
-          console.warn(`[Enhance] HTTP Error from ${model}:`, errTxt);
-          errorsCollected.push(`[${model}] HTTP ${resp.status}: ${errTxt.substring(0, 300)}`);
-          console.groupEnd();
-          continue;
-        }
+        for (const genCfg of configsToTry) {
+          const payload = genCfg ? { ...basePayload, generationConfig: genCfg } : basePayload;
+          console.log(`[Enhance] Attempting ${model} with generationConfig:`, genCfg);
+          const resp = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
 
-        const data = await resp.json();
-        console.log(`[Enhance] Response JSON object from ${model}:`, data);
-
-        const candidate = data.candidates?.[0];
-        if (candidate?.finishReason && candidate.finishReason !== "STOP") {
-          console.warn(`[Enhance] Candidate finishReason is not STOP (${candidate.finishReason}). Safety ratings or block summary:`, candidate);
-        }
-
-        const parts = candidate?.content?.parts || [];
-        for (const p of parts) {
-          if (p.inlineData?.data) {
-            console.log(`[Enhance] Successfully extracted inlineData.data from ${model} (${p.inlineData.data.length} chars)`);
-            console.groupEnd();
-            console.groupEnd();
-            return p.inlineData.data;
+          console.log(`HTTP Status (${model}, config: ${JSON.stringify(genCfg)}): ${resp.status} ${resp.statusText}`);
+          if (!resp.ok) {
+            const errTxt = await resp.text();
+            console.warn(`[Enhance] HTTP Error from ${model} with config ${JSON.stringify(genCfg)}:`, errTxt);
+            errorsCollected.push(`[${model} | cfg: ${JSON.stringify(genCfg)}] HTTP ${resp.status}: ${errTxt.substring(0, 200)}`);
+            continue;
           }
-          if (p.inline_data?.data) {
-            console.log(`[Enhance] Successfully extracted inline_data.data from ${model} (${p.inline_data.data.length} chars)`);
-            console.groupEnd();
-            console.groupEnd();
-            return p.inline_data.data;
+
+          const data = await resp.json();
+          console.log(`[Enhance] Response JSON object from ${model} (config: ${JSON.stringify(genCfg)}):`, data);
+
+          const candidate = data.candidates?.[0];
+          if (candidate?.finishReason && candidate.finishReason !== "STOP") {
+            console.warn(`[Enhance] Candidate finishReason is not STOP (${candidate.finishReason}). Safety ratings or block summary:`, candidate);
           }
-        }
-        for (const p of parts) {
-          if (p.text && p.text.includes("data:image/png;base64,")) {
-            const m = p.text.match(/data:image\/[^;]+;base64,([A-Za-z0-9+/=]+)/);
-            if (m) {
-              console.log(`[Enhance] Successfully extracted base64 image from text part in ${model} (${m[1].length} chars)`);
+
+          const parts = candidate?.content?.parts || [];
+          for (const p of parts) {
+            if (p.inlineData?.data) {
+              console.log(`[Enhance] Successfully extracted inlineData.data from ${model} (${p.inlineData.data.length} chars)`);
               console.groupEnd();
               console.groupEnd();
-              return m[1];
+              return p.inlineData.data;
+            }
+            if (p.inline_data?.data) {
+              console.log(`[Enhance] Successfully extracted inline_data.data from ${model} (${p.inline_data.data.length} chars)`);
+              console.groupEnd();
+              console.groupEnd();
+              return p.inline_data.data;
             }
           }
-          if (p.text) {
-            console.log(`[Enhance] Model ${model} returned text instead of image:`, p.text.substring(0, 500));
+          for (const p of parts) {
+            if (p.text && p.text.includes("data:image/png;base64,")) {
+              const m = p.text.match(/data:image\/[^;]+;base64,([A-Za-z0-9+/=]+)/);
+              if (m) {
+                console.log(`[Enhance] Successfully extracted base64 image from text part in ${model} (${m[1].length} chars)`);
+                console.groupEnd();
+                console.groupEnd();
+                return m[1];
+              }
+            }
+            if (p.text) {
+              console.log(`[Enhance] Model ${model} returned text instead of image:`, p.text.substring(0, 500));
+            }
           }
-        }
 
-        const warnMsg = `200 OK received but response contained no valid image data. finishReason: ${candidate?.finishReason || "unknown"}`;
-        console.warn(`[Enhance] ${warnMsg}`, candidate);
-        errorsCollected.push(`[${model}] ${warnMsg}`);
+          const warnMsg = `200 OK received but response contained no valid image data. finishReason: ${candidate?.finishReason || "unknown"}`;
+          console.warn(`[Enhance] ${warnMsg}`, candidate);
+          errorsCollected.push(`[${model} | cfg: ${JSON.stringify(genCfg)}] ${warnMsg}`);
+        }
       }
     } catch (e: any) {
       console.warn(`[Enhance] Exception during fetch with model ${model}:`, e);
