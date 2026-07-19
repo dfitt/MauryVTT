@@ -16,7 +16,9 @@ export function openGeminiApiKeyModal(onSuccess?: () => void): void {
 
   const currentKey = localStorage.getItem("gemini_api_key") || "";
   const currentModel = localStorage.getItem("gemini_enhance_model") || "gemini-3.1-flash-image";
-  const currentCustomPrompt = localStorage.getItem("gemini_enhance_custom_prompt") || "";
+  const currentCustomPrompt = localStorage.getItem("gemini_enhance_world_desc") !== null
+    ? (localStorage.getItem("gemini_enhance_world_desc") || "")
+    : (localStorage.getItem("gemini_enhance_custom_prompt") || "");
 
   modalEl.innerHTML = `
     <div style="background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(192, 132, 252, 0.5); border-radius: 12px; padding: 24px; max-width: 480px; width: 90%; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.8); color: #f8fafc; font-family: sans-serif; display: flex; flex-direction: column; gap: 16px;">
@@ -79,6 +81,7 @@ export function openGeminiApiKeyModal(onSuccess?: () => void): void {
     }
     localStorage.setItem("gemini_api_key", keyVal);
     localStorage.setItem("gemini_enhance_model", modelVal);
+    localStorage.setItem("gemini_enhance_world_desc", customPromptVal);
     localStorage.setItem("gemini_enhance_custom_prompt", customPromptVal);
     localStorage.removeItem("gemini_enhance_last_failed");
     modalEl?.remove();
@@ -384,7 +387,7 @@ export async function runGeminiMapEnhancement(engine: CanvasEngine, box: { x: nu
     engine.setTool("select");
     localStorage.removeItem("gemini_enhance_last_failed");
     showEnhanceToast("✨ AI Map Enhancement complete! Review alignment below and Accept, Retry, or Abort.", 6000);
-    showEnhanceConfirmationBar(engine, box, newMapImage);
+    showEnhanceConfirmationBar(engine, box, newMapImage, undefined, overrideDesc);
   } catch (err: any) {
     console.error("[Enhance] Error during Gemini Map Enhancement:", err);
     localStorage.setItem("gemini_enhance_last_failed", "true");
@@ -817,21 +820,27 @@ export function openGeminiDescriptionModal(
   modalEl.style.cssText = "position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; z-index: 99999;";
   document.body.appendChild(modalEl);
 
-  const savedPrompt = localStorage.getItem("gemini_enhance_custom_prompt") || "";
+  const savedWorldPrompt = localStorage.getItem("gemini_enhance_world_desc") !== null
+    ? (localStorage.getItem("gemini_enhance_world_desc") || "")
+    : (localStorage.getItem("gemini_enhance_custom_prompt") || "");
 
   modalEl.innerHTML = `
-    <div style="background: rgba(15, 23, 42, 0.96); border: 1px solid rgba(192, 132, 252, 0.6); border-radius: 14px; padding: 24px; max-width: 480px; width: 90%; box-shadow: 0 16px 48px rgba(0,0,0,0.85); color: #f8fafc; font-family: Outfit, sans-serif; display: flex; flex-direction: column; gap: 16px;">
+    <div style="background: rgba(15, 23, 42, 0.96); border: 1px solid rgba(192, 132, 252, 0.6); border-radius: 14px; padding: 24px; max-width: 500px; width: 92%; box-shadow: 0 16px 48px rgba(0,0,0,0.85); color: #f8fafc; font-family: Outfit, sans-serif; display: flex; flex-direction: column; gap: 16px;">
       <div style="display: flex; align-items: center; gap: 10px;">
         <span style="font-size: 24px;">🎨</span>
-        <h3 style="margin: 0; font-size: 18px; font-weight: 700; color: #c084fc;">AI Map Description</h3>
+        <h3 style="margin: 0; font-size: 18px; font-weight: 700; color: #c084fc;">AI Map Descriptions</h3>
       </div>
       <p style="margin: 0; font-size: 13px; color: #cbd5e1; line-height: 1.5;">
-        Enter a text description for the map you want generated over your selection box.
+        Describe the overarching setting and specific room details for the map over your selection box.
         ${isProxy ? `<span style="display: block; margin-top: 6px; color: #38bdf8; font-weight: 600;">🚀 Generating via proxy through ${getPeerUsername(proxyPeerId)}'s API key!</span>` : ""}
       </p>
       <div style="display: flex; flex-direction: column; gap: 6px;">
-        <label style="font-size: 12px; font-weight: 600; color: #e2e8f0;">Map Description / Details</label>
-        <textarea id="gemini-desc-textarea" rows="4" placeholder="e.g. A gothic chapel with ancient altars, rubble, and glowing candles around the perimeter (keep floor mostly plain without grid patterns)..." style="padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(192, 132, 252, 0.4); background: rgba(30, 41, 59, 0.8); color: #ffffff; font-size: 13px; outline: none; resize: vertical;">${savedPrompt}</textarea>
+        <label style="font-size: 12px; font-weight: 700; color: #38bdf8;">World Description <span style="font-weight: 400; color: #94a3b8;">(Overarching setting & style; stays populated across generations)</span></label>
+        <textarea id="gemini-world-desc-textarea" rows="3" placeholder="e.g. Gothic cathedral on a snowy mountain summit, weathered stone, dark fantasy atmosphere..." style="padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.4); background: rgba(30, 41, 59, 0.8); color: #ffffff; font-size: 13px; outline: none; resize: vertical;">${savedWorldPrompt}</textarea>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <label style="font-size: 12px; font-weight: 700; color: #e879f9;">Room Descriptions <span style="font-weight: 400; color: #94a3b8;">(Specific room/area details; resets each time)</span></label>
+        <textarea id="gemini-room-desc-textarea" rows="3" placeholder="e.g. A grand chapel altar with broken pew benches and scattered rubble around the edges, floor plain..." style="padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(232, 121, 249, 0.4); background: rgba(30, 41, 59, 0.8); color: #ffffff; font-size: 13px; outline: none; resize: vertical;"></textarea>
       </div>
       <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px;">
         <button id="btn-cancel-desc" class="btn-glass" style="padding: 8px 16px; border-radius: 8px; cursor: pointer; color: #cbd5e1;">Cancel</button>
@@ -840,7 +849,8 @@ export function openGeminiDescriptionModal(
     </div>
   `;
 
-  const textareaEl = modalEl.querySelector<HTMLTextAreaElement>("#gemini-desc-textarea")!;
+  const worldTextareaEl = modalEl.querySelector<HTMLTextAreaElement>("#gemini-world-desc-textarea")!;
+  const roomTextareaEl = modalEl.querySelector<HTMLTextAreaElement>("#gemini-room-desc-textarea")!;
   const cancelBtn = modalEl.querySelector<HTMLButtonElement>("#btn-cancel-desc")!;
   const submitBtn = modalEl.querySelector<HTMLButtonElement>("#btn-submit-desc")!;
 
@@ -849,19 +859,27 @@ export function openGeminiDescriptionModal(
   });
 
   submitBtn.addEventListener("click", () => {
-    const desc = textareaEl.value.trim();
+    const worldDesc = worldTextareaEl.value.trim();
+    const roomDesc = roomTextareaEl.value.trim();
+    localStorage.setItem("gemini_enhance_world_desc", worldDesc);
+
+    const combinedParts = [];
+    if (worldDesc) combinedParts.push(`World Description: "${worldDesc}"`);
+    if (roomDesc) combinedParts.push(`Room Descriptions: "${roomDesc}"`);
+    const combinedDesc = combinedParts.join("\n\n");
+
     if (!isProxy) {
-      localStorage.setItem("gemini_enhance_custom_prompt", desc);
+      localStorage.setItem("gemini_enhance_custom_prompt", combinedDesc);
     }
     modalEl?.remove();
 
     if (isProxy && proxyPeerId) {
-      sendProxyEnhanceRequest(engine, box, desc, proxyPeerId);
+      sendProxyEnhanceRequest(engine, box, combinedDesc, proxyPeerId);
     } else {
-      runGeminiMapEnhancement(engine, box, desc);
+      runGeminiMapEnhancement(engine, box, combinedDesc);
     }
   });
 
-  textareaEl.focus();
+  roomTextareaEl.focus();
 }
 
