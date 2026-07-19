@@ -36,7 +36,8 @@ export function bindEnhanceTool(engine: CanvasEngine): void {
     }
 
     const apiKey = localStorage.getItem("gemini_api_key");
-    if (!apiKey) {
+    const lastFailed = localStorage.getItem("gemini_enhance_last_failed") === "true";
+    if (!apiKey || lastFailed) {
       openGeminiApiKeyModal(() => {
         runGeminiMapEnhancement(engine, { x: box.x1, y: box.y1, width, height });
       });

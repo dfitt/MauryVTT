@@ -15,7 +15,7 @@ export function openGeminiApiKeyModal(onSuccess?: () => void): void {
   }
 
   const currentKey = localStorage.getItem("gemini_api_key") || "";
-  const currentModel = localStorage.getItem("gemini_enhance_model") || "gemini-2.5-flash-image";
+  const currentModel = localStorage.getItem("gemini_enhance_model") || "gemini-3.1-flash-image";
 
   modalEl.innerHTML = `
     <div style="background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(192, 132, 252, 0.5); border-radius: 12px; padding: 24px; max-width: 480px; width: 90%; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.8); color: #f8fafc; font-family: sans-serif; display: flex; flex-direction: column; gap: 16px;">
@@ -36,8 +36,8 @@ export function openGeminiApiKeyModal(onSuccess?: () => void): void {
 
       <div style="display: flex; flex-direction: column; gap: 6px;">
         <label style="font-size: 12px; font-weight: 600; color: #e2e8f0;">Model Identifier (Latest Gemini / Nano Banana 2)</label>
-        <input type="text" id="gemini-model-input" value="${currentModel}" placeholder="gemini-2.5-flash-image" style="padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(192, 132, 252, 0.4); background: rgba(30, 41, 59, 0.8); color: #c084fc; font-size: 13px; outline: none;" />
-        <span style="font-size: 11px; color: #94a3b8;">Default: <code>gemini-2.5-flash-image</code> (Latest Gemini / Nano Banana 2 multimodal image model)</span>
+        <input type="text" id="gemini-model-input" value="${currentModel}" placeholder="gemini-3.1-flash-image" style="padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(192, 132, 252, 0.4); background: rgba(30, 41, 59, 0.8); color: #c084fc; font-size: 13px; outline: none;" />
+        <span style="font-size: 11px; color: #94a3b8;">Default: <code>gemini-3.1-flash-image</code> (Latest Gemini / Nano Banana 2 multimodal image model)</span>
       </div>
 
       <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px;">
@@ -67,6 +67,7 @@ export function openGeminiApiKeyModal(onSuccess?: () => void): void {
     }
     localStorage.setItem("gemini_api_key", keyVal);
     localStorage.setItem("gemini_enhance_model", modelVal);
+    localStorage.removeItem("gemini_enhance_last_failed");
     modalEl?.remove();
     if (onSuccess) onSuccess();
   });
@@ -94,12 +95,13 @@ export function showEnhanceToast(text: string, durationMs = 8000): void {
 async function callGeminiImageGeneration(base64Image: string, apiKey: string, modelName: string): Promise<string | null> {
   const modelsToTry = [
     modelName,
+    "gemini-3.1-flash-image",
     "gemini-2.5-flash-image",
     "gemini-2.0-flash-exp",
     "imagen-3.0-generate-002"
   ].filter((v, i, a) => Boolean(v) && a.indexOf(v) === i);
 
-  const promptText = "You are a master virtual tabletop RPG map designer. Look at the provided top-down drawing and colored room fills as a layout guide and blueprint. Generate a detailed, high-resolution overhead 2D tabletop RPG battlemap (virtual tabletop overhead map) that corresponds precisely to the layout, rooms, walls, paths, and fills shown in this sketch guide. Add rich, creative textures, flooring, environmental details, objects, and lighting while preserving the exact spatial boundaries and alignment.";
+  const promptText = "You are a master virtual tabletop RPG map designer specializing in classic old-school D&D cartography. Look at the provided top-down drawing and room fills as a layout guide and blueprint. Generate a high-resolution, top-down, overhead 2D tabletop RPG battlemap designed in an oldschool D&D, OSR (Old School Renaissance), and Dungeon Crawl Classics (DCC) art style. The map MUST be drawn in crisp black and white ink with classic crosshatching, hand-drawn ink line walls, stippling, and retro dungeon cartography textures while preserving the exact spatial boundaries, room layouts, pathways, and alignments shown in the sketch guide.";
 
   for (const model of modelsToTry) {
     console.log(`[Enhance] Attempting map generation with model: ${model}`);
@@ -183,12 +185,13 @@ async function callGeminiImageGeneration(base64Image: string, apiKey: string, mo
 
 export async function runGeminiMapEnhancement(engine: CanvasEngine, box: { x: number; y: number; width: number; height: number }): Promise<void> {
   const apiKey = localStorage.getItem("gemini_api_key");
-  if (!apiKey) {
+  const lastFailed = localStorage.getItem("gemini_enhance_last_failed") === "true";
+  if (!apiKey || lastFailed) {
     openGeminiApiKeyModal(() => runGeminiMapEnhancement(engine, box));
     return;
   }
 
-  const modelName = localStorage.getItem("gemini_enhance_model") || "gemini-2.5-flash-image";
+  const modelName = localStorage.getItem("gemini_enhance_model") || "gemini-3.1-flash-image";
   showEnhanceToast("✨ Generating AI Overhead Map with Gemini (Nano Banana 2)... Please wait ~10-20s.", 0);
 
   try {
@@ -268,9 +271,11 @@ export async function runGeminiMapEnhancement(engine: CanvasEngine, box: { x: nu
 
     sessionManager.dispatchOperation({ opType: "CREATE_ENTITY", entity: newMapImage });
     engine.setTool("select");
+    localStorage.removeItem("gemini_enhance_last_failed");
     showEnhanceToast("✨ AI Map Enhancement complete! Map placed aligned underneath your drawings.", 6000);
   } catch (err: any) {
     console.error("[Enhance] Error during Gemini Map Enhancement:", err);
+    localStorage.setItem("gemini_enhance_last_failed", "true");
     showEnhanceToast(`❌ Enhance Error: ${err.message || err}`, 8000);
   }
 }
