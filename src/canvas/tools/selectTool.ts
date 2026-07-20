@@ -16,6 +16,12 @@ export function bindSelectTool(engine: CanvasEngine): void {
   let anchorCorner = { x: 0, y: 0 };
   let resizeDir = { x: 1, y: 1 };
 
+  // Rotating state
+  let isRotating = false;
+  let rotatingEntity: ImageEntity | null = null;
+  let rotateStartAngle = 0;
+  let origRotation = 0;
+
   // Double-tap / double-click tracking for Simple Mode pinging
   let lastSimpleTapTime = 0;
   let lastSimpleTapPos = { x: 0, y: 0 };
@@ -37,9 +43,29 @@ export function bindSelectTool(engine: CanvasEngine): void {
       return b.zIndex - a.zIndex;
     });
 
-    // 1. Check if user clicked a corner resize handle on the currently selected entity
+    // 1. Check if user clicked a corner resize handle or rotation handle on the currently selected entity
     if (engine.selectedEntityId) {
       const current = doc.entities[engine.selectedEntityId];
+      if (current && !current.locked && current.type === "image") {
+        const imgEnt = current as ImageEntity;
+        const halfH = imgEnt.size.height / 2;
+        const rotDist = Math.max(24, 30 / engine.zoom);
+        const rot = imgEnt.rotation || 0;
+        const cos = Math.cos(rot);
+        const sin = Math.sin(rot);
+        const handleWorldX = imgEnt.position.x - (-halfH - rotDist) * sin;
+        const handleWorldY = imgEnt.position.y + (-halfH - rotDist) * cos;
+        const handleThreshold = Math.max(12, 14 / engine.zoom);
+
+        if (Math.hypot(worldX - handleWorldX, worldY - handleWorldY) <= handleThreshold) {
+          isRotating = true;
+          rotatingEntity = imgEnt;
+          origRotation = imgEnt.rotation || 0;
+          rotateStartAngle = Math.atan2(worldY - imgEnt.position.y, worldX - imgEnt.position.x);
+          return;
+        }
+      }
+
       const canResizeToken = current && current.type === "token" ? (engine.resizingTokenId === current.id) : true;
       if (current && !current.locked && (current.type === "image" || current.type === "token") && canResizeToken) {
         const imgEnt = current as ImageEntity | TokenEntity;
@@ -147,6 +173,13 @@ export function bindSelectTool(engine: CanvasEngine): void {
   engine.onMouseMove((_e, worldX, worldY) => {
     if (engine.activeTool !== "select") return;
 
+    if (isRotating && rotatingEntity) {
+      const currentAngle = Math.atan2(worldY - rotatingEntity.position.y, worldX - rotatingEntity.position.x);
+      const deltaAngle = currentAngle - rotateStartAngle;
+      rotatingEntity.rotation = origRotation + deltaAngle;
+      return;
+    }
+
     if (isResizing && resizingEntity) {
       const rawW = Math.abs(worldX - anchorCorner.x);
       let newWidth = Math.max(30, Math.round(rawW));
@@ -186,12 +219,50 @@ export function bindSelectTool(engine: CanvasEngine): void {
           }
         }
       }
+      return;
+    }
+
+    if (engine.activeTool === "select" && !isRotating && !isResizing && !draggingEntity) {
+      if (engine.selectedEntityId) {
+        const current = docStore.getDocument().entities[engine.selectedEntityId];
+        if (current && !current.locked && current.type === "image") {
+          const imgEnt = current as ImageEntity;
+          const halfH = imgEnt.size.height / 2;
+          const rotDist = Math.max(24, 30 / engine.zoom);
+          const rot = imgEnt.rotation || 0;
+          const sin = Math.sin(rot);
+          const cos = Math.cos(rot);
+          const handleWorldX = imgEnt.position.x - (-halfH - rotDist) * sin;
+          const handleWorldY = imgEnt.position.y + (-halfH - rotDist) * cos;
+          const handleThreshold = Math.max(12, 14 / engine.zoom);
+
+          if (Math.hypot(worldX - handleWorldX, worldY - handleWorldY) <= handleThreshold) {
+            engine.canvas.style.cursor = "grab";
+            return;
+          }
+        }
+      }
+      engine.canvas.style.cursor = "default";
     }
   });
 
   engine.onMouseUp((_e, worldX, worldY) => {
     engine.aligningImageEntityId = null;
     if (engine.activeTool !== "select") return;
+
+    if (isRotating && rotatingEntity) {
+      sessionManager.dispatchOperation({
+        opType: "UPDATE_ENTITY",
+        id: rotatingEntity.id,
+        patch: {
+          rotation: rotatingEntity.rotation,
+          updatedAt: Date.now()
+        } as any
+      });
+      isRotating = false;
+      rotatingEntity = null;
+      return;
+    }
 
     if (isResizing && resizingEntity) {
       let finalPos = { ...resizingEntity.position };

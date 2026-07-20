@@ -1962,6 +1962,30 @@ export class CanvasEngine {
         ctx.strokeRect(-halfW - 4, -halfH - 4, displayW + 8, displayH + 8);
         ctx.setLineDash([]);
 
+        if (ent.type === "image") {
+          const rotDist = Math.max(24, 30 / this.zoom);
+          const topY = -halfH - 4;
+          ctx.beginPath();
+          ctx.moveTo(0, topY);
+          ctx.lineTo(0, topY - rotDist);
+          ctx.stroke();
+
+          const rotRadius = Math.max(7, 9 / this.zoom);
+          ctx.beginPath();
+          ctx.arc(0, topY - rotDist, rotRadius, 0, Math.PI * 2);
+          ctx.fillStyle = "#38bdf8";
+          ctx.fill();
+          ctx.strokeStyle = "#ffffff";
+          ctx.lineWidth = 1.5 / this.zoom;
+          ctx.stroke();
+
+          ctx.font = `${Math.max(10, 12 / this.zoom)}px sans-serif`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillStyle = "#0f172a";
+          ctx.fillText("↻", 0, topY - rotDist);
+        }
+
         // 4 Corner resize handle squares (only show for tokens when resizingTokenId matches)
         const showCorners = ent.type === "token" ? (this.resizingTokenId === ent.id) : true;
         if (showCorners) {

@@ -25,6 +25,10 @@ function bootstrap(): void {
   loadVttfxManifestFromUrl("vttfx/manifest.json");
   setupUnloadSavePrompt();
 
+  if (!localStorage.getItem("vtt_allow_locked_image_selection") || localStorage.getItem("vtt_allow_locked_image_selection") === "true") {
+    localStorage.setItem("vtt_allow_locked_image_selection", "own");
+  }
+
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
       navigator.serviceWorker.register("/sw.js").catch((err) => console.log("SW Reg Error:", err));
