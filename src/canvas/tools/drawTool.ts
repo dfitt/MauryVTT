@@ -19,10 +19,49 @@ function snapToGridPoint(x: number, y: number, gridPx: number): [number, number]
   }
 }
 
+function snapshotSelectedPoints(engine: CanvasEngine): Map<string, [number, number][]> {
+  const doc = docStore.getDocument();
+  const map = new Map<string, [number, number][]>();
+  for (const id of engine.selectedDrawingIds) {
+    const ent = doc.entities[id];
+    if (ent && ent.type === "line") {
+      const l = ent as LineEntity;
+      map.set(id, l.points.map(([px, py]) => [px, py]));
+    }
+  }
+  return map;
+}
+
+function getSelectedDrawingBounds(engine: CanvasEngine): { minX: number; minY: number; maxX: number; maxY: number } | null {
+  const doc = docStore.getDocument();
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const id of engine.selectedDrawingIds) {
+    const ent = doc.entities[id];
+    if (ent && ent.type === "line") {
+      const l = ent as LineEntity;
+      for (const [px, py] of l.points) {
+        if (px < minX) minX = px;
+        if (py < minY) minY = py;
+        if (px > maxX) maxX = px;
+        if (py > maxY) maxY = py;
+      }
+    }
+  }
+  if (minX === Infinity || maxX === -Infinity) return null;
+  return { minX, minY, maxX, maxY };
+}
+
 export function bindDrawTool(engine: CanvasEngine): void {
   let isDrawing = false;
   let isSelectingBox = false;
   let isDraggingSelected = false;
+  let isResizingSelected = false;
+  let activeResizeHandle: "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w" | null = null;
+  let isRotatingSelected = false;
+  let rotateCenter: { x: number; y: number } = { x: 0, y: 0 };
+  let rotateStartAngle = 0;
+  let origGroupBounds: { minX: number; minY: number; maxX: number; maxY: number } = { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+  let origSelectedPoints: Map<string, [number, number][]> = new Map();
   let startPt: [number, number] = [0, 0];
   let dragLastWorldPt: [number, number] = [0, 0];
 
@@ -31,24 +70,51 @@ export function bindDrawTool(engine: CanvasEngine): void {
 
     if (engine.activeTool === "line" && engine.lineShape === "select") {
       if (engine.selectedDrawingIds.size > 0) {
-        const doc = docStore.getDocument();
-        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-        for (const id of engine.selectedDrawingIds) {
-          const ent = doc.entities[id];
-          if (ent && ent.type === "line") {
-            const l = ent as LineEntity;
-            for (const [px, py] of l.points) {
-              if (px < minX) minX = px;
-              if (py < minY) minY = py;
-              if (px > maxX) maxX = px;
-              if (py > maxY) maxY = py;
+        const bounds = getSelectedDrawingBounds(engine);
+        if (bounds) {
+          const pad = 10 / engine.zoom;
+          const bx = bounds.minX - pad;
+          const by = bounds.minY - pad;
+          const bw = (bounds.maxX - bounds.minX) + pad * 2;
+          const bh = (bounds.maxY - bounds.minY) + pad * 2;
+          const centerX = bx + bw / 2;
+          const centerY = by + bh / 2;
+
+          const rotDist = Math.max(24, 30 / engine.zoom);
+          const handleThreshold = Math.max(12, 14 / engine.zoom);
+          if (Math.hypot(worldX - centerX, worldY - (by - rotDist)) <= handleThreshold) {
+            isRotatingSelected = true;
+            rotateCenter = { x: centerX, y: centerY };
+            rotateStartAngle = Math.atan2(worldY - centerY, worldX - centerX);
+            origSelectedPoints = snapshotSelectedPoints(engine);
+            return;
+          }
+
+          const handleCenters: { id: "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w"; x: number; y: number }[] = [
+            { id: "nw", x: bx, y: by },
+            { id: "n", x: centerX, y: by },
+            { id: "ne", x: bx + bw, y: by },
+            { id: "e", x: bx + bw, y: centerY },
+            { id: "se", x: bx + bw, y: by + bh },
+            { id: "s", x: centerX, y: by + bh },
+            { id: "sw", x: bx, y: by + bh },
+            { id: "w", x: bx, y: centerY }
+          ];
+          for (const hc of handleCenters) {
+            if (Math.hypot(worldX - hc.x, worldY - hc.y) <= handleThreshold) {
+              isResizingSelected = true;
+              activeResizeHandle = hc.id;
+              origGroupBounds = { ...bounds };
+              origSelectedPoints = snapshotSelectedPoints(engine);
+              return;
             }
           }
-        }
-        if (worldX >= minX - 15 && worldX <= maxX + 15 && worldY >= minY - 15 && worldY <= maxY + 15) {
-          isDraggingSelected = true;
-          dragLastWorldPt = [worldX, worldY];
-          return;
+
+          if (worldX >= bx && worldX <= bx + bw && worldY >= by && worldY <= by + bh) {
+            isDraggingSelected = true;
+            dragLastWorldPt = [worldX, worldY];
+            return;
+          }
         }
       }
       if (engine.selectedDrawingIds.size > 0) {
@@ -92,6 +158,72 @@ export function bindDrawTool(engine: CanvasEngine): void {
       engine.drawingSelectionBox.y2 = worldY;
       return;
     }
+
+    if (isRotatingSelected && origSelectedPoints.size > 0) {
+      const doc = docStore.getDocument();
+      const currentAngle = Math.atan2(worldY - rotateCenter.y, worldX - rotateCenter.x);
+      const deltaAngle = currentAngle - rotateStartAngle;
+      const cos = Math.cos(deltaAngle);
+      const sin = Math.sin(deltaAngle);
+
+      for (const [id, pts] of origSelectedPoints.entries()) {
+        const ent = doc.entities[id];
+        if (ent && ent.type === "line") {
+          const l = ent as LineEntity;
+          l.points = pts.map(([px, py]) => {
+            const dx = px - rotateCenter.x;
+            const dy = py - rotateCenter.y;
+            return [
+              rotateCenter.x + dx * cos - dy * sin,
+              rotateCenter.y + dx * sin + dy * cos
+            ];
+          });
+        }
+      }
+      return;
+    }
+
+    if (isResizingSelected && activeResizeHandle && origSelectedPoints.size > 0) {
+      const doc = docStore.getDocument();
+      const origW = Math.max(1, origGroupBounds.maxX - origGroupBounds.minX);
+      const origH = Math.max(1, origGroupBounds.maxY - origGroupBounds.minY);
+
+      let anchorX = (origGroupBounds.minX + origGroupBounds.maxX) / 2;
+      let scaleX = 1;
+      if (activeResizeHandle.includes("e")) {
+        anchorX = origGroupBounds.minX;
+        scaleX = (worldX - anchorX) / origW;
+      } else if (activeResizeHandle.includes("w")) {
+        anchorX = origGroupBounds.maxX;
+        scaleX = (anchorX - worldX) / origW;
+      }
+
+      let anchorY = (origGroupBounds.minY + origGroupBounds.maxY) / 2;
+      let scaleY = 1;
+      if (activeResizeHandle.includes("s")) {
+        anchorY = origGroupBounds.minY;
+        scaleY = (worldY - anchorY) / origH;
+      } else if (activeResizeHandle.includes("n")) {
+        anchorY = origGroupBounds.maxY;
+        scaleY = (anchorY - worldY) / origH;
+      }
+
+      if (Math.abs(scaleX) < 0.05) scaleX = scaleX >= 0 ? 0.05 : -0.05;
+      if (Math.abs(scaleY) < 0.05) scaleY = scaleY >= 0 ? 0.05 : -0.05;
+
+      for (const [id, pts] of origSelectedPoints.entries()) {
+        const ent = doc.entities[id];
+        if (ent && ent.type === "line") {
+          const l = ent as LineEntity;
+          l.points = pts.map(([px, py]) => [
+            anchorX + (px - anchorX) * scaleX,
+            anchorY + (py - anchorY) * scaleY
+          ]);
+        }
+      }
+      return;
+    }
+
     if (isDraggingSelected && engine.selectedDrawingIds.size > 0) {
       const dx = worldX - dragLastWorldPt[0];
       const dy = worldY - dragLastWorldPt[1];
@@ -103,6 +235,55 @@ export function bindDrawTool(engine: CanvasEngine): void {
           const l = ent as LineEntity;
           l.points = l.points.map(([px, py]) => [px + dx, py + dy]);
         }
+      }
+      return;
+    }
+
+    if (engine.activeTool === "line" && engine.lineShape === "select") {
+      let hoveredHandle = false;
+      if (engine.selectedDrawingIds.size > 0 && !isSelectingBox && !isDraggingSelected && !isResizingSelected && !isRotatingSelected) {
+        const bounds = getSelectedDrawingBounds(engine);
+        if (bounds) {
+          const pad = 10 / engine.zoom;
+          const bx = bounds.minX - pad;
+          const by = bounds.minY - pad;
+          const bw = (bounds.maxX - bounds.minX) + pad * 2;
+          const bh = (bounds.maxY - bounds.minY) + pad * 2;
+          const centerX = bx + bw / 2;
+          const centerY = by + bh / 2;
+
+          const rotDist = Math.max(24, 30 / engine.zoom);
+          const handleThreshold = Math.max(12, 14 / engine.zoom);
+          if (Math.hypot(worldX - centerX, worldY - (by - rotDist)) <= handleThreshold) {
+            engine.canvas.style.cursor = "grab";
+            hoveredHandle = true;
+          } else {
+            const handleCenters: { id: string; x: number; y: number; cursor: string }[] = [
+              { id: "nw", x: bx, y: by, cursor: "nwse-resize" },
+              { id: "n", x: centerX, y: by, cursor: "ns-resize" },
+              { id: "ne", x: bx + bw, y: by, cursor: "nesw-resize" },
+              { id: "e", x: bx + bw, y: centerY, cursor: "ew-resize" },
+              { id: "se", x: bx + bw, y: by + bh, cursor: "nwse-resize" },
+              { id: "s", x: centerX, y: by + bh, cursor: "ns-resize" },
+              { id: "sw", x: bx, y: by + bh, cursor: "nesw-resize" },
+              { id: "w", x: bx, y: centerY, cursor: "ew-resize" }
+            ];
+            for (const hc of handleCenters) {
+              if (Math.hypot(worldX - hc.x, worldY - hc.y) <= handleThreshold) {
+                engine.canvas.style.cursor = hc.cursor;
+                hoveredHandle = true;
+                break;
+              }
+            }
+          }
+          if (!hoveredHandle && worldX >= bx && worldX <= bx + bw && worldY >= by && worldY <= by + bh) {
+            engine.canvas.style.cursor = "move";
+            hoveredHandle = true;
+          }
+        }
+      }
+      if (!hoveredHandle) {
+        engine.canvas.style.cursor = "default";
       }
       return;
     }
@@ -238,8 +419,12 @@ export function bindDrawTool(engine: CanvasEngine): void {
       return;
     }
 
-    if (isDraggingSelected) {
+    if (isResizingSelected || isRotatingSelected || isDraggingSelected) {
+      isResizingSelected = false;
+      isRotatingSelected = false;
       isDraggingSelected = false;
+      activeResizeHandle = null;
+      origSelectedPoints.clear();
       const doc = docStore.getDocument();
       for (const id of engine.selectedDrawingIds) {
         const ent = doc.entities[id];

@@ -59,7 +59,7 @@ export interface RemoteCursor {
 }
 
 export class CanvasEngine {
-  private canvas: HTMLCanvasElement;
+  public canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private animFrameId: number = 0;
 
@@ -1219,11 +1219,61 @@ export class CanvasEngine {
       }
       if (minX !== Infinity && maxX !== -Infinity) {
         const pad = 10 / this.zoom;
+        const bx = minX - pad;
+        const by = minY - pad;
+        const bw = (maxX - minX) + pad * 2;
+        const bh = (maxY - minY) + pad * 2;
+        const centerX = bx + bw / 2;
+        const centerY = by + bh / 2;
+
         ctx.save();
         ctx.strokeStyle = "#38bdf8";
         ctx.lineWidth = 1.5 / this.zoom;
         ctx.setLineDash([6 / this.zoom, 4 / this.zoom]);
-        ctx.strokeRect(minX - pad, minY - pad, (maxX - minX) + pad * 2, (maxY - minY) + pad * 2);
+        ctx.strokeRect(bx, by, bw, bh);
+        ctx.setLineDash([]);
+
+        // Rotation handle at top
+        const rotDist = Math.max(24, 30 / this.zoom);
+        ctx.beginPath();
+        ctx.moveTo(centerX, by);
+        ctx.lineTo(centerX, by - rotDist);
+        ctx.stroke();
+
+        const rotRadius = Math.max(7, 9 / this.zoom);
+        ctx.beginPath();
+        ctx.arc(centerX, by - rotDist, rotRadius, 0, Math.PI * 2);
+        ctx.fillStyle = "#38bdf8";
+        ctx.fill();
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 1.5 / this.zoom;
+        ctx.stroke();
+
+        ctx.font = `${Math.max(10, 12 / this.zoom)}px sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = "#0f172a";
+        ctx.fillText("↻", centerX, by - rotDist);
+
+        // 8 Resize handles
+        const hs = Math.max(8, 10 / this.zoom);
+        const handleCenters = [
+          { x: bx, y: by },
+          { x: centerX, y: by },
+          { x: bx + bw, y: by },
+          { x: bx + bw, y: centerY },
+          { x: bx + bw, y: by + bh },
+          { x: centerX, y: by + bh },
+          { x: bx, y: by + bh },
+          { x: bx, y: centerY }
+        ];
+        for (const hc of handleCenters) {
+          ctx.fillStyle = "#38bdf8";
+          ctx.fillRect(hc.x - hs / 2, hc.y - hs / 2, hs, hs);
+          ctx.strokeStyle = "#ffffff";
+          ctx.lineWidth = 1.5 / this.zoom;
+          ctx.strokeRect(hc.x - hs / 2, hc.y - hs / 2, hs, hs);
+        }
         ctx.restore();
       }
     }
@@ -1448,16 +1498,6 @@ export class CanvasEngine {
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
       ctx.stroke();
-      if (this.selectedDrawingIds.has(ent.id)) {
-        ctx.save();
-        ctx.strokeStyle = "#a855f7";
-        ctx.lineWidth = (l.strokeWidth || 4) + (4 / this.zoom);
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
-        ctx.setLineDash([8 / this.zoom, 6 / this.zoom]);
-        ctx.stroke();
-        ctx.restore();
-      }
     } else if (ent.type === "image" || ent.type === "token") {
       const imgEnt = ent as ImageEntity | TokenEntity;
       this.ensureImageLoaded(imgEnt.assetHash);
