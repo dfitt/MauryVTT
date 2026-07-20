@@ -19,6 +19,9 @@ export function openSettingsModal(engine: CanvasEngine): void {
   const currentGridColor = localStorage.getItem("vtt_personal_grid_color") || "#000000";
   const isGridOverridden = Boolean(localStorage.getItem("vtt_personal_grid_color"));
 
+  const currentGridThickness = localStorage.getItem("vtt_personal_grid_thickness") || "0.5";
+  const currentFpsLimit = localStorage.getItem("vtt_fps_limit") || "0";
+
   const allowLockedSelection = localStorage.getItem("vtt_allow_locked_image_selection") !== "false";
 
   modalEl.innerHTML = `
@@ -75,12 +78,32 @@ export function openSettingsModal(engine: CanvasEngine): void {
             <button class="grid-preset-btn" data-color="#475569" style="background: #475569; border: 1px solid #64748b; width: 22px; height: 22px; border-radius: 4px; cursor: pointer;" title="Slate"></button>
           </div>
         </div>
+
+        <!-- Grid Line Thickness -->
+        <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 6px; border-top: 1px solid rgba(255, 255, 255, 0.06); padding-top: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <label style="font-size: 13px; font-weight: 600; color: #e2e8f0;">Grid Line Thickness</label>
+            <span id="grid-thickness-val-txt" style="font-size: 12px; color: #38bdf8; font-weight: 700; font-family: monospace;">${currentGridThickness}px</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <input type="range" id="setting-grid-thickness-slider" min="0.25" max="3.0" step="0.25" value="${currentGridThickness}" style="flex: 1; accent-color: #c084fc; cursor: pointer;" />
+            <button id="btn-reset-grid-thickness" class="btn-glass" style="padding: 6px 12px; border-radius: 8px; font-size: 12px; cursor: pointer; color: #cbd5e1; white-space: nowrap;">Reset (0.5px)</button>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">
+            <span style="font-size: 11px; color: #94a3b8;">Presets:</span>
+            <button class="grid-thickness-btn btn-glass btn-sm" data-val="0.5" style="padding: 2px 8px; font-size: 11px; border-radius: 4px; cursor: pointer;">0.5px (Default)</button>
+            <button class="grid-thickness-btn btn-glass btn-sm" data-val="1" style="padding: 2px 8px; font-size: 11px; border-radius: 4px; cursor: pointer;">1.0px</button>
+            <button class="grid-thickness-btn btn-glass btn-sm" data-val="1.5" style="padding: 2px 8px; font-size: 11px; border-radius: 4px; cursor: pointer;">1.5px</button>
+            <button class="grid-thickness-btn btn-glass btn-sm" data-val="2" style="padding: 2px 8px; font-size: 11px; border-radius: 4px; cursor: pointer;">2.0px</button>
+            <button class="grid-thickness-btn btn-glass btn-sm" data-val="3" style="padding: 2px 8px; font-size: 11px; border-radius: 4px; cursor: pointer;">3.0px</button>
+          </div>
+        </div>
       </div>
 
       <!-- Section 2: Interaction Settings -->
       <div style="display: flex; flex-direction: column; gap: 12px; background: rgba(30, 41, 59, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 16px;">
         <h4 style="margin: 0; font-size: 14px; font-weight: 700; color: #e879f9; display: flex; align-items: center; gap: 6px;">
-          🖱️ Canvas Interaction
+          🖱️ Canvas Interaction & Performance
         </h4>
         <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; user-select: none;">
           <input type="checkbox" id="setting-allow-locked-selection" ${allowLockedSelection ? "checked" : ""} style="width: 18px; height: 18px; margin-top: 2px; accent-color: #c084fc; cursor: pointer;" />
@@ -91,6 +114,21 @@ export function openSettingsModal(engine: CanvasEngine): void {
             </span>
           </div>
         </label>
+
+        <!-- FPS Limit -->
+        <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 6px; border-top: 1px solid rgba(255, 255, 255, 0.06); padding-top: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <label style="font-size: 13px; font-weight: 600; color: #e2e8f0;">Frame Rate (FPS) Limit</label>
+            <span id="fps-val-txt" style="font-size: 12px; color: #e879f9; font-weight: 700; font-family: monospace;">${currentFpsLimit === "0" || !currentFpsLimit ? "60 FPS (Uncapped)" : currentFpsLimit + " FPS"}</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button class="fps-preset-btn btn-glass ${currentFpsLimit === "0" || !currentFpsLimit ? "btn-primary" : ""}" data-val="0" style="flex: 1; padding: 6px 10px; font-size: 12px; border-radius: 8px; cursor: pointer;">60 FPS (Uncapped)</button>
+            <button class="fps-preset-btn btn-glass ${currentFpsLimit === "30" ? "btn-primary" : ""}" data-val="30" style="flex: 1; padding: 6px 10px; font-size: 12px; border-radius: 8px; cursor: pointer;">30 FPS (Saver)</button>
+            <button class="fps-preset-btn btn-glass ${currentFpsLimit === "20" ? "btn-primary" : ""}" data-val="20" style="flex: 1; padding: 6px 10px; font-size: 12px; border-radius: 8px; cursor: pointer;">20 FPS (Low)</button>
+            <button class="fps-preset-btn btn-glass ${currentFpsLimit === "15" ? "btn-primary" : ""}" data-val="15" style="flex: 1; padding: 6px 10px; font-size: 12px; border-radius: 8px; cursor: pointer;">15 FPS (Min)</button>
+          </div>
+          <span style="font-size: 11px; color: #94a3b8; margin-top: 2px;">Capping FPS reduces CPU/GPU load, fan noise, and battery drain on laptops.</span>
+        </div>
       </div>
 
       <!-- Section 3: AI Configuration Shortcut -->
@@ -119,7 +157,15 @@ export function openSettingsModal(engine: CanvasEngine): void {
   const gridResetBtn = modalEl.querySelector<HTMLButtonElement>("#btn-reset-grid-color")!;
   const gridPresetBtns = modalEl.querySelectorAll<HTMLButtonElement>(".grid-preset-btn");
 
+  const gridThicknessSlider = modalEl.querySelector<HTMLInputElement>("#setting-grid-thickness-slider")!;
+  const gridThicknessTxt = modalEl.querySelector<HTMLElement>("#grid-thickness-val-txt")!;
+  const gridThicknessResetBtn = modalEl.querySelector<HTMLButtonElement>("#btn-reset-grid-thickness")!;
+  const gridThicknessBtns = modalEl.querySelectorAll<HTMLButtonElement>(".grid-thickness-btn");
+
   const lockedCheckbox = modalEl.querySelector<HTMLInputElement>("#setting-allow-locked-selection")!;
+  const fpsTxt = modalEl.querySelector<HTMLElement>("#fps-val-txt")!;
+  const fpsBtns = modalEl.querySelectorAll<HTMLButtonElement>(".fps-preset-btn");
+
   const aiBtn = modalEl.querySelector<HTMLButtonElement>("#btn-settings-open-ai")!;
   const closeBtn = modalEl.querySelector<HTMLButtonElement>("#btn-close-settings")!;
   const closeTopBtn = modalEl.querySelector<HTMLButtonElement>("#btn-close-settings-top")!;
@@ -170,6 +216,27 @@ export function openSettingsModal(engine: CanvasEngine): void {
     });
   });
 
+  // Grid line thickness handlers
+  const updateGridThickness = (val: string) => {
+    gridThicknessSlider.value = val;
+    gridThicknessTxt.textContent = `${val}px`;
+    localStorage.setItem("vtt_personal_grid_thickness", val);
+  };
+  gridThicknessSlider.addEventListener("input", () => {
+    updateGridThickness(gridThicknessSlider.value);
+  });
+  gridThicknessResetBtn.addEventListener("click", () => {
+    localStorage.removeItem("vtt_personal_grid_thickness");
+    gridThicknessSlider.value = "0.5";
+    gridThicknessTxt.textContent = "0.5px";
+  });
+  gridThicknessBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const val = btn.getAttribute("data-val") || "0.5";
+      updateGridThickness(val);
+    });
+  });
+
   // Locked selection checkbox handler
   lockedCheckbox.addEventListener("change", () => {
     const checked = lockedCheckbox.checked;
@@ -180,6 +247,17 @@ export function openSettingsModal(engine: CanvasEngine): void {
         engine.selectedEntityId = null;
       }
     }
+  });
+
+  // FPS limit handlers
+  fpsBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const val = btn.getAttribute("data-val") || "0";
+      localStorage.setItem("vtt_fps_limit", val);
+      fpsTxt.textContent = val === "0" ? "60 FPS (Uncapped)" : `${val} FPS`;
+      fpsBtns.forEach((b) => b.classList.remove("btn-primary"));
+      btn.classList.add("btn-primary");
+    });
   });
 
   // AI configuration button handler

@@ -882,9 +882,24 @@ export class CanvasEngine {
   }
 
   private startRenderLoop(): void {
-    const render = () => {
-      this.renderFrame();
+    let lastFrameTime = 0;
+    const render = (currentTime: number) => {
       this.animFrameId = requestAnimationFrame(render);
+
+      const fpsLimitStr = localStorage.getItem("vtt_fps_limit");
+      const fpsLimit = fpsLimitStr ? Number(fpsLimitStr) : 0;
+      if (fpsLimit > 0 && fpsLimit < 120) {
+        const interval = 1000 / fpsLimit;
+        const elapsed = currentTime - lastFrameTime;
+        if (elapsed < interval) {
+          return;
+        }
+        lastFrameTime = currentTime - (elapsed % interval);
+      } else {
+        lastFrameTime = currentTime;
+      }
+
+      this.renderFrame();
     };
     this.animFrameId = requestAnimationFrame(render);
   }
@@ -1244,7 +1259,8 @@ export class CanvasEngine {
 
     const personalGridColor = localStorage.getItem("vtt_personal_grid_color");
     ctx.strokeStyle = (personalGridColor && personalGridColor.trim()) ? personalGridColor.trim() : "#000000";
-    ctx.lineWidth = 0.5 / this.zoom;
+    const personalGridThickness = Number(localStorage.getItem("vtt_personal_grid_thickness")) || 0.5;
+    ctx.lineWidth = personalGridThickness / this.zoom;
 
     if (settings.gridType === "square") {
       ctx.beginPath();
