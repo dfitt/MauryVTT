@@ -83,8 +83,12 @@ export function bindSelectTool(engine: CanvasEngine): void {
 
     // 2. Check if user clicked inside an entity
     let found: CanvasEntity | null = null;
+    const allowLockedSelection = localStorage.getItem("vtt_allow_locked_image_selection") !== "false";
     for (const ent of entities) {
       if ((window as any).vttSimpleMode && ent.type !== "token") {
+        continue;
+      }
+      if (ent.type === "image" && ent.locked && !allowLockedSelection) {
         continue;
       }
       if (ent.type === "image" || ent.type === "token") {

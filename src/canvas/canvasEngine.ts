@@ -918,7 +918,9 @@ export class CanvasEngine {
     const ctx = this.ctx;
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-    const bg = doc.canvasSettings.backgroundColor === "#13151b" ? "#475569" : (doc.canvasSettings.backgroundColor || "#475569");
+    const personalBg = localStorage.getItem("vtt_personal_bg_color");
+    const docBg = doc.canvasSettings.backgroundColor === "#13151b" ? "#475569" : (doc.canvasSettings.backgroundColor || "#475569");
+    const bg = (personalBg && personalBg.trim()) ? personalBg.trim() : docBg;
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
@@ -1240,7 +1242,8 @@ export class CanvasEngine {
     const endX = startX + (this.canvas.width / this.zoom) + size * 2;
     const endY = startY + (this.canvas.height / this.zoom) + size * 2;
 
-    ctx.strokeStyle = "#000000";
+    const personalGridColor = localStorage.getItem("vtt_personal_grid_color");
+    ctx.strokeStyle = (personalGridColor && personalGridColor.trim()) ? personalGridColor.trim() : "#000000";
     ctx.lineWidth = 0.5 / this.zoom;
 
     if (settings.gridType === "square") {

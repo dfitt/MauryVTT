@@ -3,6 +3,7 @@ import { sessionManager } from "../network/sessionManager.js";
 import { exportVTTDocArchive, importVTTDocArchive } from "../archive/vttdocArchive.js";
 import { CanvasEngine } from "../canvas/canvasEngine.js";
 import { TokenEntity } from "../types/vtt.js";
+import { openSettingsModal } from "./settingsModal.js";
 
 export function setupHeaderUI(engine?: CanvasEngine): void {
   const header = document.createElement("div");
@@ -18,6 +19,7 @@ export function setupHeaderUI(engine?: CanvasEngine): void {
       <div class="connected-users-list" id="connected-users-list"></div>
     </div>
     <div class="header-actions">
+      <button id="btn-open-settings" class="btn-glass" data-tooltip="Settings & Preferences" style="padding: 6px 10px; font-size: 1.15em; display: flex; align-items: center; justify-content: center;">⚙️</button>
       <button id="btn-open-archive" class="btn-glass">📂 Open .vttdoc</button>
       <button id="btn-save-archive" class="btn-glass btn-primary">💾 Save VTT Document</button>
     </div>
@@ -178,6 +180,12 @@ export function setupHeaderUI(engine?: CanvasEngine): void {
       }
     };
     input.click();
+  });
+
+  header.querySelector("#btn-open-settings")!.addEventListener("click", () => {
+    if (engine) {
+      openSettingsModal(engine);
+    }
   });
 
 }
