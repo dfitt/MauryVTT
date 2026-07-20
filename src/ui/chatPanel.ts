@@ -98,7 +98,59 @@ function playEffectAtUserToken(engine: CanvasEngine | undefined, doc: VTTDocumen
   }
 }
 
-export function parseAndRollDice(cmd: string, customIcon: string = ALL_ROLL_ICONS[0]): string | null {
+export function applyDamageToTargets(targetTokenIds: string[], damageTotal: number): void {
+  if (!targetTokenIds || targetTokenIds.length === 0 || damageTotal <= 0) return;
+  const doc = docStore.getDocument();
+  for (const tid of targetTokenIds) {
+    const ent = doc.entities[tid];
+    if (!ent || ent.type !== "token") continue;
+    const token = ent as TokenEntity;
+
+    const currentHpNum = token.hp !== undefined && token.hp !== "" ? (Number(token.hp) || 0) : 0;
+    const maxHpNum = token.maxHp !== undefined ? token.maxHp : (currentHpNum > 0 ? currentHpNum : 50);
+
+    const newHpNum = currentHpNum - damageTotal;
+    const effects = new Set<string>(token.statusEffects || []);
+
+    // Requirement 4: If damage reduces a token to 0 HP (or less), automatically give it the "Down" condition.
+    if (newHpNum <= 0) {
+      effects.add("down");
+    }
+
+    // Requirement 5: if damage reduces a token to half (or less) of the highest HP it has had, automatically give it the "Bloodied" condition.
+    if (newHpNum <= maxHpNum / 2 && maxHpNum > 0) {
+      effects.add("bloodied");
+    }
+
+    sessionManager.dispatchOperation({
+      opType: "UPDATE_ENTITY",
+      id: token.id,
+      patch: {
+        hp: newHpNum,
+        maxHp: Math.max(maxHpNum, currentHpNum),
+        statusEffects: Array.from(effects)
+      } as any
+    });
+
+    const myUsername = sessionManager.myUsername || localStorage.getItem("maury_vtt_username") || "Me";
+    const isMine = token.primaryOwnerUsername === myUsername || (doc.primaryTokens?.[myUsername] === token.id);
+    if (isMine) {
+      const sheet = doc.characterSheets?.[myUsername];
+      if (sheet) {
+        sessionManager.dispatchOperation({
+          opType: "UPDATE_CHARACTER_SHEET",
+          username: myUsername,
+          sheet: {
+            ...sheet,
+            hp: newHpNum
+          }
+        });
+      }
+    }
+  }
+}
+
+export function parseAndRollDice(cmd: string, customIcon: string = ALL_ROLL_ICONS[0]): { formatted: string; total: number } | null {
   const rawExpr = cmd.replace(/^\/(?:roll|r)\b\s*|^\/r\s*/i, "").replace(/\s+/g, "");
   if (!rawExpr) return null;
 
@@ -156,14 +208,22 @@ export function parseAndRollDice(cmd: string, customIcon: string = ALL_ROLL_ICON
       rollIcon = '<strong style="color: #f87171; font-weight: 900; letter-spacing: 0.5px;">NOPE</strong>';
     }
   }
-  return `${rollIcon} ${rawExpr}: ${breakdowns.join("")} = <span style="color: #ffffff; font-weight: 800; font-size: 1.15em; text-shadow: 0 0 6px rgba(255, 255, 255, 0.35);">${total}</span>`;
+  return {
+    formatted: `${rollIcon} ${rawExpr}: ${breakdowns.join("")} = <span style="color: #ffffff; font-weight: 800; font-size: 1.15em; text-shadow: 0 0 6px rgba(255, 255, 255, 0.35);">${total}</span>`,
+    total
+  };
 }
 
-export function triggerQuickRollToChat(qr: { label: string; expr: string; icon?: string }, engine?: CanvasEngine): void {
-  const rollRes = parseAndRollDice(qr.expr, qr.icon || ALL_ROLL_ICONS[0]);
-  if (!rollRes) return;
+export function triggerQuickRollToChat(qr: { label: string; expr: string; icon?: string; isDamage?: boolean }, engine?: CanvasEngine): void {
+  const rollResObj = parseAndRollDice(qr.expr, qr.icon || ALL_ROLL_ICONS[0]);
+  if (!rollResObj) return;
+  const { formatted: rollRes, total: rollTotal } = rollResObj;
 
   const targetTokenIds = engine && engine.rollTargetTokenIds.size > 0 ? Array.from(engine.rollTargetTokenIds) : undefined;
+
+  if (qr.isDamage && targetTokenIds && targetTokenIds.length > 0) {
+    applyDamageToTargets(targetTokenIds, rollTotal);
+  }
 
   const newMsg: ChatMessage = {
     id: "msg-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6),
@@ -174,7 +234,8 @@ export function triggerQuickRollToChat(qr: { label: string; expr: string; icon?:
     type: "roll",
     rollLabel: qr.label,
     rollIcon: qr.icon || ALL_ROLL_ICONS[0],
-    targetTokenIds
+    targetTokenIds,
+    isDamage: qr.isDamage
   };
 
   sessionManager.dispatchOperation({
@@ -234,6 +295,12 @@ export function setupChatPanel(engine?: CanvasEngine): void {
           <strong id="dice-builder-expr-txt">---</strong>
         </div>
         <input type="text" id="dice-builder-label" class="dice-builder-label-input" placeholder="Label (e.g. Attack or Holy Damage)..." />
+        <div style="display: flex; align-items: center; gap: 6px; margin: 4px 0;">
+          <label style="font-size: 12px; font-weight: 700; color: #fda4af; cursor: pointer; display: flex; align-items: center; gap: 6px; user-select: none;">
+            <input type="checkbox" id="dice-builder-is-damage" style="accent-color: #f43f5e; cursor: pointer; width: 14px; height: 14px;" />
+            <span>⚔️ Is Damage Roll</span>
+          </label>
+        </div>
         <div class="dice-builder-actions" style="position: relative; display: flex; gap: 6px; align-items: center;">
           <button class="btn-glass" id="dice-builder-icon-btn" data-tooltip="Choose Animation" data-tooltip-align="left" style="padding: 6px 10px; font-size: 1.1em; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 6px;">${ALL_ROLL_ICONS[0]}</button>
           <button class="btn-glass" id="dice-builder-target-btn" data-tooltip="Token Targets: Click to select target tokens on the map" data-tooltip-align="left" style="padding: 6px 10px; font-size: 1.1em; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 6px;">🎯</button>
@@ -382,6 +449,7 @@ export function setupChatPanel(engine?: CanvasEngine): void {
   const detailsEl = panel.querySelector<HTMLElement>("#dice-builder-details")!;
   const exprTxtEl = panel.querySelector<HTMLElement>("#dice-builder-expr-txt")!;
   const labelInputEl = panel.querySelector<HTMLInputElement>("#dice-builder-label")!;
+  const isDamageCheckboxEl = panel.querySelector<HTMLInputElement>("#dice-builder-is-damage")!;
   const targetBtnEl = panel.querySelector<HTMLButtonElement>("#dice-builder-target-btn")!;
   const rollBtnEl = panel.querySelector<HTMLButtonElement>("#dice-builder-roll-btn")!;
   const clearBtnEl = panel.querySelector<HTMLButtonElement>("#dice-builder-clear-btn")!;
@@ -511,7 +579,7 @@ export function setupChatPanel(engine?: CanvasEngine): void {
     return expr;
   }
 
-  function saveQuickRoll(label: string, expr: string, icon: string = ALL_ROLL_ICONS[0]): void {
+  function saveQuickRoll(label: string, expr: string, icon: string = ALL_ROLL_ICONS[0], isDamage: boolean = false): void {
     const cleanLabel = label.trim();
     const cleanExpr = expr.trim();
     const username = sessionManager.myUsername || "Me";
@@ -521,7 +589,7 @@ export function setupChatPanel(engine?: CanvasEngine): void {
     const list = doc.quickRolls?.[username] ? [...doc.quickRolls[username]] : [];
 
     const filtered = list.filter((q) => q.label.toLowerCase() !== cleanLabel.toLowerCase());
-    filtered.unshift({ label: cleanLabel, expr: cleanExpr, icon });
+    filtered.unshift({ label: cleanLabel, expr: cleanExpr, icon, isDamage });
     const trimmed = filtered.slice(0, 12);
 
     sessionManager.dispatchOperation({
@@ -571,7 +639,7 @@ export function setupChatPanel(engine?: CanvasEngine): void {
         (qr, idx) => `
           <button class="btn-glass quickroll-btn" data-idx="${idx}" title="Quick roll: ${qr.label} (${qr.expr})" style="padding: 4px 8px; font-size: 0.85em; display: flex; align-items: center; gap: 4px; border: 1px solid rgba(56, 189, 248, 0.4); background: rgba(15, 23, 42, 0.75); border-radius: 4px; color: #f8fafc; cursor: pointer;">
             <span style="color: #38bdf8; font-size: 1.1em;">${qr.icon || ALL_ROLL_ICONS[0]}</span>
-            <strong style="font-weight: 600;">${qr.label}</strong>
+            <strong style="font-weight: 600; color: ${qr.isDamage ? '#fda4af' : '#f8fafc'};">${qr.isDamage ? '⚔️ ' : ''}${qr.label}</strong>
             <span style="color: #94a3b8; font-size: 0.8em;">(${qr.expr})</span>
           </button>
         `
@@ -664,6 +732,7 @@ export function setupChatPanel(engine?: CanvasEngine): void {
       builderState[key] = 0;
     }
     labelInputEl.value = "";
+    if (isDamageCheckboxEl) isDamageCheckboxEl.checked = false;
     selectedRollIcon = ALL_ROLL_ICONS[0];
     iconBtnEl.innerHTML = ALL_ROLL_ICONS[0];
     if (iconPopoverEl) {
@@ -682,8 +751,9 @@ export function setupChatPanel(engine?: CanvasEngine): void {
       e.stopPropagation();
       const type = btn.getAttribute("data-dice");
       if (!type || !type.startsWith("d")) return;
-      const rollRes = parseAndRollDice("1" + type, selectedRollIcon);
-      if (!rollRes) return;
+      const rollResObj = parseAndRollDice("1" + type, selectedRollIcon);
+      if (!rollResObj) return;
+      const { formatted: rollRes } = rollResObj;
       const newMsg: ChatMessage = {
         id: "msg-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6),
         timestamp: Date.now(),
@@ -763,10 +833,16 @@ export function setupChatPanel(engine?: CanvasEngine): void {
     const expr = formatBuilderExpression();
     if (!expr) return;
     const label = labelInputEl.value.trim();
-    const rollRes = parseAndRollDice(expr, selectedRollIcon);
-    if (!rollRes) return;
+    const isDamage = isDamageCheckboxEl ? isDamageCheckboxEl.checked : false;
+    const rollResObj = parseAndRollDice(expr, selectedRollIcon);
+    if (!rollResObj) return;
+    const { formatted: rollRes, total: rollTotal } = rollResObj;
 
     const targetTokenIds = engine && engine.rollTargetTokenIds.size > 0 ? Array.from(engine.rollTargetTokenIds) : undefined;
+
+    if (isDamage && targetTokenIds && targetTokenIds.length > 0) {
+      applyDamageToTargets(targetTokenIds, rollTotal);
+    }
 
     const newMsg: ChatMessage = {
       id: "msg-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6),
@@ -777,7 +853,8 @@ export function setupChatPanel(engine?: CanvasEngine): void {
       type: "roll",
       rollLabel: label || undefined,
       rollIcon: selectedRollIcon,
-      targetTokenIds
+      targetTokenIds,
+      isDamage
     };
 
     sessionManager.dispatchOperation({
@@ -786,7 +863,7 @@ export function setupChatPanel(engine?: CanvasEngine): void {
     });
 
     if (label) {
-      saveQuickRoll(label, expr, selectedRollIcon);
+      saveQuickRoll(label, expr, selectedRollIcon, isDamage);
     }
 
     resetBuilderState();
@@ -955,6 +1032,26 @@ export function setupChatPanel(engine?: CanvasEngine): void {
         return;
       }
 
+      if (/^\/duplicate$/i.test(val)) {
+        if (engine && engine.duplicateSelectedToken()) {
+          // Successfully duplicated
+        } else {
+          const sysMsg: ChatMessage = {
+            id: "sys-" + Date.now(),
+            timestamp: Date.now(),
+            senderPeerId: "system",
+            senderUsername: "System",
+            content: "⚠️ No token currently selected to duplicate. Select a token on the map first.",
+            type: "system"
+          };
+          sessionManager.dispatchOperation({
+            opType: "APPEND_CHAT_MESSAGE",
+            message: sysMsg
+          });
+        }
+        return;
+      }
+
       if (/^\/resync$/i.test(val)) {
         const sysMsg: ChatMessage = {
           id: "sys-" + Date.now(),
@@ -992,6 +1089,7 @@ export function setupChatPanel(engine?: CanvasEngine): void {
   <div style="display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; align-items: baseline;">
     <code>/r &lt;expr&gt;</code><span>Roll dice or trigger QuickRoll by name (e.g. <code>/r 2d6+4</code> or <code>/r Fireball</code>)</span>
     <code>/sheet</code><span>Open character sheet (Name, Portrait, Inventory, Notes & all 12 Named Rolls)</span>
+    <code>/duplicate</code><span>Duplicate currently selected token (hotkey: <code>Ctrl+D</code>)</span>
     <code>/whisper &lt;user&gt; &lt;msg&gt;</code><span>Whisper private message to connected user (shorthand <code>/w</code>)</span>
     <code>/key &lt;apikey&gt;</code><span>Set Gemini API key in memory & storage (or <code>/key delete</code>)</span>
     <code>/enhance</code><span>AI map enhancement from selection sketch & fills</span>
@@ -1013,6 +1111,7 @@ export function setupChatPanel(engine?: CanvasEngine): void {
       let msgType: ChatMessage["type"] = "text";
       let rollLabel: string | undefined = undefined;
       let rollExpr: string | undefined = undefined;
+      let isDamageRoll = false;
 
       const rollMatch = val.match(/^(.*?)(?:\/(?:roll|r)\b\s*|\/r\s*)(.+)$/i);
       if (rollMatch) {
@@ -1041,13 +1140,24 @@ export function setupChatPanel(engine?: CanvasEngine): void {
             }
           }
         }
-        const rollRes = parseAndRollDice(expr, selectedRollIcon);
-        if (rollRes) {
-          content = rollRes;
+        if (labelText && /#dmg|#damage/i.test(labelText)) {
+          isDamageRoll = true;
+          labelText = labelText.replace(/#dmg|#damage/ig, "").trim();
+        }
+        if (expr && /#dmg|#damage/i.test(expr)) {
+          isDamageRoll = true;
+          expr = expr.replace(/#dmg|#damage/ig, "").trim();
+        }
+        const rollResObj = parseAndRollDice(expr, selectedRollIcon);
+        if (rollResObj) {
+          content = rollResObj.formatted;
           msgType = "roll";
           rollExpr = expr;
           if (labelText) {
             rollLabel = labelText;
+          }
+          if (isDamageRoll && engine && engine.rollTargetTokenIds.size > 0) {
+            applyDamageToTargets(Array.from(engine.rollTargetTokenIds), rollResObj.total);
           }
         }
       } else if (/^\/flip$/i.test(val)) {
@@ -1070,7 +1180,9 @@ export function setupChatPanel(engine?: CanvasEngine): void {
         content,
         type: msgType,
         rollLabel,
-        rollIcon: msgType === "roll" ? (/^\/flip$/i.test(val) ? COIN_ICON_SVG : selectedRollIcon) : undefined
+        rollIcon: msgType === "roll" ? (/^\/flip$/i.test(val) ? COIN_ICON_SVG : selectedRollIcon) : undefined,
+        targetTokenIds: engine && engine.rollTargetTokenIds.size > 0 ? Array.from(engine.rollTargetTokenIds) : undefined,
+        isDamage: isDamageRoll
       };
 
       sessionManager.dispatchOperation({
@@ -1079,7 +1191,7 @@ export function setupChatPanel(engine?: CanvasEngine): void {
       });
 
       if (rollLabel && rollExpr) {
-        saveQuickRoll(rollLabel, rollExpr, selectedRollIcon);
+        saveQuickRoll(rollLabel, rollExpr, selectedRollIcon, isDamageRoll);
       }
     }
   });

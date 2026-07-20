@@ -16,6 +16,7 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
   let activeCondPopover: HTMLElement | null = null;
   let activeCondBtn: HTMLButtonElement | null = null;
   let activeNameInput: HTMLInputElement | null = null;
+  let activeHpInput: HTMLInputElement | null = null;
   let activeMineCheckbox: HTMLInputElement | null = null;
   let activeMineSpan: HTMLSpanElement | null = null;
   let lastSelectedId: string | null = null;
@@ -69,6 +70,13 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
       if (activeNameInput && document.activeElement !== activeNameInput) {
         activeNameInput.value = token.label || "";
       }
+      if (activeHpInput && document.activeElement !== activeHpInput) {
+        const myUsername = sessionManager.myUsername || localStorage.getItem("maury_vtt_username") || "Me";
+        const isMine = token.primaryOwnerUsername === myUsername || (doc.primaryTokens?.[myUsername] === token.id);
+        const sheetHp = isMine ? (doc.characterSheets?.[myUsername]?.hp !== undefined ? String(doc.characterSheets[myUsername].hp) : undefined) : undefined;
+        const displayHp = token.hp !== undefined ? String(token.hp) : (sheetHp || "");
+        activeHpInput.value = displayHp;
+      }
       const myUsername = sessionManager.myUsername || localStorage.getItem("maury_vtt_username") || "Me";
       const myPeerId = sessionManager.myPeerId || "local";
       const isMine = token.primaryOwnerUsername === myUsername || (doc.primaryTokens?.[myUsername] === token.id);
@@ -102,6 +110,10 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
       title.textContent = "♟️ Token";
       bar.appendChild(title);
 
+      const myUsername = sessionManager.myUsername || localStorage.getItem("maury_vtt_username") || "Me";
+      const myPeerId = sessionManager.myPeerId || "local";
+      const isMine = token.primaryOwnerUsername === myUsername || (doc.primaryTokens?.[myUsername] === token.id);
+
       // Name Input Field
       const nameInput = document.createElement("input");
       activeNameInput = nameInput;
@@ -119,6 +131,22 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
             id: token.id,
             patch: { label: newLabel } as any
           });
+
+          const currentDoc = docStore.getDocument();
+          const currentlyMine = token.primaryOwnerUsername === myUsername || (currentDoc.primaryTokens?.[myUsername] === token.id);
+          if (currentlyMine && newLabel) {
+            const sheet = currentDoc.characterSheets?.[myUsername];
+            if (!sheet || !sheet.characterName || sheet.characterName.trim() === "") {
+              sessionManager.dispatchOperation({
+                opType: "UPDATE_CHARACTER_SHEET",
+                username: myUsername,
+                sheet: {
+                  ...(sheet || { username: myUsername }),
+                  characterName: newLabel
+                }
+              });
+            }
+          }
         }
       };
       nameInput.addEventListener("change", commitName);
@@ -130,11 +158,60 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
       });
       bar.appendChild(nameInput);
 
-      // Mine Button (full button collision area!)
-      const myUsername = sessionManager.myUsername || localStorage.getItem("maury_vtt_username") || "Me";
-      const myPeerId = sessionManager.myPeerId || "local";
-      const isMine = token.primaryOwnerUsername === myUsername || (doc.primaryTokens?.[myUsername] === token.id);
+      // HP Input Field next to Name Input
+      const sheetHp = isMine ? (doc.characterSheets?.[myUsername]?.hp !== undefined ? String(doc.characterSheets[myUsername].hp) : undefined) : undefined;
+      const initialHp = token.hp !== undefined ? String(token.hp) : (sheetHp || "");
 
+      const hpInput = document.createElement("input");
+      activeHpInput = hpInput;
+      hpInput.type = "text";
+      hpInput.className = "token-hp-input";
+      hpInput.placeholder = "HP...";
+      hpInput.value = initialHp;
+      hpInput.style.cssText =
+        "background: rgba(244, 63, 94, 0.15); border: 1px solid rgba(244, 63, 94, 0.55); border-radius: 6px; color: #fda4af; padding: 4px 8px; font-size: 13px; font-weight: 700; outline: none; width: 65px; text-align: center; margin: 0 4px;";
+
+      const commitHp = () => {
+        const newHp = hpInput.value.trim();
+        if (newHp !== String(token.hp || "")) {
+          const patch: Partial<TokenEntity> = { hp: newHp };
+          const numHp = Number(newHp);
+          if (!isNaN(numHp) && numHp > (token.maxHp || 0)) {
+            patch.maxHp = numHp;
+          }
+          sessionManager.dispatchOperation({
+            opType: "UPDATE_ENTITY",
+            id: token.id,
+            patch: patch as any
+          });
+
+          const currentDoc = docStore.getDocument();
+          const currentlyMine = token.primaryOwnerUsername === myUsername || (currentDoc.primaryTokens?.[myUsername] === token.id);
+          if (currentlyMine) {
+            const sheet = currentDoc.characterSheets?.[myUsername];
+            if (String(sheet?.hp || "") !== newHp) {
+              sessionManager.dispatchOperation({
+                opType: "UPDATE_CHARACTER_SHEET",
+                username: myUsername,
+                sheet: {
+                  ...(sheet || { username: myUsername }),
+                  hp: newHp
+                }
+              });
+            }
+          }
+        }
+      };
+      hpInput.addEventListener("change", commitHp);
+      hpInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          commitHp();
+          hpInput.blur();
+        }
+      });
+      bar.appendChild(hpInput);
+
+      // Mine Button (full button collision area!)
       const mineBtn = document.createElement("button");
       mineBtn.className = `btn-glass btn-sm ${isMine ? "btn-active" : ""}`;
       mineBtn.style.cssText = "display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; margin: 0 4px; border-radius: 8px; padding: 6px 14px; min-height: 32px;";
@@ -297,34 +374,7 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
       document.body.appendChild(condPopover);
       bar.appendChild(condContainer);
 
-      // Duplicate Button (1 cell right)
-      const dupBtn = document.createElement("button");
-      dupBtn.className = "btn-glass btn-sm";
-      dupBtn.setAttribute("data-tooltip", "Duplicate Token 1 cell to the right");
-      dupBtn.innerHTML = "📋 Duplicate";
-      dupBtn.addEventListener("click", () => {
-        const gridSizePx = doc.canvasSettings.gridSizePx || 50;
-        const cloneId = "tok-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6);
-        const clone: TokenEntity = {
-          ...token,
-          id: cloneId,
-          position: {
-            x: token.position.x + gridSizePx,
-            y: token.position.y
-          },
-          createdAt: Date.now(),
-          updatedAt: Date.now()
-        };
-        sessionManager.dispatchOperation({
-          opType: "CREATE_ENTITY",
-          entity: clone
-        });
-        engine.setTool("select");
-        engine.selectedEntityId = cloneId;
-      });
-      bar.appendChild(dupBtn);
-
-      // Resize Button next to Duplicate
+      // Resize Button next to Condition popover
       const isResizingToken = engine.resizingTokenId === token.id;
       const resizeBtn = document.createElement("button");
       resizeBtn.className = `btn-glass btn-sm ${isResizingToken ? "btn-active" : ""}`;

@@ -76,6 +76,11 @@ export function openCharacterSheetModal(engine?: CanvasEngine): void {
           <label for="char-sheet-name" style="font-size: 11px; font-weight: 800; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.6px;">Character Name</label>
           <input id="char-sheet-name" type="text" placeholder="e.g. Valen Shadowhunter..." style="width: 100%; padding: 10px 14px; background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(56, 189, 248, 0.45); border-radius: 8px; color: #fff; font-size: 1.25em; font-weight: 700; outline: none; box-sizing: border-box; transition: border-color 0.2s;" />
         </div>
+        <!-- HP Input -->
+        <div style="width: 115px; display: flex; flex-direction: column; gap: 6px; flex-shrink: 0;">
+          <label for="char-sheet-hp" style="font-size: 11px; font-weight: 800; color: #f43f5e; text-transform: uppercase; letter-spacing: 0.6px; display: flex; align-items: center; gap: 4px;"><span>❤️ HP</span></label>
+          <input id="char-sheet-hp" type="text" placeholder="HP..." style="width: 100%; padding: 10px 10px; background: rgba(244, 63, 94, 0.12); border: 1.5px solid rgba(244, 63, 94, 0.55); border-radius: 8px; color: #fda4af; font-size: 1.25em; font-weight: 900; text-align: center; outline: none; box-sizing: border-box; transition: border-color 0.2s; box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3);" />
+        </div>
       </div>
 
       <!-- Saved Named Rolls -->
@@ -179,12 +184,33 @@ export function openCharacterSheetModal(engine?: CanvasEngine): void {
   });
 
   const nameInput = modalEl.querySelector<HTMLInputElement>("#char-sheet-name")!;
+  const hpInput = modalEl.querySelector<HTMLInputElement>("#char-sheet-hp")!;
   const descInput = modalEl.querySelector<HTMLTextAreaElement>("#char-sheet-desc")!;
   const invInput = modalEl.querySelector<HTMLTextAreaElement>("#char-sheet-inv")!;
   const notesInput = modalEl.querySelector<HTMLTextAreaElement>("#char-sheet-notes")!;
   const rollsContainer = modalEl.querySelector<HTMLElement>("#char-sheet-rolls-container")!;
   const rollsCountEl = modalEl.querySelector<HTMLElement>("#char-sheet-rolls-count")!;
   const portraitBox = modalEl.querySelector<HTMLElement>("#char-sheet-portrait-box")!;
+
+  const findMyClaimedToken = (doc: VTTDocument, uname: string): TokenEntity | undefined => {
+    let tokenId = doc.primaryTokens?.[uname];
+    if (tokenId) {
+      const e = doc.entities[tokenId];
+      if (e && e.type === "token") return e as TokenEntity;
+    }
+    const sheetName = doc.characterSheets?.[uname]?.characterName;
+    for (const ent of Object.values(doc.entities)) {
+      if (ent.type === "token") {
+        const t = ent as TokenEntity;
+        if (t.primaryOwnerUsername === uname || t.label === uname || (sheetName && t.label === sheetName)) {
+          if (t.ownerPeerIds?.includes(sessionManager.myPeerId || "") || t.primaryOwnerUsername === uname || !t.primaryOwnerUsername) {
+            return t;
+          }
+        }
+      }
+    }
+    return undefined;
+  };
 
   const saveSheetFields = (flushNow = false) => {
     if (debounceTimer) {
@@ -202,7 +228,8 @@ export function openCharacterSheetModal(engine?: CanvasEngine): void {
         characterName: nameInput.value.trim(),
         description: descInput.value,
         inventory: invInput.value,
-        notes: notesInput.value
+        notes: notesInput.value,
+        hp: hpInput.value.trim()
       };
 
       // Only dispatch if something changed
@@ -210,13 +237,37 @@ export function openCharacterSheetModal(engine?: CanvasEngine): void {
         patch.characterName !== (existing.characterName || "") ||
         patch.description !== (existing.description || "") ||
         patch.inventory !== (existing.inventory || "") ||
-        patch.notes !== (existing.notes || "")
+        patch.notes !== (existing.notes || "") ||
+        (patch.hp || "") !== (existing.hp || "")
       ) {
         sessionManager.dispatchOperation({
           opType: "UPDATE_CHARACTER_SHEET",
           username: uname,
           sheet: patch
         });
+      }
+
+      // Synchronize with claimed token
+      const tokenEnt = findMyClaimedToken(currentDoc, uname);
+      if (tokenEnt) {
+        const tokenPatch: Partial<TokenEntity> = {};
+        if (patch.characterName && patch.characterName.trim() !== "" && (!tokenEnt.label || tokenEnt.label.trim() === "" || tokenEnt.label === uname)) {
+          tokenPatch.label = patch.characterName.trim();
+        }
+        if (patch.hp !== undefined && String(patch.hp || "") !== String(tokenEnt.hp || "")) {
+          tokenPatch.hp = patch.hp;
+          const numHp = Number(patch.hp);
+          if (!isNaN(numHp) && numHp > (tokenEnt.maxHp || 0)) {
+            tokenPatch.maxHp = numHp;
+          }
+        }
+        if (Object.keys(tokenPatch).length > 0) {
+          sessionManager.dispatchOperation({
+            opType: "UPDATE_ENTITY",
+            id: tokenEnt.id,
+            patch: tokenPatch as any
+          });
+        }
       }
     };
 
@@ -227,39 +278,14 @@ export function openCharacterSheetModal(engine?: CanvasEngine): void {
     }
   };
 
-  [nameInput, descInput, invInput, notesInput].forEach((el) => {
+  [nameInput, descInput, invInput, notesInput, hpInput].forEach((el) => {
     el.addEventListener("input", () => saveSheetFields(false));
     el.addEventListener("change", () => saveSheetFields(true));
     el.addEventListener("blur", () => saveSheetFields(true));
   });
 
   const updatePortrait = async (doc: VTTDocument, uname: string) => {
-    let tokenId = doc.primaryTokens?.[uname];
-    let tokenEnt: TokenEntity | undefined;
-
-    if (tokenId) {
-      const e = doc.entities[tokenId];
-      if (e && e.type === "token") {
-        tokenEnt = e as TokenEntity;
-      }
-    }
-
-    if (!tokenEnt) {
-      // Find token by primaryOwnerUsername or label matching username/characterName
-      const sheetName = doc.characterSheets?.[uname]?.characterName;
-      for (const ent of Object.values(doc.entities)) {
-        if (ent.type === "token") {
-          const t = ent as TokenEntity;
-          if (t.primaryOwnerUsername === uname || t.label === uname || (sheetName && t.label === sheetName)) {
-            if (t.ownerPeerIds?.includes(sessionManager.myPeerId || "") || t.primaryOwnerUsername === uname || !t.primaryOwnerUsername) {
-              tokenEnt = t;
-              break;
-            }
-          }
-        }
-      }
-    }
-
+    const tokenEnt = findMyClaimedToken(doc, uname);
     if (tokenEnt && engine) {
       const targetTokenId = tokenEnt.id;
       const wx = tokenEnt.position.x + tokenEnt.size.width / 2;
@@ -308,7 +334,7 @@ export function openCharacterSheetModal(engine?: CanvasEngine): void {
           <button class="btn-glass sheet-quickroll-btn" data-idx="${idx}" title="Click to roll ${qr.label} (${qr.expr})" style="padding: 8px 12px; font-size: 13px; display: flex; align-items: center; gap: 8px; border: 1px solid rgba(56, 189, 248, 0.4); background: rgba(15, 23, 42, 0.85); border-radius: 8px; color: #f8fafc; cursor: pointer; text-align: left; transition: all 0.15s ease; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">
             <span style="color: #38bdf8; font-size: 1.3em; flex-shrink: 0;">${qr.icon || ALL_ROLL_ICONS[0]}</span>
             <div style="overflow: hidden;">
-              <div style="font-weight: 700; color: #f8fafc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${qr.label}</div>
+              <div style="font-weight: 700; color: ${qr.isDamage ? '#fda4af' : '#f8fafc'}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${qr.isDamage ? '⚔️ ' : ''}${qr.label}</div>
               <div style="color: #94a3b8; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${qr.expr}</div>
             </div>
           </button>
@@ -336,6 +362,14 @@ export function openCharacterSheetModal(engine?: CanvasEngine): void {
 
     if (document.activeElement !== nameInput && nameInput.value !== (sheet.characterName || "")) {
       nameInput.value = sheet.characterName || "";
+    }
+    const tokenEnt = findMyClaimedToken(doc, uname);
+    let displayHp = sheet.hp !== undefined ? String(sheet.hp || "") : "";
+    if (tokenEnt && tokenEnt.hp !== undefined && tokenEnt.hp !== "" && String(tokenEnt.hp) !== displayHp) {
+      displayHp = String(tokenEnt.hp);
+    }
+    if (document.activeElement !== hpInput && hpInput.value !== displayHp) {
+      hpInput.value = displayHp;
     }
     if (document.activeElement !== descInput && descInput.value !== (sheet.description || "")) {
       descInput.value = sheet.description || "";

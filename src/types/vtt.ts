@@ -9,6 +9,7 @@ export interface QuickRoll {
   label: string;
   expr: string;
   icon?: string;
+  isDamage?: boolean;
 }
 
 export interface CharacterSheetData {
@@ -17,6 +18,7 @@ export interface CharacterSheetData {
   description?: string;
   inventory?: string;
   notes?: string;
+  hp?: string | number;
 }
 
 export interface VTTDocument {
@@ -103,6 +105,8 @@ export interface TokenEntity extends BaseEntity {
     color: string;
     opacity: number;
   };
+  hp?: string | number;
+  maxHp?: number;
 }
 
 export interface LineEntity extends BaseEntity {
@@ -146,6 +150,7 @@ export interface ChatMessage {
   rollLabel?: string;
   rollIcon?: string;
   targetTokenIds?: string[];
+  isDamage?: boolean;
   thumbsUp?: number;
   thumbsDown?: number;
   laugh?: number;

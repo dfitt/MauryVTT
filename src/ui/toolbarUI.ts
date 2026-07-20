@@ -858,7 +858,9 @@ export function setupToolbarUI(engine: CanvasEngine): void {
       elevation: 0,
       ownerPeerIds: [sessionManager.myPeerId || "local"],
       primaryOwnerUsername: sessionManager.myUsername || localStorage.getItem("maury_vtt_username") || "Me",
-      statusEffects: []
+      statusEffects: [],
+      hp: 50,
+      maxHp: 50
     };
 
     sessionManager.dispatchOperation({

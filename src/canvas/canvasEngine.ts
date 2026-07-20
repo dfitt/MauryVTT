@@ -384,6 +384,12 @@ export class CanvasEngine {
         isSpacePressed = true;
       }
 
+      if (!isTyping && (e.ctrlKey || e.metaKey) && (e.key === "d" || e.key === "D")) {
+        if (this.duplicateSelectedToken()) {
+          e.preventDefault();
+        }
+      }
+
       if (!isTyping && (e.code === "Delete" || e.code === "Backspace")) {
         let didDelete = false;
         if (this.selectedEntityId) {
@@ -754,6 +760,32 @@ export class CanvasEngine {
       this.selectedEntityId = selectEntityId;
       this.setTool("select");
     }
+  }
+
+  public duplicateSelectedToken(): boolean {
+    if (!this.selectedEntityId) return false;
+    const doc = docStore.getDocument();
+    const token = doc.entities[this.selectedEntityId];
+    if (!token || token.type !== "token") return false;
+    const gridSizePx = doc.canvasSettings.gridSizePx || 50;
+    const cloneId = "tok-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6);
+    const clone: TokenEntity = {
+      ...(token as TokenEntity),
+      id: cloneId,
+      position: {
+        x: token.position.x + gridSizePx,
+        y: token.position.y
+      },
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+    sessionManager.dispatchOperation({
+      opType: "CREATE_ENTITY",
+      entity: clone
+    });
+    this.setTool("select");
+    this.selectedEntityId = cloneId;
+    return true;
   }
 
   public handleEphemeralPayload(payload: EphemeralPayload): void {
