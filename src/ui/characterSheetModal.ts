@@ -12,8 +12,13 @@ let modalEl: HTMLElement | null = null;
 let unsubscribeDocStore: (() => void) | null = null;
 let debounceTimer: any = null;
 let currentPortraitUrl: string | null = null;
+let outsideClickListener: ((e: PointerEvent | MouseEvent) => void) | null = null;
 
 export function closeCharacterSheetModal(): void {
+  if (outsideClickListener) {
+    document.removeEventListener("pointerdown", outsideClickListener);
+    outsideClickListener = null;
+  }
   if (unsubscribeDocStore) {
     unsubscribeDocStore();
     unsubscribeDocStore = null;
@@ -36,8 +41,7 @@ export function openCharacterSheetModal(engine?: CanvasEngine): void {
   const username = sessionManager.myUsername || localStorage.getItem("maury_vtt_username") || "Me";
 
   if (modalEl) {
-    // Bring to front and update
-    modalEl.style.display = "flex";
+    closeCharacterSheetModal();
     return;
   }
 
@@ -124,6 +128,24 @@ export function openCharacterSheetModal(engine?: CanvasEngine): void {
   `;
 
   document.body.appendChild(modalEl);
+
+  if (!outsideClickListener) {
+    outsideClickListener = (e: PointerEvent | MouseEvent) => {
+      if (!modalEl) return;
+      if (!modalEl.contains(e.target as Node)) {
+        const targetEl = e.target as HTMLElement;
+        if (targetEl && targetEl.closest && (targetEl.closest("[data-tooltip*='Character Sheet']") || targetEl.closest("#btn-simple-sheet"))) {
+          return;
+        }
+        closeCharacterSheetModal();
+      }
+    };
+    setTimeout(() => {
+      if (outsideClickListener && modalEl) {
+        document.addEventListener("pointerdown", outsideClickListener);
+      }
+    }, 0);
+  }
 
   const closeBtn = modalEl.querySelector<HTMLButtonElement>("#close-char-sheet-btn");
   if (closeBtn) {
