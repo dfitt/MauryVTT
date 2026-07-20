@@ -47,7 +47,8 @@ export class DocumentStore {
       chatHistory: [],
       quickRolls: {},
       customVttfxBundles: {},
-      primaryTokens: {}
+      primaryTokens: {},
+      characterSheets: {}
     };
   }
 
@@ -127,6 +128,9 @@ export class DocumentStore {
     }
     if (!this.doc.primaryTokens) {
       this.doc.primaryTokens = {};
+    }
+    if (!this.doc.characterSheets) {
+      this.doc.characterSheets = {};
     }
     this.cleanupAllUnusedAssets();
     this.notify();
@@ -262,6 +266,17 @@ export class DocumentStore {
           this.doc.quickRolls = {};
         }
         this.doc.quickRolls[op.username] = op.quickRolls;
+        break;
+      }
+      case "UPDATE_CHARACTER_SHEET": {
+        if (!this.doc.characterSheets) {
+          this.doc.characterSheets = {};
+        }
+        this.doc.characterSheets[op.username] = {
+          ...this.doc.characterSheets[op.username],
+          ...op.sheet,
+          username: op.username
+        };
         break;
       }
       case "CLEAR_CHAT_HISTORY": {

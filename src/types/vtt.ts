@@ -11,6 +11,14 @@ export interface QuickRoll {
   icon?: string;
 }
 
+export interface CharacterSheetData {
+  username: string;
+  characterName?: string;
+  description?: string;
+  inventory?: string;
+  notes?: string;
+}
+
 export interface VTTDocument {
   version: "1.0.0";
   documentId: string;
@@ -26,7 +34,9 @@ export interface VTTDocument {
   quickRolls: Record<string, QuickRoll[]>; // Keyed by username
   customVttfxBundles?: Record<string, any>;
   primaryTokens?: Record<string, string>; // Keyed by username -> tokenId
+  characterSheets?: Record<string, CharacterSheetData>; // Keyed by username
 }
+
 
 export interface CanvasSettings {
   backgroundColor: string;
@@ -166,6 +176,7 @@ export type DocumentOperation =
   | { opType: "UPDATE_CHAT_MESSAGE"; id: string; patch: Partial<ChatMessage> }
   | { opType: "UPDATE_GRID_CELL"; cellKey: string; patch: Partial<GridCellData> }
   | { opType: "UPDATE_QUICK_ROLLS"; username: string; quickRolls: QuickRoll[] }
+  | { opType: "UPDATE_CHARACTER_SHEET"; username: string; sheet: CharacterSheetData }
   | { opType: "CLEAR_CHAT_HISTORY" }
   | { opType: "REGISTER_VTTFX_BUNDLE"; bundle: any }
   | { opType: "BATCH"; ops: DocumentOperation[] };

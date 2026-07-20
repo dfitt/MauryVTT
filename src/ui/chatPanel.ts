@@ -8,6 +8,7 @@ import { ALL_ROLL_ICONS, COIN_ICON_SVG } from "./rollIcons.js";
 import { openImportVttfxModal } from "./vttfxImportModal.js";
 import { openGeminiApiKeyModal } from "./enhanceModal.js";
 import { openVttfxGenerateModal } from "./vttfxGenerateModal.js";
+import { openCharacterSheetModal } from "./characterSheetModal.js";
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } {
   let c = hex.replace(/^#/, "");
@@ -94,6 +95,95 @@ function playEffectAtUserToken(engine: CanvasEngine | undefined, doc: VTTDocumen
     const sizePx = Math.max(140, userToken.size.width * engine.zoom * 1.6);
     console.log("[DiceAnimation] Playing roll animation at token:", userToken.id, "for user:", senderUsername, "effectId:", effectId, "screenPos:", screenPos);
     EffectEngine.playAtScreenCoord(screenPos.x, screenPos.y, effectId, sizePx);
+  }
+}
+
+export function parseAndRollDice(cmd: string, customIcon: string = ALL_ROLL_ICONS[0]): string | null {
+  const rawExpr = cmd.replace(/^\/(?:roll|r)\b\s*|^\/r\s*/i, "").replace(/\s+/g, "");
+  if (!rawExpr) return null;
+
+  const tokenRegex = /([+-]?)([^+-]+)/g;
+  let match;
+  let total = 0;
+  const breakdowns: string[] = [];
+  let valid = false;
+  let hasD20 = false;
+  let hasNat20 = false;
+  let hasNat1 = false;
+
+  while ((match = tokenRegex.exec(rawExpr)) !== null) {
+    const signStr = match[1];
+    const sign = signStr === "-" ? -1 : 1;
+    const term = match[2];
+
+    const diceMatch = term.match(/^(\d*)d(\d+)$/i);
+    if (diceMatch) {
+      valid = true;
+      const count = diceMatch[1] === "" ? 1 : Math.min(parseInt(diceMatch[1], 10), 50);
+      const sides = parseInt(diceMatch[2], 10);
+      if (sides <= 0 || count <= 0) continue;
+      if (sides === 20) hasD20 = true;
+
+      const rolls: number[] = [];
+      let sum = 0;
+      for (let i = 0; i < count; i++) {
+        const r = Math.floor(Math.random() * sides) + 1;
+        rolls.push(r);
+        sum += r;
+        if (sides === 20 && r === 20) hasNat20 = true;
+        if (sides === 20 && r === 1) hasNat1 = true;
+      }
+      total += sign * sum;
+      const prefix = breakdowns.length === 0 ? (sign === -1 ? "-" : "") : (sign === -1 ? " - " : " + ");
+      breakdowns.push(`${prefix}[${rolls.join(", ")}]`);
+    } else if (/^\d+$/.test(term)) {
+      valid = true;
+      const val = parseInt(term, 10);
+      total += sign * val;
+      const prefix = breakdowns.length === 0 ? (sign === -1 ? "-" : "") : (sign === -1 ? " - " : " + ");
+      breakdowns.push(`${prefix}${val}`);
+    } else {
+      return null;
+    }
+  }
+
+  if (!valid) return null;
+  let rollIcon = customIcon || ALL_ROLL_ICONS[0];
+  if (hasD20) {
+    if (hasNat20) {
+      rollIcon = '<strong style="color: #4ade80; font-weight: 900; letter-spacing: 0.5px;">CRIT!</strong>';
+    } else if (hasNat1) {
+      rollIcon = '<strong style="color: #f87171; font-weight: 900; letter-spacing: 0.5px;">NOPE</strong>';
+    }
+  }
+  return `${rollIcon} ${rawExpr}: ${breakdowns.join("")} = <span style="color: #ffffff; font-weight: 800; font-size: 1.15em; text-shadow: 0 0 6px rgba(255, 255, 255, 0.35);">${total}</span>`;
+}
+
+export function triggerQuickRollToChat(qr: { label: string; expr: string; icon?: string }, engine?: CanvasEngine): void {
+  const rollRes = parseAndRollDice(qr.expr, qr.icon || ALL_ROLL_ICONS[0]);
+  if (!rollRes) return;
+
+  const targetTokenIds = engine && engine.rollTargetTokenIds.size > 0 ? Array.from(engine.rollTargetTokenIds) : undefined;
+
+  const newMsg: ChatMessage = {
+    id: "msg-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6),
+    timestamp: Date.now(),
+    senderPeerId: sessionManager.myPeerId || "local",
+    senderUsername: sessionManager.myUsername || "Me",
+    content: rollRes,
+    type: "roll",
+    rollLabel: qr.label,
+    rollIcon: qr.icon || ALL_ROLL_ICONS[0],
+    targetTokenIds
+  };
+
+  sessionManager.dispatchOperation({
+    opType: "APPEND_CHAT_MESSAGE",
+    message: newMsg
+  });
+
+  if (engine && engine.isRollTargetingMode) {
+    engine.toggleRollTargetingMode(false);
   }
 }
 
@@ -432,7 +522,7 @@ export function setupChatPanel(engine?: CanvasEngine): void {
 
     const filtered = list.filter((q) => q.label.toLowerCase() !== cleanLabel.toLowerCase());
     filtered.unshift({ label: cleanLabel, expr: cleanExpr, icon });
-    const trimmed = filtered.slice(0, 20);
+    const trimmed = filtered.slice(0, 12);
 
     sessionManager.dispatchOperation({
       opType: "UPDATE_QUICK_ROLLS",
@@ -461,32 +551,7 @@ export function setupChatPanel(engine?: CanvasEngine): void {
   }
 
   function executeQuickRollItem(qr: { label: string; expr: string; icon?: string }): void {
-    const rollRes = parseAndRollDice(qr.expr, qr.icon || ALL_ROLL_ICONS[0]);
-    if (!rollRes) return;
-
-    const targetTokenIds = engine && engine.rollTargetTokenIds.size > 0 ? Array.from(engine.rollTargetTokenIds) : undefined;
-
-    const newMsg: ChatMessage = {
-      id: "msg-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6),
-      timestamp: Date.now(),
-      senderPeerId: sessionManager.myPeerId || "local",
-      senderUsername: sessionManager.myUsername || "Me",
-      content: rollRes,
-      type: "roll",
-      rollLabel: qr.label,
-      rollIcon: qr.icon || ALL_ROLL_ICONS[0],
-      targetTokenIds
-    };
-
-    sessionManager.dispatchOperation({
-      opType: "APPEND_CHAT_MESSAGE",
-      message: newMsg
-    });
-
-    saveQuickRoll(qr.label, qr.expr, qr.icon || ALL_ROLL_ICONS[0]);
-    if (engine && engine.isRollTargetingMode) {
-      engine.toggleRollTargetingMode(false);
-    }
+    triggerQuickRollToChat(qr, engine);
   }
 
   function renderQuickRolls(): void {
@@ -727,66 +792,7 @@ export function setupChatPanel(engine?: CanvasEngine): void {
     resetBuilderState();
   });
 
-  function parseAndRollDice(cmd: string, customIcon: string = ALL_ROLL_ICONS[0]): string | null {
-    const rawExpr = cmd.replace(/^\/(?:roll|r)\b\s*|^\/r\s*/i, "").replace(/\s+/g, "");
-    if (!rawExpr) return null;
 
-    const tokenRegex = /([+-]?)([^+-]+)/g;
-    let match;
-    let total = 0;
-    const breakdowns: string[] = [];
-    let valid = false;
-    let hasD20 = false;
-    let hasNat20 = false;
-    let hasNat1 = false;
-
-    while ((match = tokenRegex.exec(rawExpr)) !== null) {
-      const signStr = match[1];
-      const sign = signStr === "-" ? -1 : 1;
-      const term = match[2];
-
-      const diceMatch = term.match(/^(\d*)d(\d+)$/i);
-      if (diceMatch) {
-        valid = true;
-        const count = diceMatch[1] === "" ? 1 : Math.min(parseInt(diceMatch[1], 10), 50);
-        const sides = parseInt(diceMatch[2], 10);
-        if (sides <= 0 || count <= 0) continue;
-        if (sides === 20) hasD20 = true;
-
-        const rolls: number[] = [];
-        let sum = 0;
-        for (let i = 0; i < count; i++) {
-          const r = Math.floor(Math.random() * sides) + 1;
-          rolls.push(r);
-          sum += r;
-          if (sides === 20 && r === 20) hasNat20 = true;
-          if (sides === 20 && r === 1) hasNat1 = true;
-        }
-        total += sign * sum;
-        const prefix = breakdowns.length === 0 ? (sign === -1 ? "-" : "") : (sign === -1 ? " - " : " + ");
-        breakdowns.push(`${prefix}[${rolls.join(", ")}]`);
-      } else if (/^\d+$/.test(term)) {
-        valid = true;
-        const val = parseInt(term, 10);
-        total += sign * val;
-        const prefix = breakdowns.length === 0 ? (sign === -1 ? "-" : "") : (sign === -1 ? " - " : " + ");
-        breakdowns.push(`${prefix}${val}`);
-      } else {
-        return null;
-      }
-    }
-
-    if (!valid) return null;
-    let rollIcon = customIcon || ALL_ROLL_ICONS[0];
-    if (hasD20) {
-      if (hasNat20) {
-        rollIcon = '<strong style="color: #4ade80; font-weight: 900; letter-spacing: 0.5px;">CRIT!</strong>';
-      } else if (hasNat1) {
-        rollIcon = '<strong style="color: #f87171; font-weight: 900; letter-spacing: 0.5px;">NOPE</strong>';
-      }
-    }
-    return `${rollIcon} ${rawExpr}: ${breakdowns.join("")} = <span style="color: #ffffff; font-weight: 800; font-size: 1.15em; text-shadow: 0 0 6px rgba(255, 255, 255, 0.35);">${total}</span>`;
-  }
 
   inputEl.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && inputEl.value.trim()) {
@@ -944,6 +950,11 @@ export function setupChatPanel(engine?: CanvasEngine): void {
         return;
       }
 
+      if (/^\/sheet$/i.test(val)) {
+        openCharacterSheetModal(engine);
+        return;
+      }
+
       if (/^\/resync$/i.test(val)) {
         const sysMsg: ChatMessage = {
           id: "sys-" + Date.now(),
@@ -980,6 +991,7 @@ export function setupChatPanel(engine?: CanvasEngine): void {
   <div style="font-weight: 700; color: #38bdf8; border-bottom: 1px solid rgba(56, 189, 248, 0.3); padding-bottom: 2px;">💬 Commands</div>
   <div style="display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; align-items: baseline;">
     <code>/r &lt;expr&gt;</code><span>Roll dice or trigger QuickRoll by name (e.g. <code>/r 2d6+4</code> or <code>/r Fireball</code>)</span>
+    <code>/sheet</code><span>Open character sheet (Name, Portrait, Inventory, Notes & all 12 Named Rolls)</span>
     <code>/whisper &lt;user&gt; &lt;msg&gt;</code><span>Whisper private message to connected user (shorthand <code>/w</code>)</span>
     <code>/key &lt;apikey&gt;</code><span>Set Gemini API key in memory & storage (or <code>/key delete</code>)</span>
     <code>/enhance</code><span>AI map enhancement from selection sketch & fills</span>
