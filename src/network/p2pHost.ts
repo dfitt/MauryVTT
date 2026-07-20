@@ -194,7 +194,8 @@ export class P2PHost {
           const ack: SyncMessage = {
             type: "HANDSHAKE_ACK",
             snapshot,
-            appVersion: APP_VERSION
+            appVersion: APP_VERSION,
+            lastSeenEntries: Array.from(this.lastSeenMap.entries())
           };
           conn.send(ack);
           break;
@@ -206,7 +207,8 @@ export class P2PHost {
           const ack: SyncMessage = {
             type: "RESYNC_ACK",
             snapshot,
-            appVersion: APP_VERSION
+            appVersion: APP_VERSION,
+            lastSeenEntries: Array.from(this.lastSeenMap.entries())
           };
           conn.send(ack);
           break;
@@ -221,7 +223,8 @@ export class P2PHost {
             type: "OP_COMMIT",
             clientSeq: msg.clientSeq,
             revision: currentDoc.revision,
-            op: msg.op
+            op: msg.op,
+            senderPeerId: msg.senderPeerId || conn.peer
           };
 
           console.log("[p2pHost] Broadcasting OP_COMMIT (rev " + currentDoc.revision + ") for:", msg.op.opType);
@@ -307,7 +310,8 @@ export class P2PHost {
     const commit: SyncMessage = {
       type: "OP_COMMIT",
       revision: currentDoc.revision,
-      op
+      op,
+      senderPeerId: this.hostRoomId
     };
     this.broadcastMessage(commit);
   }
@@ -318,7 +322,8 @@ export class P2PHost {
     const msg: SyncMessage = {
       type: "RESYNC_ACK",
       snapshot,
-      appVersion: APP_VERSION
+      appVersion: APP_VERSION,
+      lastSeenEntries: Array.from(this.lastSeenMap.entries())
     };
     for (const conn of this.connections.values()) {
       if (conn.open) {

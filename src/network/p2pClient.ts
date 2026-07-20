@@ -203,6 +203,19 @@ export class P2PClient {
     conn.on("data", async (raw: any) => {
       if (!raw || typeof raw !== "object") return;
 
+      if (this.hostRoomId) {
+        sessionManager.recordActivity(this.hostRoomId);
+      }
+      if ("senderPeerId" in raw && typeof raw.senderPeerId === "string" && raw.senderPeerId) {
+        sessionManager.recordActivity(raw.senderPeerId);
+      }
+      if ("peerId" in raw && typeof raw.peerId === "string" && raw.peerId) {
+        sessionManager.recordActivity(raw.peerId);
+      }
+      if ("requesterPeerId" in raw && typeof raw.requesterPeerId === "string" && raw.requesterPeerId) {
+        sessionManager.recordActivity(raw.requesterPeerId);
+      }
+
       if ("type" in raw) {
         const type = raw.type;
         if (type === "CURSOR" || type === "PING" || type === "MEASURE_LINE" || type === "LASER_LINE" || type === "REPLAY_ANIMATION" || (typeof type === "string" && (type.startsWith("ENHANCE_") || type.startsWith("VTTFX_") || type.startsWith("REPLAY_")))) {
@@ -221,6 +234,11 @@ export class P2PClient {
           case "HANDSHAKE_ACK": {
             if (this.checkHostVersionAndReload(msg.appVersion)) {
               return;
+            }
+            if (msg.lastSeenEntries) {
+              for (const [peerId, timestamp] of msg.lastSeenEntries) {
+                sessionManager.lastSeenMap.set(peerId, timestamp);
+              }
             }
             docStore.loadSnapshot(msg.snapshot);
 
@@ -256,6 +274,11 @@ export class P2PClient {
             if (this.checkHostVersionAndReload(msg.appVersion)) {
               return;
             }
+            if (msg.lastSeenEntries) {
+              for (const [peerId, timestamp] of msg.lastSeenEntries) {
+                sessionManager.lastSeenMap.set(peerId, timestamp);
+              }
+            }
             console.log("[p2pClient] Received full state RESYNC_ACK from host. Rebuilding state...");
             docStore.loadSnapshot(msg.snapshot);
             await this.syncMissingAssets();
@@ -264,12 +287,17 @@ export class P2PClient {
 
           case "OP_COMMIT": {
             console.log("[p2pClient] Received OP_COMMIT from host:", msg.op.opType, msg.op);
+            if (msg.senderPeerId) {
+              sessionManager.recordActivity(msg.senderPeerId);
+            }
             if ("entity" in msg.op && msg.op.entity?.lastModifiedBy) {
               sessionManager.recordActivity(msg.op.entity.lastModifiedBy);
             } else if ("message" in msg.op && msg.op.message?.senderPeerId) {
               sessionManager.recordActivity(msg.op.message.senderPeerId);
             } else if ("profile" in msg.op && msg.op.profile?.peerId) {
               sessionManager.recordActivity(msg.op.profile.peerId);
+            } else if ("patch" in msg.op && (msg.op.patch as any)?.lastModifiedBy) {
+              sessionManager.recordActivity((msg.op.patch as any).lastModifiedBy);
             }
             docStore.applyOperation(msg.op);
             await this.syncMissingAssets();
@@ -410,7 +438,8 @@ export class P2PClient {
     this.conn.send({
       type: "OP_REQUEST",
       clientSeq,
-      op
+      op,
+      senderPeerId: this.clientPeerId
     } as SyncMessage);
   }
 

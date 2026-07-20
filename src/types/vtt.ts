@@ -147,11 +147,11 @@ export interface ChatMessage {
 
 export type SyncMessage =
   | { type: "HANDSHAKE_REQ"; peerId: string }
-  | { type: "HANDSHAKE_ACK"; snapshot: VTTDocument; appVersion?: string }
+  | { type: "HANDSHAKE_ACK"; snapshot: VTTDocument; appVersion?: string; lastSeenEntries?: [string, number][] }
   | { type: "RESYNC_REQ"; peerId: string }
-  | { type: "RESYNC_ACK"; snapshot: VTTDocument; appVersion?: string }
-  | { type: "OP_REQUEST"; clientSeq: string; op: DocumentOperation }
-  | { type: "OP_COMMIT"; clientSeq?: string; revision: number; op: DocumentOperation }
+  | { type: "RESYNC_ACK"; snapshot: VTTDocument; appVersion?: string; lastSeenEntries?: [string, number][] }
+  | { type: "OP_REQUEST"; clientSeq: string; op: DocumentOperation; senderPeerId?: string }
+  | { type: "OP_COMMIT"; clientSeq?: string; revision: number; op: DocumentOperation; senderPeerId?: string }
   | AssetProtocolMessage;
 
 export type DocumentOperation =
