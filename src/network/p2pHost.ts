@@ -7,6 +7,7 @@ import {
   DocumentOperation,
   EphemeralPayload
 } from "../types/vtt.js";
+import { APP_VERSION } from "../version.js";
 
 const CHUNK_SIZE = 16384; // 16 KB
 
@@ -192,7 +193,8 @@ export class P2PHost {
           const snapshot = docStore.getDocument();
           const ack: SyncMessage = {
             type: "HANDSHAKE_ACK",
-            snapshot
+            snapshot,
+            appVersion: APP_VERSION
           };
           conn.send(ack);
           break;
@@ -203,7 +205,8 @@ export class P2PHost {
           const snapshot = docStore.getDocument();
           const ack: SyncMessage = {
             type: "RESYNC_ACK",
-            snapshot
+            snapshot,
+            appVersion: APP_VERSION
           };
           conn.send(ack);
           break;
@@ -314,7 +317,8 @@ export class P2PHost {
     const snapshot = docStore.getDocument();
     const msg: SyncMessage = {
       type: "RESYNC_ACK",
-      snapshot
+      snapshot,
+      appVersion: APP_VERSION
     };
     for (const conn of this.connections.values()) {
       if (conn.open) {

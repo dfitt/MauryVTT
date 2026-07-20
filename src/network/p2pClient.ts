@@ -11,6 +11,7 @@ import {
   ImageEntity,
   TokenEntity
 } from "../types/vtt.js";
+import { APP_VERSION, isLaterVersion } from "../version.js";
 
 const CHUNK_SIZE = 16384; // 16 KB
 
@@ -64,6 +65,23 @@ export class P2PClient {
   private savedProfile: Omit<UserProfile, "peerId" | "joinedAt" | "role"> | null = null;
   private isReconnecting: boolean = false;
   private reconnectTimer: any = null;
+
+  private checkHostVersionAndReload(hostAppVersion?: string): boolean {
+    if (!hostAppVersion || !isLaterVersion(hostAppVersion, APP_VERSION)) {
+      sessionStorage.removeItem("vtt_reloaded_for_version");
+      return false;
+    }
+    const lastReload = sessionStorage.getItem("vtt_reloaded_for_version");
+    if (lastReload !== hostAppVersion) {
+      console.warn(`[p2pClient] Host is running newer version (${hostAppVersion}) than client (${APP_VERSION}). Forcing page refresh to get latest...`);
+      sessionStorage.setItem("vtt_reloaded_for_version", hostAppVersion);
+      window.location.reload();
+      return true;
+    } else {
+      console.warn(`[p2pClient] Already attempted refresh for host version ${hostAppVersion}, but client is still on ${APP_VERSION}. Proceeding without reload.`);
+      return false;
+    }
+  }
 
   constructor() {
     if (typeof window !== "undefined" && typeof document !== "undefined") {
@@ -201,6 +219,9 @@ export class P2PClient {
         const msg = raw as SyncMessage;
         switch (msg.type) {
           case "HANDSHAKE_ACK": {
+            if (this.checkHostVersionAndReload(msg.appVersion)) {
+              return;
+            }
             docStore.loadSnapshot(msg.snapshot);
 
             const userProfile: UserProfile = {
@@ -232,6 +253,9 @@ export class P2PClient {
           }
 
           case "RESYNC_ACK": {
+            if (this.checkHostVersionAndReload(msg.appVersion)) {
+              return;
+            }
             console.log("[p2pClient] Received full state RESYNC_ACK from host. Rebuilding state...");
             docStore.loadSnapshot(msg.snapshot);
             await this.syncMissingAssets();

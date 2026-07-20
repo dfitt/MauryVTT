@@ -147,9 +147,9 @@ export interface ChatMessage {
 
 export type SyncMessage =
   | { type: "HANDSHAKE_REQ"; peerId: string }
-  | { type: "HANDSHAKE_ACK"; snapshot: VTTDocument }
+  | { type: "HANDSHAKE_ACK"; snapshot: VTTDocument; appVersion?: string }
   | { type: "RESYNC_REQ"; peerId: string }
-  | { type: "RESYNC_ACK"; snapshot: VTTDocument }
+  | { type: "RESYNC_ACK"; snapshot: VTTDocument; appVersion?: string }
   | { type: "OP_REQUEST"; clientSeq: string; op: DocumentOperation }
   | { type: "OP_COMMIT"; clientSeq?: string; revision: number; op: DocumentOperation }
   | AssetProtocolMessage;
