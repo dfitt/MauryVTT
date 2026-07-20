@@ -366,7 +366,10 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
       sessionManager.dispatchOperation({
         opType: "UPDATE_ENTITY",
         id: ent.id,
-        patch: { locked: !ent.locked } as any
+        patch: {
+          locked: !ent.locked,
+          lockedBy: !ent.locked ? (sessionManager.myPeerId || "local") : undefined
+        } as any
       });
       updateBar(ent.id);
     });

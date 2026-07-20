@@ -58,6 +58,7 @@ export interface BaseEntity {
   updatedAt: number;
   lastModifiedBy: string;
   locked: boolean;
+  lockedBy?: string;
 }
 
 export interface ImageEntity extends BaseEntity {

@@ -9,6 +9,7 @@ import {
   EphemeralPayload
 } from "../types/vtt.js";
 import { sessionManager } from "../network/sessionManager.js";
+import { canSelectLockedImage } from "./lockedSelectionHelper.js";
 
 export type ToolType = "select" | "pan" | "draw" | "line" | "fill" | "erase" | "hide" | "unhide" | "measure" | "ping" | "token" | "ephemeral" | "laser" | "enhance";
 
@@ -1903,8 +1904,8 @@ export class CanvasEngine {
         }
       }
 
-      // Draw lock indicator badge
-      if (ent.locked) {
+      // Draw lock indicator badge (hidden for locked images user cannot select)
+      if (ent.locked && (ent.type !== "image" || canSelectLockedImage(ent))) {
         ctx.font = `${Math.max(7, 8 / this.zoom)}px Outfit, sans-serif`;
         ctx.fillStyle = "rgba(15, 23, 42, 0.9)";
         ctx.fillRect(halfW - 12 / this.zoom, -halfH, 12 / this.zoom, 12 / this.zoom);

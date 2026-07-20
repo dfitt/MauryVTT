@@ -429,10 +429,11 @@ function showEnhanceConfirmationBar(
     const lockedMapEntity: ImageEntity = {
       ...currentEnt,
       locked: true,
+      lockedBy: sessionManager.myPeerId || "local",
       updatedAt: Date.now(),
       lastModifiedBy: sessionManager.myPeerId || "local"
     };
-    docStore.applyOperation({ opType: "UPDATE_ENTITY", id: lockedMapEntity.id, patch: { locked: true } }, { incrementRevision: false });
+    docStore.applyOperation({ opType: "UPDATE_ENTITY", id: lockedMapEntity.id, patch: { locked: true, lockedBy: sessionManager.myPeerId || "local" } }, { incrementRevision: false });
     sessionManager.dispatchOperation({ opType: "CREATE_ENTITY", entity: lockedMapEntity });
     if (proxyPeerId) {
       sessionManager.dispatchOperation({

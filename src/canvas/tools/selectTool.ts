@@ -2,6 +2,7 @@ import { CanvasEngine } from "../canvasEngine.js";
 import { docStore } from "../../state/documentStore.js";
 import { sessionManager } from "../../network/sessionManager.js";
 import { CanvasEntity, ImageEntity, TokenEntity } from "../../types/vtt.js";
+import { canSelectLockedImage } from "../lockedSelectionHelper.js";
 
 export function bindSelectTool(engine: CanvasEngine): void {
   let draggingEntity: CanvasEntity | null = null;
@@ -83,12 +84,11 @@ export function bindSelectTool(engine: CanvasEngine): void {
 
     // 2. Check if user clicked inside an entity
     let found: CanvasEntity | null = null;
-    const allowLockedSelection = localStorage.getItem("vtt_allow_locked_image_selection") !== "false";
     for (const ent of entities) {
       if ((window as any).vttSimpleMode && ent.type !== "token") {
         continue;
       }
-      if (ent.type === "image" && ent.locked && !allowLockedSelection) {
+      if (ent.type === "image" && ent.locked && !canSelectLockedImage(ent)) {
         continue;
       }
       if (ent.type === "image" || ent.type === "token") {

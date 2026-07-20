@@ -1,6 +1,7 @@
 import { CanvasEngine } from "../canvas/canvasEngine.js";
 import { docStore } from "../state/documentStore.js";
 import { openGeminiApiKeyModal } from "./enhanceModal.js";
+import { canSelectLockedImage } from "../canvas/lockedSelectionHelper.js";
 
 export function openSettingsModal(engine: CanvasEngine): void {
   let modalEl = document.getElementById("vtt-settings-modal");
@@ -22,7 +23,12 @@ export function openSettingsModal(engine: CanvasEngine): void {
   const currentGridThickness = localStorage.getItem("vtt_personal_grid_thickness") || "0.5";
   const currentFpsLimit = localStorage.getItem("vtt_fps_limit") || "0";
 
-  const allowLockedSelection = localStorage.getItem("vtt_allow_locked_image_selection") !== "false";
+  const rawLockedSetting = localStorage.getItem("vtt_allow_locked_image_selection");
+  const allowLockedSelection = (rawLockedSetting === "false" || rawLockedSetting === "none")
+    ? "none"
+    : (rawLockedSetting === "all")
+      ? "all"
+      : "own"; // default is "own"
 
   modalEl.innerHTML = `
     <div style="background: rgba(15, 23, 42, 0.96); border: 1px solid rgba(192, 132, 252, 0.6); border-radius: 16px; padding: 24px; max-width: 520px; width: 92%; box-shadow: 0 20px 50px rgba(0,0,0,0.85); color: #f8fafc; font-family: Outfit, sans-serif; display: flex; flex-direction: column; gap: 20px; max-height: 90vh; overflow-y: auto;">
@@ -105,15 +111,20 @@ export function openSettingsModal(engine: CanvasEngine): void {
         <h4 style="margin: 0; font-size: 14px; font-weight: 700; color: #e879f9; display: flex; align-items: center; gap: 6px;">
           🖱️ Canvas Interaction & Performance
         </h4>
-        <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; user-select: none;">
-          <input type="checkbox" id="setting-allow-locked-selection" ${allowLockedSelection ? "checked" : ""} style="width: 18px; height: 18px; margin-top: 2px; accent-color: #c084fc; cursor: pointer;" />
-          <div style="display: flex; flex-direction: column;">
-            <span style="font-size: 13px; font-weight: 600; color: #ffffff;">Allow locked image selection</span>
-            <span style="font-size: 12px; color: #94a3b8; line-height: 1.4; margin-top: 2px;">
-              If unchecked, locked images (like background maps and room decorations) cannot be clicked or selected, preventing UI clutter and accidental selection when dragging or pinging.
-            </span>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <label style="font-size: 13px; font-weight: 600; color: #ffffff;">Allow locked image selection</label>
+            <span id="locked-sel-txt" style="font-size: 12px; color: #e879f9; font-weight: 700;">${allowLockedSelection === "none" ? "None (Can't Select)" : allowLockedSelection === "all" ? "Any Locked Image" : "Only Mine (Default)"}</span>
           </div>
-        </label>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button class="locked-selection-btn btn-glass ${allowLockedSelection === "none" ? "btn-primary" : ""}" data-val="none" style="flex: 1; padding: 6px 10px; font-size: 12px; border-radius: 8px; cursor: pointer;">None</button>
+            <button class="locked-selection-btn btn-glass ${allowLockedSelection === "own" ? "btn-primary" : ""}" data-val="own" style="flex: 1; padding: 6px 10px; font-size: 12px; border-radius: 8px; cursor: pointer;">Only Mine</button>
+            <button class="locked-selection-btn btn-glass ${allowLockedSelection === "all" ? "btn-primary" : ""}" data-val="all" style="flex: 1; padding: 6px 10px; font-size: 12px; border-radius: 8px; cursor: pointer;">All Locked</button>
+          </div>
+          <span style="font-size: 11px; color: #94a3b8; line-height: 1.4; margin-top: 2px;">
+            Control which locked images (like background maps and room decorations) you can click and select.
+          </span>
+        </div>
 
         <!-- FPS Limit -->
         <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 6px; border-top: 1px solid rgba(255, 255, 255, 0.06); padding-top: 12px;">
@@ -162,7 +173,8 @@ export function openSettingsModal(engine: CanvasEngine): void {
   const gridThicknessResetBtn = modalEl.querySelector<HTMLButtonElement>("#btn-reset-grid-thickness")!;
   const gridThicknessBtns = modalEl.querySelectorAll<HTMLButtonElement>(".grid-thickness-btn");
 
-  const lockedCheckbox = modalEl.querySelector<HTMLInputElement>("#setting-allow-locked-selection")!;
+  const lockedBtns = modalEl.querySelectorAll<HTMLButtonElement>(".locked-selection-btn");
+  const lockedTxt = modalEl.querySelector<HTMLElement>("#locked-sel-txt")!;
   const fpsTxt = modalEl.querySelector<HTMLElement>("#fps-val-txt")!;
   const fpsBtns = modalEl.querySelectorAll<HTMLButtonElement>(".fps-preset-btn");
 
@@ -237,16 +249,21 @@ export function openSettingsModal(engine: CanvasEngine): void {
     });
   });
 
-  // Locked selection checkbox handler
-  lockedCheckbox.addEventListener("change", () => {
-    const checked = lockedCheckbox.checked;
-    localStorage.setItem("vtt_allow_locked_image_selection", checked ? "true" : "false");
-    if (!checked && engine.selectedEntityId) {
-      const selectedEnt = docStore.getDocument().entities[engine.selectedEntityId];
-      if (selectedEnt && selectedEnt.locked && selectedEnt.type === "image") {
-        engine.selectedEntityId = null;
+  // Locked selection 3-state buttons handler
+  lockedBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const val = btn.getAttribute("data-val") || "own";
+      localStorage.setItem("vtt_allow_locked_image_selection", val);
+      lockedTxt.textContent = val === "none" ? "None (Can't Select)" : val === "all" ? "Any Locked Image" : "Only Mine (Default)";
+      lockedBtns.forEach((b) => b.classList.remove("btn-primary"));
+      btn.classList.add("btn-primary");
+      if (engine.selectedEntityId) {
+        const selectedEnt = docStore.getDocument().entities[engine.selectedEntityId];
+        if (selectedEnt && selectedEnt.locked && selectedEnt.type === "image" && !canSelectLockedImage(selectedEnt)) {
+          engine.selectedEntityId = null;
+        }
       }
-    }
+    });
   });
 
   // FPS limit handlers

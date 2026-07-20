@@ -4,6 +4,7 @@ import { exportVTTDocArchive, importVTTDocArchive } from "../archive/vttdocArchi
 import { CanvasEngine } from "../canvas/canvasEngine.js";
 import { TokenEntity } from "../types/vtt.js";
 import { openSettingsModal } from "./settingsModal.js";
+import { setupBatteryIndicator } from "./batteryUI.js";
 
 export function setupHeaderUI(engine?: CanvasEngine): void {
   const header = document.createElement("div");
@@ -18,7 +19,8 @@ export function setupHeaderUI(engine?: CanvasEngine): void {
       </div>
       <div class="connected-users-list" id="connected-users-list"></div>
     </div>
-    <div class="header-actions">
+    <div class="header-actions" style="display: flex; align-items: center; gap: 8px;">
+      <div id="battery-indicator-container" style="display: none; align-items: center;"></div>
       <button id="btn-open-settings" class="btn-glass" data-tooltip="Settings & Preferences" style="padding: 6px 10px; font-size: 1.15em; display: flex; align-items: center; justify-content: center;">⚙️</button>
       <button id="btn-open-archive" class="btn-glass">📂 Open .vttdoc</button>
       <button id="btn-save-archive" class="btn-glass btn-primary">💾 Save VTT Document</button>
@@ -188,4 +190,5 @@ export function setupHeaderUI(engine?: CanvasEngine): void {
     }
   });
 
+  setupBatteryIndicator();
 }
