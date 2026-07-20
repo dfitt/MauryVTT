@@ -6,6 +6,8 @@ import { VTTDocument, CharacterSheetData, TokenEntity } from "../types/vtt.js";
 import { triggerQuickRollToChat } from "./chatPanel.js";
 import { ALL_ROLL_ICONS } from "./rollIcons.js";
 
+export const SHEET_ICON_SVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle;"><path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2Z" fill="rgba(56, 189, 248, 0.15)" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="10" cy="12" r="2.2" stroke="currentColor" stroke-width="1.8"/><line x1="14" y1="11" x2="16.5" y2="11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="14" y1="13.5" x2="16.5" y2="13.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="7.5" y1="17.5" x2="16.5" y2="17.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;
+
 let modalEl: HTMLElement | null = null;
 let unsubscribeDocStore: (() => void) | null = null;
 let debounceTimer: any = null;
@@ -258,12 +260,26 @@ export function openCharacterSheetModal(engine?: CanvasEngine): void {
       }
     }
 
+    if (tokenEnt && engine) {
+      const targetTokenId = tokenEnt.id;
+      const wx = tokenEnt.position.x + tokenEnt.size.width / 2;
+      const wy = tokenEnt.position.y + tokenEnt.size.height / 2;
+      portraitBox.style.cursor = "pointer";
+      portraitBox.onclick = () => {
+        engine.zoomToWorldPos(wx, wy, targetTokenId);
+        closeCharacterSheetModal();
+      };
+    } else {
+      portraitBox.style.cursor = "default";
+      portraitBox.onclick = null;
+    }
+
     if (tokenEnt && tokenEnt.assetHash) {
       const blob = await assetStore.getAsset(tokenEnt.assetHash);
       if (blob) {
         if (currentPortraitUrl) URL.revokeObjectURL(currentPortraitUrl);
         currentPortraitUrl = URL.createObjectURL(blob);
-        portraitBox.innerHTML = `<img src="${currentPortraitUrl}" style="width: 84px; height: 84px; border-radius: 50%; object-fit: cover; border: 2.5px solid #38bdf8; box-shadow: 0 4px 16px rgba(56, 189, 248, 0.45); background: #0f172a;" title="Token Portrait: ${tokenEnt.label || uname}" />`;
+        portraitBox.innerHTML = `<img src="${currentPortraitUrl}" style="width: 84px; height: 84px; border-radius: 50%; object-fit: cover; border: 2.5px solid #38bdf8; box-shadow: 0 4px 16px rgba(56, 189, 248, 0.45); background: #0f172a;" title="Click to zoom to token (${tokenEnt.label || uname}) on map" />`;
         return;
       }
     }
@@ -273,7 +289,8 @@ export function openCharacterSheetModal(engine?: CanvasEngine): void {
       URL.revokeObjectURL(currentPortraitUrl);
       currentPortraitUrl = null;
     }
-    portraitBox.innerHTML = `<div style="width: 84px; height: 84px; border-radius: 50%; background: rgba(56, 189, 248, 0.12); border: 2px dashed rgba(56, 189, 248, 0.4); display: flex; align-items: center; justify-content: center; font-size: 2.2em; color: #38bdf8; box-shadow: inset 0 2px 8px rgba(0,0,0,0.3);" title="Claim a token on the map to display portrait here">👤</div>`;
+    const fallbackTitle = tokenEnt && engine ? `Click to zoom to token (${tokenEnt.label || uname}) on map` : "Claim a token on the map to display portrait here";
+    portraitBox.innerHTML = `<div style="width: 84px; height: 84px; border-radius: 50%; background: rgba(56, 189, 248, 0.12); border: 2px dashed rgba(56, 189, 248, 0.4); display: flex; align-items: center; justify-content: center; font-size: 2.2em; color: #38bdf8; box-shadow: inset 0 2px 8px rgba(0,0,0,0.3);" title="${fallbackTitle}">👤</div>`;
   };
 
   const renderSheetRolls = (doc: VTTDocument, uname: string) => {

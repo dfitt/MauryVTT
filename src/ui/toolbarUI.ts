@@ -5,6 +5,7 @@ import { docStore } from "../state/documentStore.js";
 import { sessionManager } from "../network/sessionManager.js";
 import { ImageEntity, TokenEntity } from "../types/vtt.js";
 import { openImportVttfxModal } from "./vttfxImportModal.js";
+import { openCharacterSheetModal, SHEET_ICON_SVG } from "./characterSheetModal.js";
 
 const PALETTE_COLORS = [
   "#38bdf8", // Cyan
@@ -913,6 +914,14 @@ export function setupToolbarUI(engine: CanvasEngine): void {
   divider3.className = "tool-divider";
   bar.appendChild(divider3);
 
+  // Character Sheet Button (left of Simple Mode)
+  const charSheetBtn = document.createElement("button");
+  charSheetBtn.className = "tool-btn";
+  charSheetBtn.setAttribute("data-tooltip", "Open Character Sheet (/sheet)");
+  charSheetBtn.innerHTML = SHEET_ICON_SVG;
+  charSheetBtn.addEventListener("click", () => openCharacterSheetModal(engine));
+  bar.appendChild(charSheetBtn);
+
   // Simple Mode Toggle Button in Advanced Mode
   const simpleModeBtn = document.createElement("button");
   simpleModeBtn.className = "tool-btn";
@@ -928,6 +937,7 @@ export function setupToolbarUI(engine: CanvasEngine): void {
   simpleBar.className = "simple-mode-bar";
   simpleBar.style.display = "none";
   simpleBar.innerHTML = `
+    <button class="btn-glass btn-sm" id="btn-simple-sheet" title="Open Character Sheet (/sheet)" style="cursor: pointer; padding: 8px 14px; font-size: 14px; font-weight: 600; border-radius: 999px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(56, 189, 248, 0.45); color: #f8fafc; margin-right: 8px; display: flex; align-items: center; justify-content: center;">${SHEET_ICON_SVG}</button>
     <button class="btn-glass btn-sm" id="btn-simple-chat" style="cursor: pointer; padding: 8px 16px; font-size: 14px; font-weight: 600; border-radius: 999px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(56, 189, 248, 0.45); color: #f8fafc; margin-right: 8px;">💬 Chat & Dice</button>
     <button class="btn-glass btn-sm btn-primary" id="btn-toggle-advanced" style="cursor: pointer; padding: 8px 14px; font-size: 14px; font-weight: 600; border-radius: 999px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);">⚙️ Adv Mode</button>
   `;
@@ -985,6 +995,7 @@ export function setupToolbarUI(engine: CanvasEngine): void {
   (window as any).setVTTSimpleMode = applySimpleMode;
 
   simpleModeBtn.addEventListener("click", () => applySimpleMode(true));
+  simpleBar.querySelector<HTMLButtonElement>("#btn-simple-sheet")!.addEventListener("click", () => openCharacterSheetModal(engine));
   simpleBar.querySelector<HTMLButtonElement>("#btn-toggle-advanced")!.addEventListener("click", () => applySimpleMode(false));
   simpleBar.querySelector<HTMLButtonElement>("#btn-simple-chat")!.addEventListener("click", () => {
     if (typeof (window as any).toggleVttChat === "function") {
