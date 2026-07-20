@@ -12,6 +12,10 @@ export function updateLastVTTDocSaveTime(time: number = Date.now()): void {
 
 export function setupUnloadSavePrompt(): void {
   window.addEventListener("beforeunload", (e) => {
+    // Only remind host users to save the VTT document
+    const isHost = sessionManager.role === "host" || (sessionManager.myPeerId && sessionManager.myPeerId === docStore.getDocument().documentId);
+    if (!isHost) return;
+
     if (Date.now() - lastVTTDocSaveTime > 60_000) {
       const msg = "It has been more than 1 minute since you last saved the VTT document (.vttdoc). Would you like to save before leaving?";
       e.preventDefault();
