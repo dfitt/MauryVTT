@@ -106,8 +106,10 @@ export function applyDamageToTargets(targetTokenIds: string[], damageTotal: numb
     if (!ent || ent.type !== "token") continue;
     const token = ent as TokenEntity;
 
-    const currentHpNum = token.hp !== undefined && token.hp !== "" ? (Number(token.hp) || 0) : 0;
-    const maxHpNum = token.maxHp !== undefined ? token.maxHp : (currentHpNum > 0 ? currentHpNum : 50);
+    if (token.hp === undefined || token.hp === "") continue;
+    const currentHpNum = Number(token.hp);
+    if (isNaN(currentHpNum)) continue;
+    const maxHpNum = token.maxHp !== undefined ? token.maxHp : currentHpNum;
 
     const newHpNum = currentHpNum - damageTotal;
     const effects = new Set<string>(token.statusEffects || []);
