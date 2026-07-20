@@ -22,6 +22,37 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
   };
 }
 
+function formatLinks(input: string): string {
+  if (!input) return input;
+  const parts = input.split(/(<[^>]+>)/g);
+  let insideAnchor = false;
+
+  return parts
+    .map((part) => {
+      if (part.startsWith("<")) {
+        if (/^<a\b/i.test(part)) insideAnchor = true;
+        else if (/^<\/a>/i.test(part)) insideAnchor = false;
+        return part;
+      }
+      if (insideAnchor) return part;
+
+      const urlRegex = /(https?:\/\/[^\s<"']+|www\.[^\s<"']+)/gi;
+      return part.replace(urlRegex, (rawUrl) => {
+        let url = rawUrl;
+        let trailing = "";
+        const matchTrailing = url.match(/([.,!?;:]+|\)+)$/);
+        if (matchTrailing) {
+          trailing = matchTrailing[0];
+          url = url.slice(0, -trailing.length);
+        }
+
+        const href = url.startsWith("http") ? url : `https://${url}`;
+        return `<a href="${href}" target="_blank" rel="noopener noreferrer" class="chat-link" style="color: #38bdf8; text-decoration: underline; word-break: break-all;">${url}</a>${trailing}`;
+      });
+    })
+    .join("");
+}
+
 function playEffectAtUserToken(engine: CanvasEngine | undefined, doc: VTTDocument, senderUsername?: string, senderPeerId?: string, effectId?: string, targetTokenIds?: string[]): void {
   if (!effectId || !engine || !doc || !doc.entities) return;
 
@@ -1092,14 +1123,14 @@ export function setupChatPanel(engine?: CanvasEngine): void {
     const senderUser = doc.users[msg.senderPeerId];
     const userColor = senderUser?.color || (msg.senderPeerId === (sessionManager.myPeerId || "local") ? sessionManager.myColor : "#38bdf8") || "#38bdf8";
 
-    let contentHtml = msg.content;
+    let contentHtml = formatLinks(msg.content);
     if (msg.type === "roll") {
       const iconToUse = msg.rollIcon || ALL_ROLL_ICONS[0];
-      contentHtml = `${iconToUse} ${msg.rollLabel ? `<strong>${msg.rollLabel}</strong>: ` : ""}${msg.content}`;
+      contentHtml = `${iconToUse} ${msg.rollLabel ? `<strong>${formatLinks(msg.rollLabel)}</strong>: ` : ""}${formatLinks(msg.content)}`;
     } else if (msg.type === "action") {
-      contentHtml = `<em>* ${msg.senderUsername} ${msg.content} *</em>`;
+      contentHtml = `<em>* ${msg.senderUsername} ${formatLinks(msg.content)} *</em>`;
     } else if (msg.type === "whisper") {
-      contentHtml = `<span style="color: #e879f9; font-weight: 800;">🔮 Whisper:</span> ${msg.content}`;
+      contentHtml = `<span style="color: #e879f9; font-weight: 800;">🔮 Whisper:</span> ${formatLinks(msg.content)}`;
     }
 
     toastEl.innerHTML = `
@@ -1275,13 +1306,12 @@ export function setupChatPanel(engine?: CanvasEngine): void {
       msgEl.className = `chat-msg ${msg.type === "roll" ? "roll" : ""}`;
       if (msg.type === "system") {
         msgEl.className = "chat-msg system";
-        msgEl.innerHTML = msg.content;
+        msgEl.innerHTML = formatLinks(msg.content);
         container.appendChild(msgEl);
         container.scrollTop = container.scrollHeight;
         return;
       }
 
-      msgEl.style.cursor = "pointer";
       msgEl.title = "Click message to show/hide reactions";
 
       const senderUser = doc.users[msg.senderPeerId];
@@ -1312,20 +1342,20 @@ export function setupChatPanel(engine?: CanvasEngine): void {
         displayContent.includes("=") &&
         displayContent.includes("[");
 
-      let formattedText = displayContent;
+      let formattedText = formatLinks(displayContent);
       if (isNewRoll) {
         const eqMatch = displayContent.match(/(\s*=\s*)<span/i);
         const eqIdx = eqMatch && eqMatch.index !== undefined ? eqMatch.index : displayContent.indexOf("=");
         const beforeEquals = displayContent.substring(0, eqIdx);
         const afterEquals = displayContent.substring(eqIdx);
-        formattedText = `<span class="roll-before-equals" data-final="${encodeURIComponent(beforeEquals)}">${beforeEquals}</span><span class="roll-after-equals" style="display: none; opacity: 0;">${afterEquals}</span>`;
+        formattedText = `<span class="roll-before-equals" data-final="${encodeURIComponent(beforeEquals)}">${formatLinks(beforeEquals)}</span><span class="roll-after-equals" style="display: none; opacity: 0;">${formatLinks(afterEquals)}</span>`;
         console.log("[DiceAnimation] Formatted new roll spans - beforeEquals:", beforeEquals, "afterEquals:", afterEquals);
       }
 
       const isMySender = msg.senderPeerId === (sessionManager.myPeerId || "local") || msg.senderUsername?.toLowerCase() === (sessionManager.myUsername || "Me").toLowerCase();
       const authorText = msg.type === "whisper"
         ? `<span style="color: #e879f9; font-weight: 800;">🔮 Whisper ${isMySender ? `to <strong>${msg.recipientUsername || "user"}</strong>` : `from <strong>${msg.senderUsername}</strong>`}</span>`
-        : `<span style="color: ${userColor}">${msg.senderUsername}${msg.rollLabel ? ` - <span style="color: #cbd5e1; font-weight: normal;">${msg.rollLabel}</span>` : ""}</span>`;
+        : `<span style="color: ${userColor}">${msg.senderUsername}${msg.rollLabel ? ` - <span style="color: #cbd5e1; font-weight: normal;">${formatLinks(msg.rollLabel)}</span>` : ""}</span>`;
 
       msgEl.innerHTML = `
         <div class="msg-author">${authorText}</div>
@@ -1459,6 +1489,16 @@ export function setupChatPanel(engine?: CanvasEngine): void {
 
   container.addEventListener("click", (e) => {
     const targetEl = e.target as HTMLElement;
+
+    // Do not toggle reactions if selecting text or clicking a link
+    const sel = window.getSelection();
+    if (sel && sel.toString().trim().length > 0) {
+      return;
+    }
+    if (targetEl.closest("a")) {
+      return;
+    }
+
     const btn = targetEl.closest(".chat-reaction-btn");
     if (btn) {
       const msgId = btn.getAttribute("data-id");
