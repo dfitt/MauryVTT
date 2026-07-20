@@ -4,6 +4,35 @@ import { assetStore } from "../state/idbAssetStore.js";
 import { VTTDocument } from "../types/vtt.js";
 import { sessionManager } from "../network/sessionManager.js";
 
+export let lastVTTDocSaveTime: number = Date.now();
+
+export function updateLastVTTDocSaveTime(time: number = Date.now()): void {
+  lastVTTDocSaveTime = time;
+}
+
+export function setupUnloadSavePrompt(): void {
+  window.addEventListener("beforeunload", (e) => {
+    if (Date.now() - lastVTTDocSaveTime > 60_000) {
+      const msg = "It has been more than 1 minute since you last saved the VTT document (.vttdoc). Would you like to save before leaving?";
+      e.preventDefault();
+      e.returnValue = msg;
+
+      setTimeout(async () => {
+        if (confirm("It has been more than 1 minute since you last saved the VTT document (.vttdoc). Would you like to save and download it right now?")) {
+          try {
+            await exportVTTDocArchive();
+            lastVTTDocSaveTime = Date.now();
+          } catch (err) {
+            console.error("[vttdocArchive] Error auto-saving document on unload:", err);
+          }
+        }
+      }, 100);
+
+      return msg;
+    }
+  });
+}
+
 export async function exportVTTDocArchive(): Promise<void> {
   const doc = docStore.getDocument();
   const zip = new JSZip();
@@ -53,6 +82,7 @@ export async function exportVTTDocArchive(): Promise<void> {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+  updateLastVTTDocSaveTime(Date.now());
 }
 
 export async function importVTTDocArchive(file: File): Promise<void> {
@@ -88,5 +118,6 @@ export async function importVTTDocArchive(file: File): Promise<void> {
     console.log("[vttdocArchive] Host imported .vttdoc; forcing resync to all connected clients...");
     await sessionManager.resyncState();
   }
+  updateLastVTTDocSaveTime(Date.now());
 }
 

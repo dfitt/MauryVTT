@@ -18,10 +18,12 @@ import { renderJoinModal } from "./ui/joinModal.js";
 import { sessionManager } from "./network/sessionManager.js";
 import { registerTroubleshootingUtilities } from "./utils/troubleshooting.js";
 import { loadVttfxManifestFromUrl } from "./effects/vttfxLoader.js";
+import { setupUnloadSavePrompt } from "./archive/vttdocArchive.js";
 
 function bootstrap(): void {
   registerTroubleshootingUtilities();
   loadVttfxManifestFromUrl("vttfx/manifest.json");
+  setupUnloadSavePrompt();
 
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
