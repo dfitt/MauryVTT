@@ -198,7 +198,8 @@ export async function openImageGenDescriptionModal(
     modal.remove();
 
     // Prepare reference base64 data for all selected tokens
-    const tokenRefs: { label: string; base64: string; mimeType: string }[] = [];
+    const doc = docStore.getDocument();
+    const tokenRefs: { label: string; base64: string; mimeType: string; description?: string }[] = [];
     for (const tok of selectedTokens) {
       if (tok.assetHash) {
         const blob = await assetStore.getAsset(tok.assetHash);
@@ -211,10 +212,43 @@ export async function openImageGenDescriptionModal(
             };
             reader.readAsDataURL(blob);
           });
+
+          // Check if token is claimed and has a character sheet description
+          let description: string | undefined = undefined;
+          let claimingUsername = tok.primaryOwnerUsername;
+          if (!claimingUsername && doc.primaryTokens) {
+            for (const [uname, tid] of Object.entries(doc.primaryTokens)) {
+              if (tid === tok.id) {
+                claimingUsername = uname;
+                break;
+              }
+            }
+          }
+          if (!claimingUsername && doc.characterSheets) {
+            const tokLabelLower = tok.label.trim().toLowerCase();
+            for (const [uname, sheet] of Object.entries(doc.characterSheets)) {
+              if (
+                uname.toLowerCase() === tokLabelLower ||
+                (sheet.characterName && sheet.characterName.trim().toLowerCase() === tokLabelLower)
+              ) {
+                claimingUsername = uname;
+                break;
+              }
+            }
+          }
+
+          if (claimingUsername && doc.characterSheets?.[claimingUsername]) {
+            const sheetDesc = doc.characterSheets[claimingUsername].description;
+            if (sheetDesc && sheetDesc.trim()) {
+              description = sheetDesc.trim();
+            }
+          }
+
           tokenRefs.push({
             label: tok.label.trim(),
             base64,
-            mimeType: blob.type || "image/png"
+            mimeType: blob.type || "image/png",
+            ...(description ? { description } : {})
           });
         }
       }
@@ -234,7 +268,7 @@ export async function openImageGenDescriptionModal(
 
 export function sendProxyImageGenRequest(
   prompt: string,
-  tokenRefs: { label: string; base64: string; mimeType: string }[],
+  tokenRefs: { label: string; base64: string; mimeType: string; description?: string }[],
   proxyPeerId: string
 ): void {
   const myId = sessionManager.myPeerId || "local";
@@ -257,7 +291,7 @@ export function sendProxyImageGenRequest(
 export async function runAiImageGeneration(
   engine: CanvasEngine,
   prompt: string,
-  tokenRefs: { label: string; base64: string; mimeType: string }[]
+  tokenRefs: { label: string; base64: string; mimeType: string; description?: string }[]
 ): Promise<void> {
   const apiKey = localStorage.getItem("gemini_api_key");
   const modelName = localStorage.getItem("gemini_enhance_model") || "gemini-3.1-flash-image";
@@ -389,7 +423,7 @@ export function openImageGenPreviewModal(engine: CanvasEngine, base64Image: stri
 }
 
 export async function callGeminiSceneImageGeneration(
-  tokenRefs: { label: string; base64: string; mimeType: string }[],
+  tokenRefs: { label: string; base64: string; mimeType: string; description?: string }[],
   apiKey: string,
   modelName: string,
   promptText: string
@@ -415,7 +449,11 @@ ${tokenRefs.length > 0 ? `We have provided ${tokenRefs.length} character referen
 
   for (const ref of tokenRefs) {
     const safeFilename = ref.label.replace(/[^a-zA-Z0-9_-]/g, "_") + ".png";
-    parts.push({ text: `\n[Character Reference Image: "${ref.label}" (Filename: ${safeFilename})]` });
+    let textHeader = `\n[Character Reference Image: "${ref.label}" (Filename: ${safeFilename})]`;
+    if (ref.description) {
+      textHeader += `\n[Character Sheet Description for "${ref.label}":\n"${ref.description}"]`;
+    }
+    parts.push({ text: textHeader });
     parts.push({
       inline_data: {
         mime_type: ref.mimeType || "image/png",
