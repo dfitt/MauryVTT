@@ -297,7 +297,7 @@ export function setupChatPanel(engine?: CanvasEngine): void {
           <strong id="dice-builder-expr-txt">---</strong>
         </div>
         <input type="text" id="dice-builder-label" class="dice-builder-label-input" placeholder="Label (e.g. Attack or Holy Damage)..." />
-        <div style="display: flex; align-items: center; gap: 6px; margin: 4px 0;">
+        <div style="display: none; align-items: center; gap: 6px; margin: 4px 0;">
           <label style="font-size: 12px; font-weight: 700; color: #fda4af; cursor: pointer; display: flex; align-items: center; gap: 6px; user-select: none;">
             <input type="checkbox" id="dice-builder-is-damage" style="accent-color: #f43f5e; cursor: pointer; width: 14px; height: 14px;" />
             <span>⚔️ Is Damage Roll</span>
