@@ -3,6 +3,7 @@ import { clientEngine } from "./p2pClient.js";
 import { DocumentOperation, EphemeralPayload } from "../types/vtt.js";
 import { docStore } from "../state/documentStore.js";
 import { assetStore } from "../state/idbAssetStore.js";
+import { autoLoadLastSavedVTTDocForRoom } from "../archive/vttdocArchive.js";
 
 class SessionManager {
   public role: "none" | "host" | "client" = "none";
@@ -68,6 +69,7 @@ class SessionManager {
     this.hostRoomId = peerId;
     docStore.initHostDocument(peerId, username, color);
     this.startHeartbeat();
+    await autoLoadLastSavedVTTDocForRoom(peerId);
     return peerId;
   }
 

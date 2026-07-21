@@ -4,10 +4,24 @@ import { assetStore } from "../state/idbAssetStore.js";
 import { VTTDocument } from "../types/vtt.js";
 import { sessionManager } from "../network/sessionManager.js";
 
+export const LAST_SAVED_PATH_KEY = "vtt_last_saved_doc_path";
+export const LAST_SAVED_BLOB_KEY = "vtt_last_saved_doc_archive";
+
 export let lastVTTDocSaveTime: number = Date.now();
 
 export function updateLastVTTDocSaveTime(time: number = Date.now()): void {
   lastVTTDocSaveTime = time;
+}
+
+export function getMinuteTimestamp(): string {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const year = now.getFullYear();
+  const month = pad(now.getMonth() + 1);
+  const day = pad(now.getDate());
+  const hours = pad(now.getHours());
+  const mins = pad(now.getMinutes());
+  return `${year}-${month}-${day}_${hours}-${mins}`;
 }
 
 export function setupUnloadSavePrompt(): void {
@@ -37,7 +51,7 @@ export function setupUnloadSavePrompt(): void {
   });
 }
 
-export async function exportVTTDocArchive(): Promise<void> {
+export async function exportVTTDocArchive(): Promise<string> {
   const doc = docStore.getDocument();
   const zip = new JSZip();
 
@@ -74,22 +88,37 @@ export async function exportVTTDocArchive(): Promise<void> {
     }
   }
 
-  // 3. Generate ZIP buffer
+  // 5. Generate ZIP buffer
   const zipBlob = await zip.generateAsync({ type: "blob" });
 
-  // 4. Trigger download
+  // 6. Generate filename: room name + timestamp with minute (no second)
+  const roomName = sessionManager.hostRoomId || cleanDoc.documentId || "vtt-room";
+  const filename = `${roomName}_${getMinuteTimestamp()}.vttdoc`;
+
+  // 7. Save filename/path and archive blob into local storage & IDB
+  try {
+    localStorage.setItem(LAST_SAVED_PATH_KEY, filename);
+    await assetStore.saveAsset(LAST_SAVED_BLOB_KEY, zipBlob);
+    console.log(`[vttdocArchive] Saved last-saved vttdoc path: ${filename}`);
+  } catch (err) {
+    console.warn("[vttdocArchive] Error saving last vttdoc to local storage/IDB:", err);
+  }
+
+  // 8. Trigger download
   const url = URL.createObjectURL(zipBlob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `vtt-session-${new Date().toISOString().slice(0, 10)}.vttdoc`;
+  a.download = filename;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
   updateLastVTTDocSaveTime(Date.now());
+
+  return filename;
 }
 
-export async function importVTTDocArchive(file: File): Promise<void> {
+export async function importVTTDocArchive(file: File | Blob, filename?: string): Promise<void> {
   const zip = await JSZip.loadAsync(file);
 
   const docFile = zip.file("document.json");
@@ -122,6 +151,48 @@ export async function importVTTDocArchive(file: File): Promise<void> {
     console.log("[vttdocArchive] Host imported .vttdoc; forcing resync to all connected clients...");
     await sessionManager.resyncState();
   }
+
+  // Record as last-saved vttdoc if a filename or File object is provided
+  const saveName = filename || (file instanceof File ? file.name : undefined);
+  if (saveName) {
+    try {
+      localStorage.setItem(LAST_SAVED_PATH_KEY, saveName);
+      await assetStore.saveAsset(LAST_SAVED_BLOB_KEY, file);
+      console.log(`[vttdocArchive] Updated last-saved vttdoc path from import: ${saveName}`);
+    } catch (err) {
+      console.warn("[vttdocArchive] Error caching imported vttdoc:", err);
+    }
+  }
+
   updateLastVTTDocSaveTime(Date.now());
 }
+
+export async function autoLoadLastSavedVTTDocForRoom(roomName: string): Promise<boolean> {
+  if (!roomName) return false;
+  const lastSavedPath = localStorage.getItem(LAST_SAVED_PATH_KEY);
+  if (!lastSavedPath) return false;
+
+  const basename = lastSavedPath.split(/[/\\]/).pop() || lastSavedPath;
+  const matchesRoom =
+    basename.toLowerCase().startsWith(roomName.toLowerCase()) ||
+    lastSavedPath.toLowerCase().startsWith(roomName.toLowerCase());
+
+  if (matchesRoom) {
+    console.log(`[vttdocArchive] Auto-loading vttdoc '${basename}' for room '${roomName}'`);
+    try {
+      const savedBlob = await assetStore.getAsset(LAST_SAVED_BLOB_KEY);
+      if (savedBlob) {
+        await importVTTDocArchive(savedBlob, basename);
+        console.log(`[vttdocArchive] Auto-loaded vttdoc successfully for room '${roomName}'`);
+        return true;
+      } else {
+        console.warn(`[vttdocArchive] Last-saved vttdoc path matches '${roomName}' but blob not found in IDB.`);
+      }
+    } catch (err) {
+      console.error(`[vttdocArchive] Failed auto-loading vttdoc for room '${roomName}':`, err);
+    }
+  }
+  return false;
+}
+
 
