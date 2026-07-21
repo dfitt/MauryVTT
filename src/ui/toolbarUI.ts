@@ -89,7 +89,7 @@ export function setupToolbarUI(engine: CanvasEngine): void {
   const updateMainAiIcon = () => {
     const aiBtn = bar.querySelector('.tool-btn[data-tool-id="ai"]');
     if (aiBtn) {
-      aiBtn.innerHTML = AI_ICONS[engine.aiTool || "enhance"] || AI_ICONS.enhance;
+      aiBtn.innerHTML = AI_ICONS.enhance;
     }
   };
 
@@ -136,7 +136,7 @@ export function setupToolbarUI(engine: CanvasEngine): void {
     },
     {
       id: "ai",
-      icon: AI_ICONS[engine.aiTool || "enhance"] || AI_ICONS.enhance,
+      icon: AI_ICONS.enhance,
       title: "AI Tools (Map Enhance, AI Token, AI VTTFX)"
     }
   ];
