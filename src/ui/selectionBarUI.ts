@@ -17,6 +17,7 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
   let activeCondBtn: HTMLButtonElement | null = null;
   let activeNameInput: HTMLInputElement | null = null;
   let activeHpInput: HTMLInputElement | null = null;
+  let activeMaxHpInput: HTMLInputElement | null = null;
   let activeMineCheckbox: HTMLInputElement | null = null;
   let activeMineSpan: HTMLSpanElement | null = null;
   let lastSelectedId: string | null = null;
@@ -76,6 +77,13 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
         const sheetHp = isMine ? (doc.characterSheets?.[myUsername]?.hp !== undefined ? String(doc.characterSheets[myUsername].hp) : undefined) : undefined;
         const displayHp = token.hp !== undefined ? String(token.hp) : (sheetHp || "");
         activeHpInput.value = displayHp;
+      }
+      if (activeMaxHpInput && document.activeElement !== activeMaxHpInput) {
+        const myUsername = sessionManager.myUsername || localStorage.getItem("maury_vtt_username") || "Me";
+        const isMine = token.primaryOwnerUsername === myUsername || (doc.primaryTokens?.[myUsername] === token.id);
+        const sheetMaxHp = isMine ? (doc.characterSheets?.[myUsername]?.maxHp !== undefined ? String(doc.characterSheets[myUsername].maxHp) : undefined) : undefined;
+        const displayMaxHp = token.maxHp !== undefined ? String(token.maxHp) : (sheetMaxHp || "");
+        activeMaxHpInput.value = displayMaxHp;
       }
       const myUsername = sessionManager.myUsername || localStorage.getItem("maury_vtt_username") || "Me";
       const myPeerId = sessionManager.myPeerId || "local";
@@ -158,58 +166,126 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
       });
       bar.appendChild(nameInput);
 
-      // HP Input Field next to Name Input
+      // HP & Max HP Input Container next to Name Input
+      const hpBox = document.createElement("div");
+      hpBox.style.cssText = "display: flex; align-items: center; gap: 4px; position: relative; margin: 0 4px;";
+
       const sheetHp = isMine ? (doc.characterSheets?.[myUsername]?.hp !== undefined ? String(doc.characterSheets[myUsername].hp) : undefined) : undefined;
       const initialHp = token.hp !== undefined ? String(token.hp) : (sheetHp || "");
+      const sheetMaxHp = isMine ? (doc.characterSheets?.[myUsername]?.maxHp !== undefined ? String(doc.characterSheets[myUsername].maxHp) : undefined) : undefined;
+      const initialMaxHp = token.maxHp !== undefined ? String(token.maxHp) : (sheetMaxHp || "");
 
       const hpInput = document.createElement("input");
       activeHpInput = hpInput;
       hpInput.type = "text";
       hpInput.className = "token-hp-input";
-      hpInput.placeholder = "HP...";
+      hpInput.placeholder = "HP";
       hpInput.value = initialHp;
       hpInput.style.cssText =
-        "background: rgba(244, 63, 94, 0.15); border: 1px solid rgba(244, 63, 94, 0.55); border-radius: 6px; color: #fda4af; padding: 4px 8px; font-size: 13px; font-weight: 700; outline: none; width: 65px; text-align: center; margin: 0 4px;";
+        "background: rgba(244, 63, 94, 0.15); border: 1px solid rgba(244, 63, 94, 0.55); border-radius: 6px; color: #fda4af; padding: 4px 6px; font-size: 13px; font-weight: 700; outline: none; width: 48px; text-align: center;";
 
-      const commitHp = () => {
+      const hpSlash = document.createElement("span");
+      hpSlash.textContent = "/";
+      hpSlash.style.cssText = "color: #f43f5e; font-weight: 800; font-size: 13px;";
+
+      const maxHpInput = document.createElement("input");
+      activeMaxHpInput = maxHpInput;
+      maxHpInput.type = "text";
+      maxHpInput.className = "token-max-hp-input";
+      maxHpInput.placeholder = "Max";
+      maxHpInput.value = initialMaxHp;
+      maxHpInput.style.cssText =
+        "background: rgba(244, 63, 94, 0.15); border: 1px solid rgba(244, 63, 94, 0.55); border-radius: 6px; color: #fda4af; padding: 4px 6px; font-size: 13px; font-weight: 700; outline: none; width: 48px; text-align: center;";
+
+      const hpHistoryPopup = document.createElement("div");
+      hpHistoryPopup.style.cssText = "display: none; position: absolute; bottom: 100%; left: 0; width: 110px; background: rgba(15, 23, 42, 0.98); border: 1px solid #f43f5e; border-radius: 8px; padding: 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.7); z-index: 3000; flex-direction: column; gap: 4px; margin-bottom: 6px;";
+
+      const commitHpAndMax = () => {
         const newHp = hpInput.value.trim();
-        if (newHp !== String(token.hp || "")) {
-          const patch: Partial<TokenEntity> = { hp: newHp };
-          const numHp = Number(newHp);
-          if (!isNaN(numHp) && numHp > (token.maxHp || 0)) {
-            patch.maxHp = numHp;
-          }
+        const newMaxHp = maxHpInput.value.trim();
+        const currentDoc = docStore.getDocument();
+        const latestToken = currentDoc.entities[token.id] as TokenEntity || token;
+        const patch: Partial<TokenEntity> = {};
+        if (newHp !== String(latestToken.hp || "")) {
+          patch.hp = newHp;
+        }
+        if (newMaxHp !== String(latestToken.maxHp || "")) {
+          patch.maxHp = newMaxHp;
+        }
+        if (Object.keys(patch).length > 0) {
           sessionManager.dispatchOperation({
             opType: "UPDATE_ENTITY",
             id: token.id,
             patch: patch as any
           });
-
-          const currentDoc = docStore.getDocument();
-          const currentlyMine = token.primaryOwnerUsername === myUsername || (currentDoc.primaryTokens?.[myUsername] === token.id);
-          if (currentlyMine) {
-            const sheet = currentDoc.characterSheets?.[myUsername];
-            if (String(sheet?.hp || "") !== newHp) {
-              sessionManager.dispatchOperation({
-                opType: "UPDATE_CHARACTER_SHEET",
-                username: myUsername,
-                sheet: {
-                  ...(sheet || { username: myUsername }),
-                  hp: newHp
-                }
-              });
-            }
-          }
         }
       };
-      hpInput.addEventListener("change", commitHp);
+
+      hpInput.addEventListener("change", commitHpAndMax);
       hpInput.addEventListener("keydown", (e) => {
         if (e.key === "Enter") {
-          commitHp();
+          commitHpAndMax();
           hpInput.blur();
         }
       });
-      bar.appendChild(hpInput);
+      maxHpInput.addEventListener("change", commitHpAndMax);
+      maxHpInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          commitHpAndMax();
+          maxHpInput.blur();
+        }
+      });
+
+      let hpFocusClicks = 0;
+      const showSelectionHpHistoryPopup = () => {
+        const currentDoc = docStore.getDocument();
+        const latestToken = currentDoc.entities[token.id] as TokenEntity || token;
+        const history = (latestToken.hpHistory || []).slice(-6).reverse();
+        if (history.length === 0) return;
+
+        hpHistoryPopup.innerHTML = `<div style="font-size: 10px; color: #cbd5e1; font-weight: 800; text-transform: uppercase; padding: 2px 4px;">Recent HP</div>`;
+        history.forEach((val) => {
+          const btn = document.createElement("button");
+          btn.className = "btn-glass btn-sm";
+          btn.style.cssText = "width: 100%; text-align: center; padding: 4px; font-weight: 800; color: #fda4af; cursor: pointer; font-size: 12px;";
+          btn.textContent = String(val);
+          btn.addEventListener("mousedown", (e) => {
+            e.preventDefault();
+            hpInput.value = String(val);
+            commitHpAndMax();
+            hpHistoryPopup.style.display = "none";
+          });
+          hpHistoryPopup.appendChild(btn);
+        });
+        hpHistoryPopup.style.display = "flex";
+      };
+
+      hpInput.addEventListener("focus", () => {
+        hpFocusClicks++;
+        if (hpFocusClicks >= 2) {
+          showSelectionHpHistoryPopup();
+        }
+      });
+      hpInput.addEventListener("click", () => {
+        if (document.activeElement === hpInput) {
+          hpFocusClicks++;
+          if (hpFocusClicks >= 2) {
+            showSelectionHpHistoryPopup();
+          }
+        }
+      });
+      hpInput.addEventListener("blur", () => {
+        hpFocusClicks = 0;
+        setTimeout(() => {
+          hpHistoryPopup.style.display = "none";
+        }, 200);
+      });
+
+      hpBox.appendChild(hpInput);
+      hpBox.appendChild(hpSlash);
+      hpBox.appendChild(maxHpInput);
+      hpBox.appendChild(hpHistoryPopup);
+      bar.appendChild(hpBox);
 
       // Mine Button (full button collision area!)
       const mineBtn = document.createElement("button");

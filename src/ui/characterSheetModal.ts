@@ -80,10 +80,18 @@ export function openCharacterSheetModal(engine?: CanvasEngine): void {
           <label for="char-sheet-name" style="font-size: 11px; font-weight: 800; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.6px;">Character Name</label>
           <input id="char-sheet-name" type="text" placeholder="e.g. Valen Shadowhunter..." style="width: 100%; padding: 10px 14px; background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(56, 189, 248, 0.45); border-radius: 8px; color: #fff; font-size: 1.25em; font-weight: 700; outline: none; box-sizing: border-box; transition: border-color 0.2s;" />
         </div>
-        <!-- HP Input -->
-        <div style="width: 115px; display: flex; flex-direction: column; gap: 6px; flex-shrink: 0;">
-          <label for="char-sheet-hp" style="font-size: 11px; font-weight: 800; color: #f43f5e; text-transform: uppercase; letter-spacing: 0.6px; display: flex; align-items: center; gap: 4px;"><span>❤️ HP</span></label>
-          <input id="char-sheet-hp" type="text" placeholder="HP..." style="width: 100%; padding: 10px 10px; background: rgba(244, 63, 94, 0.12); border: 1.5px solid rgba(244, 63, 94, 0.55); border-radius: 8px; color: #fda4af; font-size: 1.25em; font-weight: 900; text-align: center; outline: none; box-sizing: border-box; transition: border-color 0.2s; box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3);" />
+        <!-- HP / Max HP Input -->
+        <div style="width: 220px; display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; position: relative;">
+          <label style="font-size: 11px; font-weight: 800; color: #f43f5e; text-transform: uppercase; letter-spacing: 0.6px; display: flex; align-items: center; justify-content: space-between;">
+            <span>❤️ HP / MAX HP</span>
+          </label>
+          <div style="display: flex; align-items: center; gap: 4px;">
+            <input id="char-sheet-hp" type="text" placeholder="HP..." style="width: 50%; padding: 10px 6px; background: rgba(244, 63, 94, 0.12); border: 1.5px solid rgba(244, 63, 94, 0.55); border-radius: 8px; color: #fda4af; font-size: 1.25em; font-weight: 900; text-align: center; outline: none; box-sizing: border-box; transition: border-color 0.2s; box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3);" />
+            <span style="color: #f43f5e; font-weight: 900; font-size: 1.2em;">/</span>
+            <input id="char-sheet-max-hp" type="text" placeholder="Max..." style="width: 50%; padding: 10px 6px; background: rgba(244, 63, 94, 0.12); border: 1.5px solid rgba(244, 63, 94, 0.55); border-radius: 8px; color: #fda4af; font-size: 1.25em; font-weight: 900; text-align: center; outline: none; box-sizing: border-box; transition: border-color 0.2s; box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3);" />
+          </div>
+          <div id="char-sheet-hp-history-popup" style="display: none; position: absolute; top: 100%; left: 0; width: 100%; background: rgba(15, 23, 42, 0.98); border: 1px solid #f43f5e; border-radius: 8px; padding: 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.7); z-index: 3000; flex-direction: column; gap: 4px; margin-top: 4px;">
+          </div>
         </div>
       </div>
 
@@ -207,6 +215,8 @@ export function openCharacterSheetModal(engine?: CanvasEngine): void {
 
   const nameInput = modalEl.querySelector<HTMLInputElement>("#char-sheet-name")!;
   const hpInput = modalEl.querySelector<HTMLInputElement>("#char-sheet-hp")!;
+  const maxHpInput = modalEl.querySelector<HTMLInputElement>("#char-sheet-max-hp")!;
+  const hpHistoryPopup = modalEl.querySelector<HTMLElement>("#char-sheet-hp-history-popup")!;
   const descInput = modalEl.querySelector<HTMLTextAreaElement>("#char-sheet-desc")!;
   const invInput = modalEl.querySelector<HTMLTextAreaElement>("#char-sheet-inv")!;
   const notesInput = modalEl.querySelector<HTMLTextAreaElement>("#char-sheet-notes")!;
@@ -251,7 +261,8 @@ export function openCharacterSheetModal(engine?: CanvasEngine): void {
         description: descInput.value,
         inventory: invInput.value,
         notes: notesInput.value,
-        hp: hpInput.value.trim()
+        hp: hpInput.value.trim(),
+        maxHp: maxHpInput.value.trim()
       };
 
       // Only dispatch if something changed
@@ -260,7 +271,8 @@ export function openCharacterSheetModal(engine?: CanvasEngine): void {
         patch.description !== (existing.description || "") ||
         patch.inventory !== (existing.inventory || "") ||
         patch.notes !== (existing.notes || "") ||
-        (patch.hp || "") !== (existing.hp || "")
+        (patch.hp || "") !== (existing.hp || "") ||
+        (patch.maxHp || "") !== (existing.maxHp || "")
       ) {
         sessionManager.dispatchOperation({
           opType: "UPDATE_CHARACTER_SHEET",
@@ -278,10 +290,9 @@ export function openCharacterSheetModal(engine?: CanvasEngine): void {
         }
         if (patch.hp !== undefined && String(patch.hp || "") !== String(tokenEnt.hp || "")) {
           tokenPatch.hp = patch.hp;
-          const numHp = Number(patch.hp);
-          if (!isNaN(numHp) && numHp > (tokenEnt.maxHp || 0)) {
-            tokenPatch.maxHp = numHp;
-          }
+        }
+        if (patch.maxHp !== undefined && String(patch.maxHp || "") !== String(tokenEnt.maxHp || "")) {
+          tokenPatch.maxHp = patch.maxHp;
         }
         if (Object.keys(tokenPatch).length > 0) {
           sessionManager.dispatchOperation({
@@ -300,10 +311,57 @@ export function openCharacterSheetModal(engine?: CanvasEngine): void {
     }
   };
 
-  [nameInput, descInput, invInput, notesInput, hpInput].forEach((el) => {
+  [nameInput, descInput, invInput, notesInput, hpInput, maxHpInput].forEach((el) => {
     el.addEventListener("input", () => saveSheetFields(false));
     el.addEventListener("change", () => saveSheetFields(true));
     el.addEventListener("blur", () => saveSheetFields(true));
+  });
+
+  let hpFocusClicks = 0;
+  const showHpHistoryPopup = () => {
+    const uname = sessionManager.myUsername || localStorage.getItem("maury_vtt_username") || "Me";
+    const currentDoc = docStore.getDocument();
+    const tokenEnt = findMyClaimedToken(currentDoc, uname);
+    const sheet = currentDoc.characterSheets?.[uname];
+    const history = (tokenEnt?.hpHistory || sheet?.hpHistory || []).slice(-6).reverse();
+    if (history.length === 0) return;
+
+    hpHistoryPopup.innerHTML = `<div style="font-size: 10px; color: #cbd5e1; font-weight: 800; text-transform: uppercase; padding: 2px 4px;">Recent HP</div>`;
+    history.forEach((val) => {
+      const btn = document.createElement("button");
+      btn.className = "btn-glass btn-sm";
+      btn.style.cssText = "width: 100%; text-align: center; padding: 6px; font-weight: 800; color: #fda4af; cursor: pointer;";
+      btn.textContent = String(val);
+      btn.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        hpInput.value = String(val);
+        saveSheetFields(true);
+        hpHistoryPopup.style.display = "none";
+      });
+      hpHistoryPopup.appendChild(btn);
+    });
+    hpHistoryPopup.style.display = "flex";
+  };
+
+  hpInput.addEventListener("focus", () => {
+    hpFocusClicks++;
+    if (hpFocusClicks >= 2) {
+      showHpHistoryPopup();
+    }
+  });
+  hpInput.addEventListener("click", () => {
+    if (document.activeElement === hpInput) {
+      hpFocusClicks++;
+      if (hpFocusClicks >= 2) {
+        showHpHistoryPopup();
+      }
+    }
+  });
+  hpInput.addEventListener("blur", () => {
+    hpFocusClicks = 0;
+    setTimeout(() => {
+      if (hpHistoryPopup) hpHistoryPopup.style.display = "none";
+    }, 200);
   });
 
   const updatePortrait = async (doc: VTTDocument, uname: string) => {
@@ -392,6 +450,13 @@ export function openCharacterSheetModal(engine?: CanvasEngine): void {
     }
     if (document.activeElement !== hpInput && hpInput.value !== displayHp) {
       hpInput.value = displayHp;
+    }
+    let displayMaxHp = sheet.maxHp !== undefined ? String(sheet.maxHp || "") : "";
+    if (tokenEnt && tokenEnt.maxHp !== undefined && tokenEnt.maxHp !== "" && String(tokenEnt.maxHp) !== displayMaxHp) {
+      displayMaxHp = String(tokenEnt.maxHp);
+    }
+    if (document.activeElement !== maxHpInput && maxHpInput.value !== displayMaxHp) {
+      maxHpInput.value = displayMaxHp;
     }
     if (document.activeElement !== descInput && descInput.value !== (sheet.description || "")) {
       descInput.value = sheet.description || "";

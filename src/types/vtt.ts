@@ -19,6 +19,8 @@ export interface CharacterSheetData {
   inventory?: string;
   notes?: string;
   hp?: string | number;
+  maxHp?: string | number;
+  hpHistory?: (string | number)[];
 }
 
 export interface VTTDocument {
@@ -106,7 +108,8 @@ export interface TokenEntity extends BaseEntity {
     opacity: number;
   };
   hp?: string | number;
-  maxHp?: number;
+  maxHp?: string | number;
+  hpHistory?: (string | number)[];
 }
 
 export interface LineEntity extends BaseEntity {

@@ -483,7 +483,7 @@ export function setupToolbarUI(engine: CanvasEngine): void {
     btn.setAttribute("data-tool-id", tool.id);
 
     btn.addEventListener("click", (e) => {
-      if (engine.activeTool === tool.id && hasOptions(tool.id)) {
+      if (tool.id === "ai" || (engine.activeTool === tool.id && hasOptions(tool.id))) {
         e.stopPropagation();
         if (toolPopover.style.display === "flex" && toolPopover.getAttribute("data-popover-tool") === tool.id) {
           toolPopover.style.display = "none";
@@ -508,18 +508,6 @@ export function setupToolbarUI(engine: CanvasEngine): void {
         } else if (tool.id === "token") {
           tokenPickerActive = true;
           tokenInput.click();
-        } else if (tool.id === "ai") {
-          const curAi = engine.aiTool || "enhance";
-          if (curAi === "enhance") {
-            engine.setTool("enhance");
-            showEnhanceToast("✨ AI Map Enhancement active: Draw a selection box over your map sketch area on the canvas!", 5000);
-          } else if (curAi === "token") {
-            openAiTokenGenerateModal(engine, createAndDispatchToken);
-          } else if (curAi === "vttfx") {
-            openVttfxGenerateModal();
-          } else if (curAi === "imageGen") {
-            openAiImageGenerateModal(engine);
-          }
         }
       }
     });
@@ -545,7 +533,7 @@ export function setupToolbarUI(engine: CanvasEngine): void {
   };
 
   const drawingTools = tools.filter((t) => t.id === "select" || t.id === "line" || t.id === "fill" || t.id === "erase" || t.id === "ephemeral");
-  const mediaTools = tools.filter((t) => t.id === "image" || t.id === "token" || t.id === "ai");
+  const mediaTools = tools.filter((t) => t.id === "image" || t.id === "map" || t.id === "token" || t.id === "ai");
 
   drawingTools.forEach((tool) => {
     bar.appendChild(createToolBtn(tool));

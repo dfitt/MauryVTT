@@ -145,6 +145,26 @@ export class DocumentStore {
     this.notify();
   }
 
+  private recordHpAndCheckMax(target: { hp?: string | number; maxHp?: string | number; hpHistory?: (string | number)[] }, newHp: string | number | undefined): void {
+    if (newHp === undefined || newHp === "" || String(newHp).trim() === "") return;
+    const strHp = String(newHp).trim();
+    if (!target.hpHistory) target.hpHistory = [];
+    if (target.hpHistory[target.hpHistory.length - 1] !== strHp) {
+      target.hpHistory.push(strHp);
+      if (target.hpHistory.length > 20) {
+        target.hpHistory = target.hpHistory.slice(-20);
+      }
+    }
+    const numHp = Number(strHp);
+    if (!isNaN(numHp)) {
+      const currentMax = Number(target.maxHp || 0);
+      const historyMax = Math.max(0, ...target.hpHistory.map((h) => Number(h)).filter((n) => !isNaN(n)));
+      if (numHp > currentMax && numHp >= historyMax) {
+        target.maxHp = numHp;
+      }
+    }
+  }
+
   private syncNameBetweenSheetAndClaimedToken(username: string, newName?: string, source: "sheet" | "token" = "sheet"): void {
     if (!username) return;
     if (!this.doc.characterSheets) this.doc.characterSheets = {};
@@ -155,24 +175,49 @@ export class DocumentStore {
 
     if (source === "sheet") {
       const nameToSync = newName !== undefined ? newName : sheet.characterName;
-      if (nameToSync !== undefined) {
-        if (tokenId && this.doc.entities[tokenId]) {
-          const tok = this.doc.entities[tokenId] as any;
-          if (tok.label !== nameToSync) {
-            tok.label = nameToSync;
-            tok.updatedAt = Date.now();
-          }
+      if (tokenId && this.doc.entities[tokenId]) {
+        const tok = this.doc.entities[tokenId] as any;
+        if (nameToSync !== undefined && tok.label !== nameToSync) {
+          tok.label = nameToSync;
+          tok.updatedAt = Date.now();
+        }
+        if (sheet.hp !== undefined && tok.hp !== sheet.hp) {
+          tok.hp = sheet.hp;
+          tok.updatedAt = Date.now();
+        }
+        if (sheet.maxHp !== undefined && tok.maxHp !== sheet.maxHp) {
+          tok.maxHp = sheet.maxHp;
+          tok.updatedAt = Date.now();
+        }
+        if (sheet.hpHistory && JSON.stringify(tok.hpHistory) !== JSON.stringify(sheet.hpHistory)) {
+          tok.hpHistory = [...sheet.hpHistory];
+          tok.updatedAt = Date.now();
         }
       }
     } else if (source === "token") {
       const nameToSync = newName !== undefined ? newName : (tokenId && this.doc.entities[tokenId] ? (this.doc.entities[tokenId] as any).label : undefined);
-      if (nameToSync !== undefined) {
-        if (sheet.characterName !== nameToSync) {
-          this.doc.characterSheets[username] = {
-            ...sheet,
-            username,
-            characterName: nameToSync
-          };
+      if (tokenId && this.doc.entities[tokenId]) {
+        const tok = this.doc.entities[tokenId] as any;
+        let sheetUpdated = false;
+        const updatedSheet = { ...sheet, username };
+        if (nameToSync !== undefined && sheet.characterName !== nameToSync) {
+          updatedSheet.characterName = nameToSync;
+          sheetUpdated = true;
+        }
+        if (tok.hp !== undefined && sheet.hp !== tok.hp) {
+          updatedSheet.hp = tok.hp;
+          sheetUpdated = true;
+        }
+        if (tok.maxHp !== undefined && sheet.maxHp !== tok.maxHp) {
+          updatedSheet.maxHp = tok.maxHp;
+          sheetUpdated = true;
+        }
+        if (tok.hpHistory && JSON.stringify(sheet.hpHistory) !== JSON.stringify(tok.hpHistory)) {
+          updatedSheet.hpHistory = [...tok.hpHistory];
+          sheetUpdated = true;
+        }
+        if (sheetUpdated) {
+          this.doc.characterSheets[username] = updatedSheet;
         }
       }
     }
@@ -239,13 +284,20 @@ export class DocumentStore {
             }
 
             const patchToken = op.patch as Partial<TokenEntity>;
+            if (patchToken.hp !== undefined) {
+              this.recordHpAndCheckMax(updatedTok, patchToken.hp);
+            }
             if (patchToken.label !== undefined && newOwner) {
               this.syncNameBetweenSheetAndClaimedToken(newOwner, patchToken.label, "token");
-            } else if (newOwner && oldOwner !== newOwner) {
-              if (this.doc.characterSheets?.[newOwner]?.characterName) {
-                this.syncNameBetweenSheetAndClaimedToken(newOwner, undefined, "sheet");
-              } else if (updatedTok.label) {
+            } else if (newOwner) {
+              if (patchToken.hp !== undefined || patchToken.maxHp !== undefined) {
                 this.syncNameBetweenSheetAndClaimedToken(newOwner, updatedTok.label, "token");
+              } else if (oldOwner !== newOwner) {
+                if (this.doc.characterSheets?.[newOwner]?.characterName) {
+                  this.syncNameBetweenSheetAndClaimedToken(newOwner, undefined, "sheet");
+                } else if (updatedTok.label) {
+                  this.syncNameBetweenSheetAndClaimedToken(newOwner, updatedTok.label, "token");
+                }
               }
             }
           }
@@ -322,11 +374,15 @@ export class DocumentStore {
         if (!this.doc.characterSheets) {
           this.doc.characterSheets = {};
         }
-        this.doc.characterSheets[op.username] = {
+        const updatedSheet = {
           ...this.doc.characterSheets[op.username],
           ...op.sheet,
           username: op.username
         };
+        if (op.sheet.hp !== undefined) {
+          this.recordHpAndCheckMax(updatedSheet, op.sheet.hp);
+        }
+        this.doc.characterSheets[op.username] = updatedSheet;
         this.syncNameBetweenSheetAndClaimedToken(op.username, op.sheet.characterName, "sheet");
         break;
       }
