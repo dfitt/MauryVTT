@@ -750,9 +750,9 @@ export class CanvasEngine {
     };
   }
 
-  public zoomToWorldPos(wx: number, wy: number, selectEntityId?: string): void {
+  public zoomToWorldPos(wx: number, wy: number, selectEntityId?: string, screenOffsetX = 0): void {
     const targetZoom = Math.max(this.zoom, 1.3);
-    const centerX = this.canvas.width / 2;
+    const centerX = this.canvas.width / 2 + screenOffsetX;
     const centerY = this.canvas.height / 2;
     const targetX = centerX - wx * targetZoom;
     const targetY = centerY - wy * targetZoom;

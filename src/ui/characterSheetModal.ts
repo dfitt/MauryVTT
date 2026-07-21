@@ -8,6 +8,37 @@ import { ALL_ROLL_ICONS } from "./rollIcons.js";
 
 export const SHEET_ICON_SVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle;"><path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2Z" fill="rgba(56, 189, 248, 0.15)" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="10" cy="12" r="2.2" stroke="currentColor" stroke-width="1.8"/><line x1="14" y1="11" x2="16.5" y2="11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="14" y1="13.5" x2="16.5" y2="13.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="7.5" y1="17.5" x2="16.5" y2="17.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;
 
+export function formatTimeAgo(timestamp?: number): string {
+  if (!timestamp) return "";
+  const diffMs = Date.now() - timestamp;
+  const diffSec = Math.max(0, Math.floor(diffMs / 1000));
+  if (diffSec < 60) {
+    return `${Math.max(1, diffSec)} second${diffSec === 1 ? "" : "s"} ago`;
+  }
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) {
+    return `${diffMin} minute${diffMin === 1 ? "" : "s"} ago`;
+  }
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) {
+    return `${diffHr} hour${diffHr === 1 ? "" : "s"} ago`;
+  }
+  const diffDay = Math.floor(diffHr / 24);
+  if (diffDay < 7) {
+    return `${diffDay} day${diffDay === 1 ? "" : "s"} ago`;
+  }
+  const diffWeek = Math.floor(diffDay / 7);
+  if (diffWeek < 4) {
+    return diffWeek === 1 ? "last week" : `${diffWeek} weeks ago`;
+  }
+  const diffMonth = Math.floor(diffDay / 30);
+  if (diffMonth < 12) {
+    return diffMonth === 1 ? "last month" : `${diffMonth} months ago`;
+  }
+  const diffYear = Math.floor(diffDay / 365);
+  return diffYear <= 1 ? "last year" : `${diffYear} years ago`;
+}
+
 let modalEl: HTMLElement | null = null;
 let unsubscribeDocStore: (() => void) | null = null;
 let debounceTimer: any = null;
@@ -323,18 +354,22 @@ export function openCharacterSheetModal(engine?: CanvasEngine): void {
     const currentDoc = docStore.getDocument();
     const tokenEnt = findMyClaimedToken(currentDoc, uname);
     const sheet = currentDoc.characterSheets?.[uname];
-    const history = (tokenEnt?.hpHistory || sheet?.hpHistory || []).slice(-6).reverse();
+    const history = (tokenEnt?.hpHistory || sheet?.hpHistory || []).slice(-6);
     if (history.length === 0) return;
 
-    hpHistoryPopup.innerHTML = `<div style="font-size: 10px; color: #cbd5e1; font-weight: 800; text-transform: uppercase; padding: 2px 4px;">Recent HP</div>`;
-    history.forEach((val) => {
+    hpHistoryPopup.innerHTML = `<div style="font-size: 10px; color: #cbd5e1; font-weight: 800; text-transform: uppercase; padding: 2px 4px; border-bottom: 1px solid rgba(244, 63, 94, 0.3); margin-bottom: 2px;">Recent HP</div>`;
+    history.forEach((entry) => {
+      const val = typeof entry === "object" && entry !== null ? String((entry as any).val ?? (entry as any).hp) : String(entry);
+      const ts = typeof entry === "object" && entry !== null ? (entry as any).timestamp : undefined;
+      const timeAgo = formatTimeAgo(ts);
+
       const btn = document.createElement("button");
       btn.className = "btn-glass btn-sm";
-      btn.style.cssText = "width: 100%; text-align: center; padding: 6px; font-weight: 800; color: #fda4af; cursor: pointer;";
-      btn.textContent = String(val);
+      btn.style.cssText = "width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 8px; font-weight: 800; color: #fda4af; cursor: pointer; border-radius: 4px;";
+      btn.innerHTML = `<span style="font-size: 13px; font-weight: 900;">${val}</span>` + (timeAgo ? `<span style="font-size: 10px; color: #94a3b8; font-weight: 500;">${timeAgo}</span>` : "");
       btn.addEventListener("mousedown", (e) => {
         e.preventDefault();
-        hpInput.value = String(val);
+        hpInput.value = val;
         saveSheetFields(true);
         hpHistoryPopup.style.display = "none";
       });
@@ -372,8 +407,15 @@ export function openCharacterSheetModal(engine?: CanvasEngine): void {
       const wy = tokenEnt.position.y + tokenEnt.size.height / 2;
       portraitBox.style.cursor = "pointer";
       portraitBox.onclick = () => {
-        engine.zoomToWorldPos(wx, wy, targetTokenId);
-        closeCharacterSheetModal();
+        const isMobileNow = window.innerWidth <= 768;
+        if (isMobileNow) {
+          engine.zoomToWorldPos(wx, wy, targetTokenId);
+          closeCharacterSheetModal();
+        } else {
+          // On desktop: zoom to token, offset view to the right so token is visible to left of sheet, keep sheet open
+          const offsetLeftPx = Math.min(-260, -window.innerWidth * 0.22);
+          engine.zoomToWorldPos(wx, wy, targetTokenId, offsetLeftPx);
+        }
       };
     } else {
       portraitBox.style.cursor = "default";

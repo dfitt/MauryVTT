@@ -20,7 +20,7 @@ export interface CharacterSheetData {
   notes?: string;
   hp?: string | number;
   maxHp?: string | number;
-  hpHistory?: (string | number)[];
+  hpHistory?: (string | number | { val: string | number; timestamp?: number })[];
 }
 
 export interface VTTDocument {
@@ -109,7 +109,7 @@ export interface TokenEntity extends BaseEntity {
   };
   hp?: string | number;
   maxHp?: string | number;
-  hpHistory?: (string | number)[];
+  hpHistory?: (string | number | { val: string | number; timestamp?: number })[];
 }
 
 export interface LineEntity extends BaseEntity {

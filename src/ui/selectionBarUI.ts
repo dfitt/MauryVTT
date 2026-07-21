@@ -2,6 +2,7 @@ import { CanvasEngine } from "../canvas/canvasEngine.js";
 import { docStore } from "../state/documentStore.js";
 import { sessionManager } from "../network/sessionManager.js";
 import { TokenEntity } from "../types/vtt.js";
+import { formatTimeAgo } from "./characterSheetModal.js";
 
 export function setupSelectionBarUI(engine: CanvasEngine): void {
   const bar = document.createElement("div");
@@ -198,7 +199,7 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
         "background: rgba(244, 63, 94, 0.15); border: 1px solid rgba(244, 63, 94, 0.55); border-radius: 6px; color: #fda4af; padding: 4px 6px; font-size: 13px; font-weight: 700; outline: none; width: 48px; text-align: center;";
 
       const hpHistoryPopup = document.createElement("div");
-      hpHistoryPopup.style.cssText = "display: none; position: absolute; bottom: 100%; left: 0; width: 110px; background: rgba(15, 23, 42, 0.98); border: 1px solid #f43f5e; border-radius: 8px; padding: 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.7); z-index: 3000; flex-direction: column; gap: 4px; margin-bottom: 6px;";
+      hpHistoryPopup.style.cssText = "display: none; position: absolute; bottom: 100%; left: 0; min-width: 160px; background: rgba(15, 23, 42, 0.98); border: 1px solid #f43f5e; border-radius: 8px; padding: 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.7); z-index: 3000; flex-direction: column; gap: 4px; margin-bottom: 6px;";
 
       const commitHpAndMax = () => {
         const newHp = hpInput.value.trim();
@@ -240,18 +241,22 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
       const showSelectionHpHistoryPopup = () => {
         const currentDoc = docStore.getDocument();
         const latestToken = currentDoc.entities[token.id] as TokenEntity || token;
-        const history = (latestToken.hpHistory || []).slice(-6).reverse();
+        const history = (latestToken.hpHistory || []).slice(-6);
         if (history.length === 0) return;
 
-        hpHistoryPopup.innerHTML = `<div style="font-size: 10px; color: #cbd5e1; font-weight: 800; text-transform: uppercase; padding: 2px 4px;">Recent HP</div>`;
-        history.forEach((val) => {
+        hpHistoryPopup.innerHTML = `<div style="font-size: 10px; color: #cbd5e1; font-weight: 800; text-transform: uppercase; padding: 2px 4px; border-bottom: 1px solid rgba(244, 63, 94, 0.3); margin-bottom: 2px;">Recent HP</div>`;
+        history.forEach((entry) => {
+          const val = typeof entry === "object" && entry !== null ? String((entry as any).val ?? (entry as any).hp) : String(entry);
+          const ts = typeof entry === "object" && entry !== null ? (entry as any).timestamp : undefined;
+          const timeAgo = formatTimeAgo(ts);
+
           const btn = document.createElement("button");
           btn.className = "btn-glass btn-sm";
-          btn.style.cssText = "width: 100%; text-align: center; padding: 4px; font-weight: 800; color: #fda4af; cursor: pointer; font-size: 12px;";
-          btn.textContent = String(val);
+          btn.style.cssText = "width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 8px; font-weight: 800; color: #fda4af; cursor: pointer; font-size: 12px; border-radius: 4px;";
+          btn.innerHTML = `<span style="font-size: 13px; font-weight: 900;">${val}</span>` + (timeAgo ? `<span style="font-size: 10px; color: #94a3b8; font-weight: 500;">${timeAgo}</span>` : "");
           btn.addEventListener("mousedown", (e) => {
             e.preventDefault();
-            hpInput.value = String(val);
+            hpInput.value = val;
             commitHpAndMax();
             hpHistoryPopup.style.display = "none";
           });

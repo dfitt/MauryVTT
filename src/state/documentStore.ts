@@ -145,12 +145,14 @@ export class DocumentStore {
     this.notify();
   }
 
-  private recordHpAndCheckMax(target: { hp?: string | number; maxHp?: string | number; hpHistory?: (string | number)[] }, newHp: string | number | undefined): void {
+  private recordHpAndCheckMax(target: { hp?: string | number; maxHp?: string | number; hpHistory?: any[] }, newHp: string | number | undefined): void {
     if (newHp === undefined || newHp === "" || String(newHp).trim() === "") return;
     const strHp = String(newHp).trim();
     if (!target.hpHistory) target.hpHistory = [];
-    if (target.hpHistory[target.hpHistory.length - 1] !== strHp) {
-      target.hpHistory.push(strHp);
+    const last = target.hpHistory[target.hpHistory.length - 1];
+    const lastVal = typeof last === "object" && last !== null ? String((last as any).val ?? (last as any).hp) : String(last);
+    if (lastVal !== strHp) {
+      target.hpHistory.push({ val: strHp, timestamp: Date.now() });
       if (target.hpHistory.length > 20) {
         target.hpHistory = target.hpHistory.slice(-20);
       }
@@ -158,7 +160,7 @@ export class DocumentStore {
     const numHp = Number(strHp);
     if (!isNaN(numHp)) {
       const currentMax = Number(target.maxHp || 0);
-      const historyMax = Math.max(0, ...target.hpHistory.map((h) => Number(h)).filter((n) => !isNaN(n)));
+      const historyMax = Math.max(0, ...target.hpHistory.map((h) => typeof h === "object" && h !== null ? Number((h as any).val ?? (h as any).hp) : Number(h)).filter((n) => !isNaN(n)));
       if (numHp > currentMax && numHp >= historyMax) {
         target.maxHp = numHp;
       }
