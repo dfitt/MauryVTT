@@ -125,6 +125,11 @@ export function setupToolbarUI(engine: CanvasEngine): void {
       title: "Add Image File"
     },
     {
+      id: "map",
+      icon: "🗺️",
+      title: "Add Map File"
+    },
+    {
       id: "token",
       icon: "♟️",
       title: "Add Pawns / Token Image"
@@ -498,6 +503,8 @@ export function setupToolbarUI(engine: CanvasEngine): void {
         toolPopover.style.display = "none";
         if (tool.id === "image") {
           fileInput.click();
+        } else if (tool.id === "map") {
+          mapFileInput.click();
         } else if (tool.id === "token") {
           tokenPickerActive = true;
           tokenInput.click();
@@ -983,6 +990,14 @@ export function setupToolbarUI(engine: CanvasEngine): void {
       y: gy + gridSizePx / 2
     };
 
+    const myUname = sessionManager.myUsername || localStorage.getItem("maury_vtt_username") || "Me";
+    const alreadyHasClaimedToken = Boolean(
+      doc.primaryTokens?.[myUname] ||
+      Object.values(doc.entities).some(
+        (e) => e.type === "token" && (e as any).primaryOwnerUsername === myUname
+      )
+    );
+
     const newToken: TokenEntity = {
       id: "tok-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6),
       type: "token",
@@ -1005,7 +1020,7 @@ export function setupToolbarUI(engine: CanvasEngine): void {
       gridSnapped: true,
       elevation: 0,
       ownerPeerIds: [sessionManager.myPeerId || "local"],
-      primaryOwnerUsername: sessionManager.myUsername || localStorage.getItem("maury_vtt_username") || "Me",
+      primaryOwnerUsername: alreadyHasClaimedToken ? undefined : myUname,
       statusEffects: []
     };
 
