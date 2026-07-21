@@ -273,7 +273,7 @@ export function openCharacterSheetModal(engine?: CanvasEngine): void {
       const tokenEnt = findMyClaimedToken(currentDoc, uname);
       if (tokenEnt) {
         const tokenPatch: Partial<TokenEntity> = {};
-        if (patch.characterName && patch.characterName.trim() !== "" && (!tokenEnt.label || tokenEnt.label.trim() === "" || tokenEnt.label === uname)) {
+        if (patch.characterName !== undefined && patch.characterName.trim() !== "" && tokenEnt.label !== patch.characterName.trim()) {
           tokenPatch.label = patch.characterName.trim();
         }
         if (patch.hp !== undefined && String(patch.hp || "") !== String(tokenEnt.hp || "")) {

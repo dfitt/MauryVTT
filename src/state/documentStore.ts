@@ -2,6 +2,7 @@ import {
   VTTDocument,
   DocumentOperation,
   CanvasEntity,
+  TokenEntity,
   UserProfile,
   ChatMessage
 } from "../types/vtt.js";
@@ -144,6 +145,39 @@ export class DocumentStore {
     this.notify();
   }
 
+  private syncNameBetweenSheetAndClaimedToken(username: string, newName?: string, source: "sheet" | "token" = "sheet"): void {
+    if (!username) return;
+    if (!this.doc.characterSheets) this.doc.characterSheets = {};
+    if (!this.doc.primaryTokens) this.doc.primaryTokens = {};
+
+    const tokenId = this.doc.primaryTokens[username] || Object.values(this.doc.entities).find((e) => e.type === "token" && (e as any).primaryOwnerUsername === username)?.id;
+    const sheet = this.doc.characterSheets[username] || { username };
+
+    if (source === "sheet") {
+      const nameToSync = newName !== undefined ? newName : sheet.characterName;
+      if (nameToSync !== undefined) {
+        if (tokenId && this.doc.entities[tokenId]) {
+          const tok = this.doc.entities[tokenId] as any;
+          if (tok.label !== nameToSync) {
+            tok.label = nameToSync;
+            tok.updatedAt = Date.now();
+          }
+        }
+      }
+    } else if (source === "token") {
+      const nameToSync = newName !== undefined ? newName : (tokenId && this.doc.entities[tokenId] ? (this.doc.entities[tokenId] as any).label : undefined);
+      if (nameToSync !== undefined) {
+        if (sheet.characterName !== nameToSync) {
+          this.doc.characterSheets[username] = {
+            ...sheet,
+            username,
+            characterName: nameToSync
+          };
+        }
+      }
+    }
+  }
+
   private applySingleOp(op: DocumentOperation): void {
     if (!this.doc.primaryTokens) {
       this.doc.primaryTokens = {};
@@ -159,6 +193,11 @@ export class DocumentStore {
               if (ent.type === "token" && ent.id !== tok.id && (ent as any).primaryOwnerUsername === tok.primaryOwnerUsername) {
                 (ent as any).primaryOwnerUsername = undefined;
               }
+            }
+            if (this.doc.characterSheets?.[tok.primaryOwnerUsername]?.characterName) {
+              this.syncNameBetweenSheetAndClaimedToken(tok.primaryOwnerUsername, undefined, "sheet");
+            } else if (tok.label) {
+              this.syncNameBetweenSheetAndClaimedToken(tok.primaryOwnerUsername, tok.label, "token");
             }
           }
         }
@@ -196,6 +235,17 @@ export class DocumentStore {
                 if (tid === op.id) {
                   delete this.doc.primaryTokens[uname];
                 }
+              }
+            }
+
+            const patchToken = op.patch as Partial<TokenEntity>;
+            if (patchToken.label !== undefined && newOwner) {
+              this.syncNameBetweenSheetAndClaimedToken(newOwner, patchToken.label, "token");
+            } else if (newOwner && oldOwner !== newOwner) {
+              if (this.doc.characterSheets?.[newOwner]?.characterName) {
+                this.syncNameBetweenSheetAndClaimedToken(newOwner, undefined, "sheet");
+              } else if (updatedTok.label) {
+                this.syncNameBetweenSheetAndClaimedToken(newOwner, updatedTok.label, "token");
               }
             }
           }
@@ -277,6 +327,7 @@ export class DocumentStore {
           ...op.sheet,
           username: op.username
         };
+        this.syncNameBetweenSheetAndClaimedToken(op.username, op.sheet.characterName, "sheet");
         break;
       }
       case "CLEAR_CHAT_HISTORY": {

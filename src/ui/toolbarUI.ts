@@ -10,6 +10,7 @@ import { EFFECT_REGISTRY } from "../effects/effectDefs.js";
 import { showEnhanceToast } from "./enhanceModal.js";
 import { openAiTokenGenerateModal, setupTokenProxyListeners } from "./tokenAiModal.js";
 import { openVttfxGenerateModal } from "./vttfxGenerateModal.js";
+import { openAiImageGenerateModal } from "./imageGenModal.js";
 
 const PALETTE_COLORS = [
   "#38bdf8", // Cyan
@@ -67,7 +68,8 @@ export function setupToolbarUI(engine: CanvasEngine): void {
   const AI_ICONS: Record<string, string> = {
     enhance: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle;"><path d="M12 2L14.4 8.4L21 10.8L14.4 13.2L12 19.6L9.6 13.2L3 10.8L9.6 8.4L12 2Z" fill="url(#enhance-grad)" stroke="#c084fc" stroke-width="1.5"/><path d="M19 16L20.2 19.2L23 20.4L20.2 21.6L19 24.8L17.8 21.6L15 20.4L17.8 19.2L19 16Z" fill="#e879f9"/><defs><linearGradient id="enhance-grad" x1="3" y1="2" x2="21" y2="20" gradientUnits="userSpaceOnUse"><stop stop-color="#c084fc"/><stop offset="1" stop-color="#38bdf8"/></linearGradient></defs></svg>`,
     token: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle;"><circle cx="12" cy="12" r="9" stroke="#38bdf8" stroke-width="1.8" fill="rgba(56,189,248,0.15)"/><path d="M12 6L13.5 10.5L18 12L13.5 13.5L12 18L10.5 13.5L6 12L10.5 10.5L12 6Z" fill="url(#token-ai-grad)" stroke="#c084fc" stroke-width="1.2"/><defs><linearGradient id="token-ai-grad" x1="6" y1="6" x2="18" y2="18" gradientUnits="userSpaceOnUse"><stop stop-color="#c084fc"/><stop offset="1" stop-color="#38bdf8"/></linearGradient></defs></svg>`,
-    vttfx: `💫`
+    vttfx: `💫`,
+    imageGen: `🎨`
   };
 
   const updateMainLineIcon = () => {
@@ -429,10 +431,11 @@ export function setupToolbarUI(engine: CanvasEngine): void {
       const grid = document.createElement("div");
       grid.style.cssText = "display: flex; flex-direction: column; gap: 6px;";
       
-      const aiOptions: { id: "enhance" | "token" | "vttfx"; label: string; desc: string; icon: string }[] = [
+      const aiOptions: { id: "enhance" | "token" | "vttfx" | "imageGen"; label: string; desc: string; icon: string }[] = [
         { id: "enhance", label: "AI Map Enhance", desc: "/enhance - Draw selection box on canvas", icon: AI_ICONS.enhance },
         { id: "token", label: "AI Token Generator", desc: "Generate token art from description", icon: AI_ICONS.token },
-        { id: "vttfx", label: "AI VTTFX Generator", desc: "Generate animated spell & status VFX", icon: AI_ICONS.vttfx }
+        { id: "vttfx", label: "AI VTTFX Generator", desc: "Generate animated spell & status VFX", icon: AI_ICONS.vttfx },
+        { id: "imageGen", label: "AI Scene / Illustration", desc: "Generate Dark Fantasy scene art referencing tokens", icon: AI_ICONS.imageGen }
       ];
 
       aiOptions.forEach((o) => {
@@ -457,6 +460,8 @@ export function setupToolbarUI(engine: CanvasEngine): void {
             openAiTokenGenerateModal(engine, createAndDispatchToken);
           } else if (o.id === "vttfx") {
             openVttfxGenerateModal();
+          } else if (o.id === "imageGen") {
+            openAiImageGenerateModal(engine);
           }
         });
         grid.appendChild(b);
@@ -505,6 +510,8 @@ export function setupToolbarUI(engine: CanvasEngine): void {
             openAiTokenGenerateModal(engine, createAndDispatchToken);
           } else if (curAi === "vttfx") {
             openVttfxGenerateModal();
+          } else if (curAi === "imageGen") {
+            openAiImageGenerateModal(engine);
           }
         }
       }

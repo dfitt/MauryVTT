@@ -328,6 +328,25 @@ export type EphemeralPayload =
       error?: string;
     }
   | {
+      type: "IMAGE_GEN_PROXY_REQ";
+      reqId: string;
+      requesterPeerId: string;
+      requesterUsername: string;
+      proxyPeerId: string;
+      prompt: string;
+      tokenRefs: { label: string; base64: string; mimeType: string }[];
+    }
+  | {
+      type: "IMAGE_GEN_PROXY_RES";
+      reqId: string;
+      requesterPeerId: string;
+      proxyPeerId: string;
+      status: "success" | "error";
+      assetManifestEntry?: { assetHash: string; mimeType: string; byteSize: number; widthPx: number; heightPx: number; };
+      prompt?: string;
+      error?: string;
+    }
+  | {
       type: "REPLAY_ANIMATION";
       msgId: string;
       effectId: string;

@@ -76,7 +76,7 @@ export class CanvasEngine {
   public ephemeralTool: "ping" | "measure" | "laser" = "laser";
   public mapTool: "upload" | "enhance" = "upload";
   public tokenTool: "upload" | "ai" = "upload";
-  public aiTool: "enhance" | "token" | "vttfx" = "enhance";
+  public aiTool: "enhance" | "token" | "vttfx" | "imageGen" = "enhance";
   public pingEffectId: string | null = null;
   public drawColor: string = "#38bdf8";
   public drawWidth: number = 8;
@@ -737,6 +737,10 @@ export class CanvasEngine {
       x: wx * this.zoom + this.panX,
       y: wy * this.zoom + this.panY
     };
+  }
+
+  public getViewportCenterInWorld(): { x: number; y: number } {
+    return this.screenToWorld(window.innerWidth / 2, window.innerHeight / 2);
   }
 
   public snapToGrid(wx: number, wy: number, gridSizePx = 50): { x: number; y: number } {

@@ -136,7 +136,7 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
           const currentlyMine = token.primaryOwnerUsername === myUsername || (currentDoc.primaryTokens?.[myUsername] === token.id);
           if (currentlyMine && newLabel) {
             const sheet = currentDoc.characterSheets?.[myUsername];
-            if (!sheet || !sheet.characterName || sheet.characterName.trim() === "") {
+            if (!sheet || sheet.characterName !== newLabel) {
               sessionManager.dispatchOperation({
                 opType: "UPDATE_CHARACTER_SHEET",
                 username: myUsername,
