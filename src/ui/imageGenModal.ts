@@ -59,22 +59,7 @@ export async function openImageGenDescriptionModal(
       }
     }
   }
-  const selectedTokens = tokenCandidates.slice(0, 15);
-
-  const tokensListHtml = selectedTokens.length > 0
-    ? `
-      <div style="background: rgba(30, 41, 59, 0.65); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px; max-height: 120px; overflow-y: auto;">
-        <span style="font-size: 11px; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.5px;">Linked Character Reference Images (${selectedTokens.length}/15)</span>
-        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
-          ${selectedTokens.map((t) => `<span style="background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 999px; padding: 2px 8px; font-size: 11px; color: #e2e8f0; display: inline-flex; align-items: center; gap: 4px;">👤 ${t.label.trim()}</span>`).join("")}
-        </div>
-      </div>
-    `
-    : `
-      <div style="background: rgba(30, 41, 59, 0.65); border: 1px dashed rgba(148, 163, 184, 0.35); border-radius: 8px; padding: 10px; font-size: 11px; color: #94a3b8; font-style: italic;">
-        No named tokens found on canvas currently. Generating scene using only your text description!
-      </div>
-    `;
+  let selectedTokens: TokenEntity[] = tokenCandidates.slice(0, 15);
 
   modal.innerHTML = `
     <div style="background: rgba(15, 23, 42, 0.96); border: 1px solid rgba(56, 189, 248, 0.6); border-radius: 14px; padding: 24px; max-width: 520px; width: 92%; box-shadow: 0 16px 48px rgba(0,0,0,0.85); color: #f8fafc; font-family: Outfit, sans-serif; display: flex; flex-direction: column; gap: 16px;">
@@ -91,7 +76,7 @@ export async function openImageGenDescriptionModal(
         ${isProxy ? `<span style="display: block; margin-top: 6px; color: #c084fc; font-weight: 600;">🚀 Generating via proxy through ${getPeerUsername(proxyPeerId)}'s API key!</span>` : ""}
       </p>
 
-      ${tokensListHtml}
+      <div id="imagegen-tokens-container"></div>
 
       <div style="display: flex; flex-direction: column; gap: 6px;">
         <label style="font-size: 12px; font-weight: 700; color: #38bdf8;">Scene Description & Action</label>
@@ -109,6 +94,93 @@ export async function openImageGenDescriptionModal(
   `;
 
   document.body.appendChild(modal);
+
+  const renderTokensList = () => {
+    const container = modal.querySelector<HTMLElement>("#imagegen-tokens-container");
+    if (!container) return;
+
+    if (selectedTokens.length > 0) {
+      container.innerHTML = `
+        <div style="background: rgba(30, 41, 59, 0.65); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px; max-height: 120px; overflow-y: auto;">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-size: 11px; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.5px;">Linked Character Reference Images (${selectedTokens.length}/15)</span>
+            <span style="font-size: 10px; color: #94a3b8;">Left-click to insert • Right-click to remove</span>
+          </div>
+          <div id="imagegen-tokens-list" style="display: flex; flex-wrap: wrap; gap: 6px;"></div>
+        </div>
+      `;
+
+      const listEl = container.querySelector<HTMLElement>("#imagegen-tokens-list");
+      if (listEl) {
+        for (const tok of selectedTokens) {
+          const badge = document.createElement("span");
+          badge.style.cssText = "background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 999px; padding: 2px 8px; font-size: 11px; color: #e2e8f0; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; user-select: none; transition: background 0.15s, border-color 0.15s;";
+          badge.title = `Left-click to insert "${tok.label.trim()}" at cursor | Right-click to remove reference`;
+          badge.innerHTML = `👤 ${tok.label.trim()}`;
+
+          badge.addEventListener("mouseenter", () => {
+            badge.style.background = "rgba(56, 189, 248, 0.3)";
+            badge.style.borderColor = "#38bdf8";
+          });
+          badge.addEventListener("mouseleave", () => {
+            badge.style.background = "rgba(56, 189, 248, 0.15)";
+            badge.style.borderColor = "rgba(56, 189, 248, 0.4)";
+          });
+
+          badge.addEventListener("mousedown", (e) => {
+            if (e.button === 0) {
+              e.preventDefault();
+            }
+          });
+
+          badge.addEventListener("click", (e) => {
+            e.preventDefault();
+            const textareaEl = modal.querySelector<HTMLTextAreaElement>("#gemini-imagegen-desc-textarea");
+            if (!textareaEl) return;
+
+            const name = tok.label.trim();
+            const hasFocus = document.activeElement === textareaEl;
+            const start = (hasFocus && textareaEl.selectionStart !== null) ? textareaEl.selectionStart : textareaEl.value.length;
+            const end = (hasFocus && textareaEl.selectionEnd !== null) ? textareaEl.selectionEnd : textareaEl.value.length;
+
+            const before = textareaEl.value.substring(0, start);
+            const after = textareaEl.value.substring(end);
+
+            let textToInsert = name;
+            if (before.length > 0 && !/\s$/.test(before) && !/[\(\["']$/.test(before)) {
+              textToInsert = " " + textToInsert;
+            }
+            if (after.length > 0 && !/^\s/.test(after) && !/^[,\.\?!\)\]"']/.test(after)) {
+              textToInsert = textToInsert + " ";
+            }
+
+            textareaEl.value = before + textToInsert + after;
+            const newCursorPos = before.length + textToInsert.length;
+            textareaEl.focus();
+            textareaEl.selectionStart = newCursorPos;
+            textareaEl.selectionEnd = newCursorPos;
+          });
+
+          badge.addEventListener("contextmenu", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            selectedTokens = selectedTokens.filter((t) => t.id !== tok.id && t !== tok);
+            renderTokensList();
+          });
+
+          listEl.appendChild(badge);
+        }
+      }
+    } else {
+      container.innerHTML = `
+        <div style="background: rgba(30, 41, 59, 0.65); border: 1px dashed rgba(148, 163, 184, 0.35); border-radius: 8px; padding: 10px; font-size: 11px; color: #94a3b8; font-style: italic;">
+          No named tokens selected for character reference. Generating scene using only your text description!
+        </div>
+      `;
+    }
+  };
+
+  renderTokensList();
 
   const textareaEl = modal.querySelector<HTMLTextAreaElement>("#gemini-imagegen-desc-textarea")!;
   const cancelBtn = modal.querySelector<HTMLButtonElement>("#btn-cancel-imagegen-desc")!;
@@ -156,6 +228,8 @@ export async function openImageGenDescriptionModal(
   });
 
   textareaEl.focus();
+  textareaEl.selectionStart = textareaEl.value.length;
+  textareaEl.selectionEnd = textareaEl.value.length;
 }
 
 export function sendProxyImageGenRequest(
