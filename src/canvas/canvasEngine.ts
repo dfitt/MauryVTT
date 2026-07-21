@@ -68,7 +68,7 @@ export class CanvasEngine {
   // Viewport transform
   public panX: number = 0;
   public panY: number = 0;
-  public zoom: number = 1.0;
+  public zoom: number = 0.5;
   public targetPanZoom: { x: number; y: number; zoom: number } | null = null;
 
   // Tool state
