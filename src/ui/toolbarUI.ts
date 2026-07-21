@@ -128,6 +128,11 @@ export function setupToolbarUI(engine: CanvasEngine): void {
       title: "Ephemeral Tools (Ping, Measure, Laser)"
     },
     {
+      id: "image",
+      icon: "🖼️",
+      title: "Add Image File"
+    },
+    {
       id: "map",
       icon: MAP_ICONS[engine.mapTool] || MAP_ICONS.upload,
       title: "Map Import & AI Enhancement (/enhance)"
@@ -531,7 +536,9 @@ export function setupToolbarUI(engine: CanvasEngine): void {
         bar.querySelectorAll(".tool-btn[data-tool-id]").forEach((b) => b.classList.remove("active"));
         btn.classList.add("active");
         toolPopover.style.display = "none";
-        if (tool.id === "map" && engine.mapTool === "upload") {
+        if (tool.id === "image") {
+          fileInput.click();
+        } else if (tool.id === "map" && engine.mapTool === "upload") {
           mapFileInput.click();
         } else if (tool.id === "token" && engine.tokenTool === "upload") {
           tokenPickerActive = true;
@@ -907,7 +914,6 @@ export function setupToolbarUI(engine: CanvasEngine): void {
     }
   });
 
-  bar.appendChild(uploadBtn);
   bar.appendChild(fileInput);
 
   const mapFileInput = document.createElement("input");
@@ -1035,8 +1041,7 @@ export function setupToolbarUI(engine: CanvasEngine): void {
       opType: "CREATE_ENTITY",
       entity: newToken
     });
-    engine.setTool("select");
-    engine.selectedEntityId = newToken.id;
+    engine.zoomToWorldPos(snappedPos.x, snappedPos.y, newToken.id);
 
     sessionManager.uploadAsset(processed.assetHash, processed.blob)
       .catch((err) => console.error("[toolbarUI] Network upload failed for token asset:", err));

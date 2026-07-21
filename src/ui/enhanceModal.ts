@@ -121,7 +121,13 @@ export function showEnhanceToast(text: string, durationMs = 8000): void {
   }
 }
 
-async function callGeminiImageGeneration(base64Image: string, apiKey: string, modelName: string, overrideDesc?: string): Promise<string | null> {
+async function callGeminiImageGeneration(
+  base64Image: string,
+  apiKey: string,
+  modelName: string,
+  overrideDesc?: string,
+  boxDimensions?: { width: number; height: number }
+): Promise<string | null> {
   const modelsToTry = [
     modelName,
     "gemini-3.1-flash-image",
@@ -130,7 +136,33 @@ async function callGeminiImageGeneration(base64Image: string, apiKey: string, mo
     "imagen-3.0-generate-002"
   ].filter((v, i, a) => Boolean(v) && a.indexOf(v) === i);
 
-  const premadePrompt = "You are a master virtual tabletop RPG map designer specializing in classic old-school D&D cartography. Look at the provided top-down drawing and room fills as a layout guide and blueprint. Generate a high-resolution, top-down, overhead 2D tabletop RPG battlemap designed in an oldschool D&D, OSR (Old School Renaissance), and Dungeon Crawl Classics (DCC) art style. The map MUST be drawn with crisp black ink on a solid, stark white (#FFFFFF) background with classic crosshatching, hand-drawn ink line walls, stippling, and retro dungeon cartography textures while preserving the exact spatial boundaries, room layouts, pathways, and alignments shown in the sketch guide. Even if the reference sketch has a dark background, your generated map MUST have a solid, stark white (#FFFFFF) background with black ink lines. CRITICAL INSTRUCTIONS:\n1. Do NOT draw or include any square or hexagonal grid lines, floor tile grids, flagstone grids, floor patterns, map legends, text labels, titles, keys, or compass roses on the map itself.\n2. Floors MUST be mostly empty, plain, and stark white (#FFFFFF) except for important objects, furniture, debris, rubble, and decorations. Absolutely NO regular floor patterns, tiles, checkers, parquet, or grid textures are allowed on the floor because they conflict directly with the virtual tabletop software's built-in dynamic grid lines.";
+  let boxRatio = 1.0;
+  let targetW = 1024;
+  let targetH = 1024;
+  let aspectRatioStr = "1:1";
+
+  if (boxDimensions && boxDimensions.width > 0 && boxDimensions.height > 0) {
+    boxRatio = boxDimensions.width / boxDimensions.height;
+    if (boxRatio >= 1.0) {
+      targetW = 1024;
+      targetH = Math.max(256, Math.round(1024 / boxRatio));
+    } else {
+      targetH = 1024;
+      targetW = Math.max(256, Math.round(1024 * boxRatio));
+    }
+    if (boxRatio > 1.5) aspectRatioStr = "16:9";
+    else if (boxRatio > 1.15) aspectRatioStr = "4:3";
+    else if (boxRatio > 0.85) aspectRatioStr = "1:1";
+    else if (boxRatio > 0.65) aspectRatioStr = "3:4";
+    else aspectRatioStr = "9:16";
+  }
+  const imageSizeStr = `${targetW}x${targetH}`;
+
+  const aspectInstruction = boxDimensions
+    ? `\n3. CRITICAL ASPECT RATIO INSTRUCTION: The returned generated map image MUST strictly match the exact aspect ratio of the input reference sketch image (${boxDimensions.width}x${boxDimensions.height}, aspect ratio ${boxRatio.toFixed(2)}:1). Do NOT alter the proportions, stretch, skew, square-crop, or change the spatial relative dimensions or rectangular boundaries of the rooms, corridors, or overall canvas frame!`
+    : "";
+
+  const premadePrompt = `You are a master virtual tabletop RPG map designer specializing in classic old-school D&D cartography. Look at the provided top-down drawing and room fills as a layout guide and blueprint. Generate a high-resolution, top-down, overhead 2D tabletop RPG battlemap designed in an oldschool D&D, OSR (Old School Renaissance), and Dungeon Crawl Classics (DCC) art style. The map MUST be drawn with crisp black ink on a solid, stark white (#FFFFFF) background with classic crosshatching, hand-drawn ink line walls, stippling, and retro dungeon cartography textures while preserving the exact spatial boundaries, room layouts, pathways, and alignments shown in the sketch guide. Even if the reference sketch has a dark background, your generated map MUST have a solid, stark white (#FFFFFF) background with black ink lines. CRITICAL INSTRUCTIONS:\n1. Do NOT draw or include any square or hexagonal grid lines, floor tile grids, flagstone grids, floor patterns, map legends, text labels, titles, keys, or compass roses on the map itself.\n2. Floors MUST be mostly empty, plain, and stark white (#FFFFFF) except for important objects, furniture, debris, rubble, and decorations. Absolutely NO regular floor patterns, tiles, checkers, parquet, or grid textures are allowed on the floor because they conflict directly with the virtual tabletop software's built-in dynamic grid lines.${aspectInstruction}`;
   const customDesc = overrideDesc !== undefined ? overrideDesc.trim() : localStorage.getItem("gemini_enhance_custom_prompt")?.trim();
   const promptText = customDesc
     ? `${premadePrompt}\n\nCRITICAL USER OVERRIDE DESCRIPTION (Follow this user description strictly; if any instructions below or above conflict with this custom description, this user description takes overriding precedence):\n"${customDesc}"`
@@ -160,9 +192,9 @@ async function callGeminiImageGeneration(base64Image: string, apiKey: string, mo
           ],
           parameters: {
             sampleCount: 1,
-            aspectRatio: "1:1",
-            sampleImageSize: "1024x1024",
-            imageSize: "1024x1024"
+            aspectRatio: aspectRatioStr,
+            sampleImageSize: imageSizeStr,
+            imageSize: imageSizeStr
           }
         };
 
@@ -216,8 +248,8 @@ async function callGeminiImageGeneration(base64Image: string, apiKey: string, mo
         };
 
         const configsToTry = [
-          { responseModalities: ["IMAGE", "TEXT"], imageConfig: { imageSize: "1024x1024", aspectRatio: "1:1" } },
-          { responseModalities: ["IMAGE"], imageConfig: { imageSize: "1024x1024", aspectRatio: "1:1" } },
+          { responseModalities: ["IMAGE", "TEXT"], imageConfig: { imageSize: imageSizeStr, aspectRatio: aspectRatioStr } },
+          { responseModalities: ["IMAGE"], imageConfig: { imageSize: imageSizeStr, aspectRatio: aspectRatioStr } },
           { responseModalities: ["IMAGE", "TEXT"] },
           { responseModalities: ["IMAGE"] },
           null // try without generationConfig if model rejects responseModalities
@@ -340,7 +372,7 @@ export async function runGeminiMapEnhancement(engine: CanvasEngine, box: { x: nu
 
     console.log("[Enhance] Captured offscreen sketch area:", box, "size:", canvasW, canvasH);
 
-    const resultBase64 = await callGeminiImageGeneration(base64Image, apiKey, modelName, overrideDesc);
+    const resultBase64 = await callGeminiImageGeneration(base64Image, apiKey, modelName, overrideDesc, { width: box.width, height: box.height });
     if (!resultBase64) {
       throw new Error("No image output returned by Gemini API.");
     }
@@ -731,7 +763,7 @@ async function runGeminiMapEnhancementForProxy(
     const base64Image = dataUrl.split(",")[1];
 
     console.log(`[EnhanceProxy] Calling Gemini API (model=${modelName})...`);
-    const resultBase64 = await callGeminiImageGeneration(base64Image, apiKey, modelName, description);
+    const resultBase64 = await callGeminiImageGeneration(base64Image, apiKey, modelName, description, { width: box.width, height: box.height });
     if (!resultBase64) {
       throw new Error("No image output returned by Gemini API during proxy request.");
     }

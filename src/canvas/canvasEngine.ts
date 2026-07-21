@@ -12,7 +12,7 @@ import { sessionManager } from "../network/sessionManager.js";
 import { canSelectLockedImage } from "./lockedSelectionHelper.js";
 import { EffectEngine } from "../effects/effectEngine.js";
 
-export type ToolType = "select" | "pan" | "draw" | "line" | "fill" | "erase" | "hide" | "unhide" | "measure" | "ping" | "token" | "ephemeral" | "laser" | "enhance" | "map";
+export type ToolType = "select" | "pan" | "draw" | "line" | "fill" | "erase" | "hide" | "unhide" | "measure" | "ping" | "token" | "ephemeral" | "laser" | "enhance" | "map" | "image";
 
 export interface ActiveLaser {
   laserId: string;
