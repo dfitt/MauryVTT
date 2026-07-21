@@ -7,7 +7,7 @@ export function bindEnhanceTool(engine: CanvasEngine): void {
   let isSelecting = false;
   let startPt = { x: 0, y: 0 };
 
-  const isEnhanceActive = () => engine.activeTool === "enhance" || (engine.activeTool === "map" && engine.mapTool === "enhance");
+  const isEnhanceActive = () => engine.activeTool === "enhance" || (engine.activeTool === "map" && engine.mapTool === "enhance") || (engine.activeTool === "ai" && engine.aiTool === "enhance");
 
   engine.onMouseDown((_e, worldX, worldY) => {
     if (!isEnhanceActive()) return;
