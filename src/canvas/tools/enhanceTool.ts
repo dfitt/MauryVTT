@@ -7,15 +7,17 @@ export function bindEnhanceTool(engine: CanvasEngine): void {
   let isSelecting = false;
   let startPt = { x: 0, y: 0 };
 
+  const isEnhanceActive = () => engine.activeTool === "enhance" || (engine.activeTool === "map" && engine.mapTool === "enhance");
+
   engine.onMouseDown((_e, worldX, worldY) => {
-    if (engine.activeTool !== "enhance") return;
+    if (!isEnhanceActive()) return;
     isSelecting = true;
     startPt = { x: worldX, y: worldY };
     engine.enhanceSelectionBox = { x1: startPt.x, y1: startPt.y, x2: startPt.x, y2: startPt.y };
   });
 
   engine.onMouseMove((_e, worldX, worldY) => {
-    if (!isSelecting || engine.activeTool !== "enhance") return;
+    if (!isSelecting || !isEnhanceActive()) return;
     engine.enhanceSelectionBox = {
       x1: Math.min(startPt.x, worldX),
       y1: Math.min(startPt.y, worldY),
@@ -25,7 +27,7 @@ export function bindEnhanceTool(engine: CanvasEngine): void {
   });
 
   engine.onMouseUp(() => {
-    if (!isSelecting || engine.activeTool !== "enhance") return;
+    if (!isSelecting || !isEnhanceActive()) return;
     isSelecting = false;
     const box = engine.enhanceSelectionBox;
     engine.enhanceSelectionBox = null;

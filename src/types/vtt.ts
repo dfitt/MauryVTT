@@ -214,6 +214,10 @@ export type AssetProtocolMessage =
 
 export type EphemeralPayload =
   | {
+      type: "HEARTBEAT";
+      peerId: string;
+    }
+  | {
       type: "CURSOR";
       peerId: string;
       username: string;
@@ -301,6 +305,26 @@ export type EphemeralPayload =
       vttfxItem?: any;
       iconDesc?: string;
       animDesc?: string;
+      error?: string;
+    }
+  | {
+      type: "TOKEN_PROXY_REQ";
+      reqId: string;
+      requesterPeerId: string;
+      requesterUsername: string;
+      proxyPeerId: string;
+      description: string;
+      ringColor?: string;
+    }
+  | {
+      type: "TOKEN_PROXY_RES";
+      reqId: string;
+      requesterPeerId: string;
+      proxyPeerId: string;
+      status: "success" | "error";
+      assetManifestEntry?: { assetHash: string; mimeType: string; byteSize: number; widthPx: number; heightPx: number; };
+      description?: string;
+      ringColor?: string;
       error?: string;
     }
   | {

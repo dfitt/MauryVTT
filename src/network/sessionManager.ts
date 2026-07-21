@@ -12,9 +12,40 @@ class SessionManager {
   public hostRoomId: string = "";
   private ephemeralListeners: Set<(payload: EphemeralPayload) => void> = new Set();
 
+  private heartbeatInterval: any = null;
+
   constructor() {
-    hostEngine.onEphemeral((payload) => this.emitEphemeral(payload));
-    clientEngine.onEphemeral((payload) => this.emitEphemeral(payload));
+    hostEngine.onEphemeral((payload) => {
+      if (payload && (payload as any).peerId) {
+        this.recordActivity((payload as any).peerId);
+      }
+      this.emitEphemeral(payload);
+    });
+    clientEngine.onEphemeral((payload) => {
+      if (payload && (payload as any).peerId) {
+        this.recordActivity((payload as any).peerId);
+      }
+      this.emitEphemeral(payload);
+    });
+  }
+
+  public startHeartbeat(): void {
+    if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
+    this.heartbeatInterval = setInterval(() => {
+      if (this.role !== "none" && this.myPeerId) {
+        this.sendEphemeral({
+          type: "HEARTBEAT",
+          peerId: this.myPeerId
+        });
+      }
+    }, 20000);
+  }
+
+  public stopHeartbeat(): void {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
+    }
   }
 
   private emitEphemeral(payload: EphemeralPayload): void {
@@ -36,6 +67,7 @@ class SessionManager {
     this.myPeerId = peerId;
     this.hostRoomId = peerId;
     docStore.initHostDocument(peerId, username, color);
+    this.startHeartbeat();
     return peerId;
   }
 
@@ -46,6 +78,7 @@ class SessionManager {
     this.hostRoomId = hostRoomId;
     const peerId = await clientEngine.connectToHost(hostRoomId, { username, color });
     this.myPeerId = peerId;
+    this.startHeartbeat();
     return peerId;
   }
 
@@ -103,14 +136,18 @@ class SessionManager {
 
   public recordActivity(peerId: string): void {
     if (peerId) {
-      this.lastSeenMap.set(peerId, Date.now());
+      const now = Date.now();
+      this.lastSeenMap.set(peerId, now);
+      if (this.role === "host") {
+        hostEngine.lastSeenMap.set(peerId, now);
+      }
     }
   }
 
   public getActiveUsers(): Array<{ username: string; color: string; role: string; peerId?: string }> {
     const map = new Map<string, { username: string; color: string; role: string; peerId?: string }>();
     const now = Date.now();
-    const FIVE_MINUTES_MS = 5 * 60 * 1000;
+    const THIRTY_SECONDS_MS = 30 * 1000;
 
     if (this.myUsername) {
       map.set(this.myUsername.toLowerCase().trim(), {
@@ -125,8 +162,8 @@ class SessionManager {
     for (const u of Object.values(docUsers)) {
       if (u.peerId === this.myPeerId) continue;
 
-      const lastSeen = this.lastSeenMap.get(u.peerId) || (this.role === "host" ? hostEngine.lastSeenMap.get(u.peerId) : undefined) || u.joinedAt || now;
-      if (now - lastSeen > FIVE_MINUTES_MS) {
+      const lastSeen = this.lastSeenMap.get(u.peerId) || (this.role === "host" ? hostEngine.lastSeenMap.get(u.peerId) : undefined);
+      if (!lastSeen || (now - lastSeen > THIRTY_SECONDS_MS)) {
         continue;
       }
 
@@ -145,6 +182,7 @@ class SessionManager {
   }
 
   public disconnect(): void {
+    this.stopHeartbeat();
     if (this.role === "host") {
       hostEngine.disconnect();
     } else if (this.role === "client") {

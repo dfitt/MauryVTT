@@ -159,7 +159,10 @@ async function callGeminiImageGeneration(base64Image: string, apiKey: string, mo
             }
           ],
           parameters: {
-            sampleCount: 1
+            sampleCount: 1,
+            aspectRatio: "1:1",
+            sampleImageSize: "1024x1024",
+            imageSize: "1024x1024"
           }
         };
 
@@ -213,6 +216,8 @@ async function callGeminiImageGeneration(base64Image: string, apiKey: string, mo
         };
 
         const configsToTry = [
+          { responseModalities: ["IMAGE", "TEXT"], imageConfig: { imageSize: "1024x1024", aspectRatio: "1:1" } },
+          { responseModalities: ["IMAGE"], imageConfig: { imageSize: "1024x1024", aspectRatio: "1:1" } },
           { responseModalities: ["IMAGE", "TEXT"] },
           { responseModalities: ["IMAGE"] },
           null // try without generationConfig if model rejects responseModalities

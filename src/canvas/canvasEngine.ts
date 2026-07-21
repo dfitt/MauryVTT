@@ -12,7 +12,7 @@ import { sessionManager } from "../network/sessionManager.js";
 import { canSelectLockedImage } from "./lockedSelectionHelper.js";
 import { EffectEngine } from "../effects/effectEngine.js";
 
-export type ToolType = "select" | "pan" | "draw" | "line" | "fill" | "erase" | "hide" | "unhide" | "measure" | "ping" | "token" | "ephemeral" | "laser" | "enhance";
+export type ToolType = "select" | "pan" | "draw" | "line" | "fill" | "erase" | "hide" | "unhide" | "measure" | "ping" | "token" | "ephemeral" | "laser" | "enhance" | "map";
 
 export interface ActiveLaser {
   laserId: string;
@@ -74,6 +74,8 @@ export class CanvasEngine {
   // Tool state
   public activeTool: ToolType = "select";
   public ephemeralTool: "ping" | "measure" | "laser" = "laser";
+  public mapTool: "upload" | "enhance" = "upload";
+  public tokenTool: "upload" | "ai" = "upload";
   public pingEffectId: string | null = null;
   public drawColor: string = "#38bdf8";
   public drawWidth: number = 8;
@@ -203,7 +205,7 @@ export class CanvasEngine {
       }
       this.activeTool = tool;
       (window as any).vttActiveTool = tool;
-      if (tool === "enhance" || tool === "draw" || tool === "line" || tool === "fill" || tool === "erase") {
+      if (tool === "enhance" || (tool === "map" && this.mapTool === "enhance") || tool === "draw" || tool === "line" || tool === "fill" || tool === "erase") {
         this.canvas.style.cursor = "crosshair";
       } else if (tool === "pan") {
         this.canvas.style.cursor = "grab";

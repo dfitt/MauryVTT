@@ -7,6 +7,8 @@ import { ImageEntity, TokenEntity } from "../types/vtt.js";
 import { openImportVttfxModal } from "./vttfxImportModal.js";
 import { openCharacterSheetModal, SHEET_ICON_SVG } from "./characterSheetModal.js";
 import { EFFECT_REGISTRY } from "../effects/effectDefs.js";
+import { showEnhanceToast } from "./enhanceModal.js";
+import { openAiTokenGenerateModal, setupTokenProxyListeners } from "./tokenAiModal.js";
 
 const PALETTE_COLORS = [
   "#38bdf8", // Cyan
@@ -61,6 +63,16 @@ export function setupToolbarUI(engine: CanvasEngine): void {
     laser: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; overflow: visible;"><defs><style>@keyframes laserBeamPulse{0%,100%{opacity:0.45;stroke-width:4.5px;}50%{opacity:0.85;stroke-width:6px;}}@keyframes laserSparkle1{0%{transform:rotate(0deg) scale(0.9);}50%{transform:rotate(180deg) scale(1.35);}100%{transform:rotate(360deg) scale(0.9);}}@keyframes laserSparkle2{0%{transform:rotate(45deg) scale(1.2);}50%{transform:rotate(-135deg) scale(0.8);}100%{transform:rotate(-315deg) scale(1.2);}}.laser-glow{animation:laserBeamPulse 1.6s infinite ease-in-out;transform-origin:center;}.sparkle-start{animation:laserSparkle1 3s infinite linear;transform-origin:4px 20px;}.sparkle-end{animation:laserSparkle2 2.5s infinite linear;transform-origin:20px 4px;}</style></defs><line x1="4" y1="20" x2="20" y2="4" stroke="#f43f5e" stroke-width="5" stroke-linecap="round" class="laser-glow"/><line x1="4" y1="20" x2="20" y2="4" stroke="#fb7185" stroke-width="2.8" stroke-linecap="round"/><line x1="4" y1="20" x2="20" y2="4" stroke="#ffffff" stroke-width="1.3" stroke-linecap="round"/><g class="sparkle-start"><path d="M 4 13 Q 4 20 11 20 Q 4 20 4 27 Q 4 20 -3 20 Q 4 20 4 13 Z" fill="#f43f5e" opacity="0.65"/><path d="M 4 15.5 Q 4 20 8.5 20 Q 4 20 4 24.5 Q 4 20 -0.5 20 Q 4 20 4 15.5 Z" fill="#ffffff"/></g><g class="sparkle-end"><path d="M 20 -3 Q 20 4 27 4 Q 20 4 20 11 Q 20 4 13 4 Q 20 4 20 -3 Z" fill="#f43f5e" opacity="0.65"/><path d="M 20 -0.5 Q 20 4 24.5 4 Q 20 4 20 8.5 Q 20 4 15.5 4 Q 20 4 20 -0.5 Z" fill="#ffffff"/></g></svg>`
   };
 
+  const MAP_ICONS: Record<string, string> = {
+    upload: `🗺️`,
+    enhance: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle;"><path d="M12 2L14.4 8.4L21 10.8L14.4 13.2L12 19.6L9.6 13.2L3 10.8L9.6 8.4L12 2Z" fill="url(#enhance-grad)" stroke="#c084fc" stroke-width="1.5"/><path d="M19 16L20.2 19.2L23 20.4L20.2 21.6L19 24.8L17.8 21.6L15 20.4L17.8 19.2L19 16Z" fill="#e879f9"/><defs><linearGradient id="enhance-grad" x1="3" y1="2" x2="21" y2="20" gradientUnits="userSpaceOnUse"><stop stop-color="#c084fc"/><stop offset="1" stop-color="#38bdf8"/></linearGradient></defs></svg>`
+  };
+
+  const TOKEN_ICONS: Record<string, string> = {
+    upload: `♟️`,
+    ai: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle;"><circle cx="12" cy="12" r="9" stroke="#38bdf8" stroke-width="1.8" fill="rgba(56,189,248,0.15)"/><path d="M12 6L13.5 10.5L18 12L13.5 13.5L12 18L10.5 13.5L6 12L10.5 10.5L12 6Z" fill="url(#token-ai-grad)" stroke="#c084fc" stroke-width="1.2"/><defs><linearGradient id="token-ai-grad" x1="6" y1="6" x2="18" y2="18" gradientUnits="userSpaceOnUse"><stop stop-color="#c084fc"/><stop offset="1" stop-color="#38bdf8"/></linearGradient></defs></svg>`
+  };
+
   const updateMainLineIcon = () => {
     const lineBtn = bar.querySelector('.tool-btn[data-tool-id="line"]');
     if (lineBtn) {
@@ -72,6 +84,20 @@ export function setupToolbarUI(engine: CanvasEngine): void {
     const ephemBtn = bar.querySelector('.tool-btn[data-tool-id="ephemeral"]');
     if (ephemBtn) {
       ephemBtn.innerHTML = EPHEMERAL_ICONS[engine.ephemeralTool] || EPHEMERAL_ICONS.laser;
+    }
+  };
+
+  const updateMainMapIcon = () => {
+    const mapBtn = bar.querySelector('.tool-btn[data-tool-id="map"]');
+    if (mapBtn) {
+      mapBtn.innerHTML = MAP_ICONS[engine.mapTool] || MAP_ICONS.upload;
+    }
+  };
+
+  const updateMainTokenIcon = () => {
+    const tokenBtn = bar.querySelector('.tool-btn[data-tool-id="token"]');
+    if (tokenBtn) {
+      tokenBtn.innerHTML = TOKEN_ICONS[engine.tokenTool] || TOKEN_ICONS.upload;
     }
   };
 
@@ -102,9 +128,14 @@ export function setupToolbarUI(engine: CanvasEngine): void {
       title: "Ephemeral Tools (Ping, Measure, Laser)"
     },
     {
-      id: "enhance",
-      icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle;"><path d="M12 2L14.4 8.4L21 10.8L14.4 13.2L12 19.6L9.6 13.2L3 10.8L9.6 8.4L12 2Z" fill="url(#enhance-grad)" stroke="#c084fc" stroke-width="1.5"/><path d="M19 16L20.2 19.2L23 20.4L20.2 21.6L19 24.8L17.8 21.6L15 20.4L17.8 19.2L19 16Z" fill="#e879f9"/><defs><linearGradient id="enhance-grad" x1="3" y1="2" x2="21" y2="20" gradientUnits="userSpaceOnUse"><stop stop-color="#c084fc"/><stop offset="1" stop-color="#38bdf8"/></linearGradient></defs></svg>`,
-      title: "AI Map Enhancement (/enhance - Draw selection box to generate map)"
+      id: "map",
+      icon: MAP_ICONS[engine.mapTool] || MAP_ICONS.upload,
+      title: "Map Import & AI Enhancement (/enhance)"
+    },
+    {
+      id: "token",
+      icon: TOKEN_ICONS[engine.tokenTool] || TOKEN_ICONS.upload,
+      title: "Token Import & AI Generation"
     }
   ];
 
@@ -117,7 +148,7 @@ export function setupToolbarUI(engine: CanvasEngine): void {
     "display: none; position: absolute; bottom: 68px; left: 16px; background: rgba(15, 23, 42, 0.96); border: 1px solid rgba(56, 189, 248, 0.45); border-radius: 12px; padding: 12px 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.65); z-index: 1000; flex-direction: column; gap: 10px; min-width: 230px; color: #f8fafc; font-family: Outfit, sans-serif;";
   bar.appendChild(toolPopover);
 
-  const hasOptions = (id: ToolType) => id === "draw" || id === "line" || id === "fill" || id === "erase" || id === "ephemeral";
+  const hasOptions = (id: ToolType) => id === "draw" || id === "line" || id === "fill" || id === "erase" || id === "ephemeral" || id === "map" || id === "token";
 
   const renderPopover = (toolId: ToolType) => {
     toolPopover.innerHTML = "";
@@ -393,6 +424,85 @@ export function setupToolbarUI(engine: CanvasEngine): void {
       hint.textContent = "💡 Shortcut: Double-click canvas anytime to ping";
       toolPopover.appendChild(hint);
     }
+
+    if (toolId === "map") {
+      const header = document.createElement("div");
+      header.style.cssText = "font-weight: 600; font-size: 13px; color: #c084fc; margin-bottom: 4px;";
+      header.textContent = "🗺️ Map Import & AI Enhancement";
+      toolPopover.appendChild(header);
+
+      const grid = document.createElement("div");
+      grid.style.cssText = "display: flex; flex-direction: column; gap: 6px;";
+      
+      const mapOptions: { id: typeof engine.mapTool; label: string; desc: string; icon: string }[] = [
+        { id: "upload", label: "Import Map File", desc: "Upload image file from computer", icon: "🗺️" },
+        { id: "enhance", label: "AI Map Enhancement", desc: "/enhance - Draw box on canvas", icon: MAP_ICONS.enhance }
+      ];
+
+      mapOptions.forEach((o) => {
+        const b = document.createElement("button");
+        const active = engine.mapTool === o.id;
+        b.className = `btn-glass btn-sm ${active ? "btn-active" : ""}`;
+        b.style.cssText = `padding: 8px 10px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 10px; text-align: left; ${active ? "background: rgba(192, 132, 252, 0.25); border: 1px solid #c084fc; color: #ffffff; font-weight: 700;" : "color: #cbd5e1;"}`;
+        b.innerHTML = `<span style="font-size: 18px; display: flex; align-items: center;">${o.icon}</span><div style="display: flex; flex-direction: column;"><span style="font-size: 13px;">${o.label}</span><span style="font-size: 11px; color: #94a3b8; font-weight: 400;">${o.desc}</span></div>`;
+        b.addEventListener("click", () => {
+          engine.mapTool = o.id;
+          updateMainMapIcon();
+          engine.setTool("map");
+          bar.querySelectorAll(".tool-btn[data-tool-id]").forEach((btnEl) => btnEl.classList.remove("active"));
+          const mapBtn = bar.querySelector('.tool-btn[data-tool-id="map"]');
+          mapBtn?.classList.add("active");
+          toolPopover.style.display = "none";
+          if (o.id === "upload") {
+            mapFileInput.click();
+          } else if (o.id === "enhance") {
+            showEnhanceToast("✨ AI Map Enhancement active: Draw a selection box over your map sketch area on the canvas!", 5000);
+          }
+        });
+        grid.appendChild(b);
+      });
+      toolPopover.appendChild(grid);
+    }
+
+    if (toolId === "token") {
+      const header = document.createElement("div");
+      header.style.cssText = "font-weight: 600; font-size: 13px; color: #38bdf8; margin-bottom: 4px;";
+      header.textContent = "♟️ Token Import & AI Generation";
+      toolPopover.appendChild(header);
+
+      const grid = document.createElement("div");
+      grid.style.cssText = "display: flex; flex-direction: column; gap: 6px;";
+      
+      const tokenOptions: { id: typeof engine.tokenTool; label: string; desc: string; icon: string }[] = [
+        { id: "upload", label: "Import Token File", desc: "Upload image (auto-circularized)", icon: "♟️" },
+        { id: "ai", label: "AI Token Generator", desc: "Generate token art from description", icon: TOKEN_ICONS.ai }
+      ];
+
+      tokenOptions.forEach((o) => {
+        const b = document.createElement("button");
+        const active = engine.tokenTool === o.id;
+        b.className = `btn-glass btn-sm ${active ? "btn-active" : ""}`;
+        b.style.cssText = `padding: 8px 10px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 10px; text-align: left; ${active ? "background: rgba(56, 189, 248, 0.25); border: 1px solid #38bdf8; color: #ffffff; font-weight: 700;" : "color: #cbd5e1;"}`;
+        b.innerHTML = `<span style="font-size: 18px; display: flex; align-items: center;">${o.icon}</span><div style="display: flex; flex-direction: column;"><span style="font-size: 13px;">${o.label}</span><span style="font-size: 11px; color: #94a3b8; font-weight: 400;">${o.desc}</span></div>`;
+        b.addEventListener("click", () => {
+          engine.tokenTool = o.id;
+          updateMainTokenIcon();
+          engine.setTool("token");
+          bar.querySelectorAll(".tool-btn[data-tool-id]").forEach((btnEl) => btnEl.classList.remove("active"));
+          const tokenBtn = bar.querySelector('.tool-btn[data-tool-id="token"]');
+          tokenBtn?.classList.add("active");
+          toolPopover.style.display = "none";
+          if (o.id === "upload") {
+            tokenPickerActive = true;
+            tokenInput.click();
+          } else if (o.id === "ai") {
+            openAiTokenGenerateModal(engine, createAndDispatchToken);
+          }
+        });
+        grid.appendChild(b);
+      });
+      toolPopover.appendChild(grid);
+    }
   };
 
   tools.forEach((tool) => {
@@ -421,6 +531,14 @@ export function setupToolbarUI(engine: CanvasEngine): void {
         bar.querySelectorAll(".tool-btn[data-tool-id]").forEach((b) => b.classList.remove("active"));
         btn.classList.add("active");
         toolPopover.style.display = "none";
+        if (tool.id === "map" && engine.mapTool === "upload") {
+          mapFileInput.click();
+        } else if (tool.id === "token" && engine.tokenTool === "upload") {
+          tokenPickerActive = true;
+          tokenInput.click();
+        } else if (tool.id === "token" && engine.tokenTool === "ai") {
+          openAiTokenGenerateModal(engine, createAndDispatchToken);
+        }
       }
     });
 
@@ -446,6 +564,8 @@ export function setupToolbarUI(engine: CanvasEngine): void {
 
   updateMainLineIcon();
   updateMainEphemeralIcon();
+  updateMainMapIcon();
+  updateMainTokenIcon();
 
   const deleteFloatingBar = document.createElement("div");
   deleteFloatingBar.className = "drawing-selection-bar";
@@ -790,18 +910,10 @@ export function setupToolbarUI(engine: CanvasEngine): void {
   bar.appendChild(uploadBtn);
   bar.appendChild(fileInput);
 
-  // Add Map Button
-  const addMapBtn = document.createElement("button");
-  addMapBtn.className = "tool-btn";
-  addMapBtn.setAttribute("data-tooltip", "Add Map");
-  addMapBtn.innerHTML = "🗺️";
-
   const mapFileInput = document.createElement("input");
   mapFileInput.type = "file";
   mapFileInput.accept = "image/*";
   mapFileInput.style.display = "none";
-
-  addMapBtn.addEventListener("click", () => mapFileInput.click());
 
   mapFileInput.addEventListener("change", async () => {
     const file = mapFileInput.files?.[0];
@@ -865,14 +977,7 @@ export function setupToolbarUI(engine: CanvasEngine): void {
     mapFileInput.value = "";
   });
 
-  bar.appendChild(addMapBtn);
   bar.appendChild(mapFileInput);
-
-  // Upload Token Button
-  const uploadTokenBtn = document.createElement("button");
-  uploadTokenBtn.className = "tool-btn";
-  uploadTokenBtn.setAttribute("data-tooltip", "Add Token (any image works)");
-  uploadTokenBtn.innerHTML = "♟️";
 
   const tokenInput = document.createElement("input");
   tokenInput.type = "file";
@@ -937,11 +1042,9 @@ export function setupToolbarUI(engine: CanvasEngine): void {
       .catch((err) => console.error("[toolbarUI] Network upload failed for token asset:", err));
   };
 
+  setupTokenProxyListeners(engine, createAndDispatchToken);
+
   let tokenPickerActive = false;
-  uploadTokenBtn.addEventListener("click", () => {
-    tokenPickerActive = true;
-    tokenInput.click();
-  });
 
   tokenInput.addEventListener("change", async () => {
     tokenPickerActive = false;
@@ -972,7 +1075,6 @@ export function setupToolbarUI(engine: CanvasEngine): void {
     }
   });
 
-  bar.appendChild(uploadTokenBtn);
   bar.appendChild(tokenInput);
 
   const divider3 = document.createElement("div");
