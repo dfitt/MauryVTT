@@ -510,7 +510,7 @@ export function setupToolbarUI(engine: CanvasEngine): void {
     }
   };
 
-  tools.forEach((tool) => {
+  const createToolBtn = (tool: typeof tools[0]) => {
     const btn = document.createElement("button");
     btn.className = `tool-btn ${engine.activeTool === tool.id ? "active" : ""}`;
     btn.setAttribute("data-tooltip", tool.title + (hasOptions(tool.id) ? " (Click active or right-click for size & options)" : ""));
@@ -566,7 +566,14 @@ export function setupToolbarUI(engine: CanvasEngine): void {
       }
     });
 
-    bar.appendChild(btn);
+    return btn;
+  };
+
+  const drawingTools = tools.filter((t) => t.id === "select" || t.id === "line" || t.id === "fill" || t.id === "erase" || t.id === "ephemeral");
+  const mediaTools = tools.filter((t) => t.id === "image" || t.id === "map" || t.id === "token");
+
+  drawingTools.forEach((tool) => {
+    bar.appendChild(createToolBtn(tool));
   });
 
   updateMainLineIcon();
@@ -634,7 +641,7 @@ export function setupToolbarUI(engine: CanvasEngine): void {
   divider1.className = "tool-divider";
   bar.appendChild(divider1);
 
-  // Compact Single-Button Color Picker
+  // Compact Single-Button Color Picker (Drawing Color Selector)
   const colorGroup = document.createElement("div");
   colorGroup.className = "toolbar-colors";
 
@@ -761,18 +768,14 @@ export function setupToolbarUI(engine: CanvasEngine): void {
   divider2.className = "tool-divider";
   bar.appendChild(divider2);
 
-  // Upload Image Button
-  const uploadBtn = document.createElement("button");
-  uploadBtn.className = "tool-btn";
-  uploadBtn.setAttribute("data-tooltip", "Add Image");
-  uploadBtn.innerHTML = "🖼️";
+  mediaTools.forEach((tool) => {
+    bar.appendChild(createToolBtn(tool));
+  });
 
   const fileInput = document.createElement("input");
   fileInput.type = "file";
   fileInput.accept = "image/*";
   fileInput.style.display = "none";
-
-  uploadBtn.addEventListener("click", () => fileInput.click());
 
   const createAndDispatchImage = async (file: File) => {
     console.log("[toolbarUI] Standard image upload/paste selected:", file.name || "pasted-image", file.size);
