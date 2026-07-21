@@ -3,7 +3,7 @@ import { sessionManager } from "../network/sessionManager.js";
 import { ChatMessage, TokenEntity, VTTDocument } from "../types/vtt.js";
 import { CanvasEngine } from "../canvas/canvasEngine.js";
 import { EffectEngine } from "../effects/effectEngine.js";
-import { getEffectIdForIcon } from "../effects/effectDefs.js";
+import { getEffectIdForIcon, EFFECT_REGISTRY } from "../effects/effectDefs.js";
 import { ALL_ROLL_ICONS, COIN_ICON_SVG } from "./rollIcons.js";
 import { openImportVttfxModal } from "./vttfxImportModal.js";
 import { openGeminiApiKeyModal } from "./enhanceModal.js";
@@ -463,7 +463,22 @@ export function setupChatPanel(engine?: CanvasEngine): void {
   let currentIconPage = 0;
   const ICONS_PER_PAGE = 20;
 
+  let previewLoopTimer: any = null;
+
+  function stopHoverPreview(): void {
+    if (previewLoopTimer) {
+      clearInterval(previewLoopTimer);
+      previewLoopTimer = null;
+    }
+    const previewEl = document.getElementById("roll-icon-hover-preview");
+    if (previewEl) {
+      previewEl.style.display = "none";
+      previewEl.innerHTML = "";
+    }
+  }
+
   function renderPopoverPage(): void {
+    stopHoverPreview();
     const gridEl = iconPopoverEl.querySelector<HTMLElement>("#popover-icon-grid");
     const prevBtn = iconPopoverEl.querySelector<HTMLButtonElement>("#popover-prev-btn");
     const nextBtn = iconPopoverEl.querySelector<HTMLButtonElement>("#popover-next-btn");
@@ -491,12 +506,96 @@ export function setupChatPanel(engine?: CanvasEngine): void {
     gridEl.querySelectorAll<HTMLButtonElement>(".roll-icon-swatch").forEach((swatch) => {
       swatch.addEventListener("click", (e) => {
         e.stopPropagation();
+        stopHoverPreview();
         const chosen = decodeURIComponent(swatch.getAttribute("data-icon") || ALL_ROLL_ICONS[0]);
         selectedRollIcon = chosen;
         iconBtnEl.innerHTML = chosen;
         iconPopoverEl.style.display = "none";
         renderPopoverPage();
       });
+
+      swatch.addEventListener("mouseenter", (e) => {
+        stopHoverPreview();
+        const chosen = decodeURIComponent(swatch.getAttribute("data-icon") || ALL_ROLL_ICONS[0]);
+        const effId = getEffectIdForIcon(chosen);
+        if (!effId || !EFFECT_REGISTRY[effId]) return;
+        const effect = EFFECT_REGISTRY[effId];
+
+        let previewEl = document.getElementById("roll-icon-hover-preview");
+        if (!previewEl) {
+          previewEl = document.createElement("div");
+          previewEl.id = "roll-icon-hover-preview";
+          previewEl.style.cssText = `
+            position: fixed;
+            width: 140px;
+            height: 140px;
+            pointer-events: none;
+            z-index: 100000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(15, 23, 42, 0.94);
+            border: 1px solid rgba(56, 189, 248, 0.6);
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.85);
+            overflow: hidden;
+          `;
+          document.body.appendChild(previewEl);
+        }
+
+        const runPreviewCycle = () => {
+          if (!previewEl || previewEl.style.display === "none") return;
+          previewEl.innerHTML = "";
+
+          const svgDiv = document.createElement("div");
+          svgDiv.style.position = "absolute";
+          svgDiv.style.inset = "0";
+          svgDiv.style.display = "flex";
+          svgDiv.style.alignItems = "center";
+          svgDiv.style.justifyContent = "center";
+          svgDiv.innerHTML = effect.renderSvg();
+          previewEl.appendChild(svgDiv);
+
+          if (effect.particles) {
+            const pCanvas = document.createElement("canvas");
+            pCanvas.style.position = "absolute";
+            pCanvas.style.inset = "0";
+            pCanvas.style.width = "100%";
+            pCanvas.style.height = "100%";
+            previewEl.appendChild(pCanvas);
+            EffectEngine.runParticleSystem(pCanvas, effect.particles, effect.durationMs);
+          }
+        };
+
+        const sizePx = 140;
+        let left = e.clientX - sizePx / 2;
+        let top = e.clientY - sizePx - 16;
+        if (left < 10) left = 10;
+        if (left + sizePx > window.innerWidth - 10) left = window.innerWidth - sizePx - 10;
+        if (top < 10) top = e.clientY + 24;
+        previewEl.style.left = `${left}px`;
+        previewEl.style.top = `${top}px`;
+        previewEl.style.display = "flex";
+
+        runPreviewCycle();
+        const intervalMs = Math.max(800, (effect.durationMs || 1000) + 200);
+        previewLoopTimer = setInterval(runPreviewCycle, intervalMs);
+      });
+
+      swatch.addEventListener("mousemove", (e) => {
+        const previewEl = document.getElementById("roll-icon-hover-preview");
+        if (!previewEl || previewEl.style.display === "none") return;
+        const sizePx = 140;
+        let left = e.clientX - sizePx / 2;
+        let top = e.clientY - sizePx - 16;
+        if (left < 10) left = 10;
+        if (left + sizePx > window.innerWidth - 10) left = window.innerWidth - sizePx - 10;
+        if (top < 10) top = e.clientY + 24;
+        previewEl.style.left = `${left}px`;
+        previewEl.style.top = `${top}px`;
+      });
+
+      swatch.addEventListener("mouseleave", stopHoverPreview);
     });
   }
 
@@ -520,6 +619,7 @@ export function setupChatPanel(engine?: CanvasEngine): void {
   const vttfxFileInput = iconPopoverEl.querySelector<HTMLInputElement>("#popover-vttfx-file-input");
   iconPopoverEl.querySelector<HTMLButtonElement>("#popover-generate-vttfx-btn")?.addEventListener("click", (e) => {
     e.stopPropagation();
+    stopHoverPreview();
     iconPopoverEl.style.display = "none";
     openVttfxGenerateModal();
   });
@@ -553,12 +653,14 @@ export function setupChatPanel(engine?: CanvasEngine): void {
       iconPopoverEl.style.display = "flex";
       renderPopoverPage();
     } else {
+      stopHoverPreview();
       iconPopoverEl.style.display = "none";
     }
   });
 
   document.addEventListener("click", (e) => {
     if (!iconBtnEl.contains(e.target as Node) && !iconPopoverEl.contains(e.target as Node)) {
+      stopHoverPreview();
       iconPopoverEl.style.display = "none";
     }
   });

@@ -32,6 +32,16 @@ function isMobilePhone(): boolean {
 export function setupToolbarUI(engine: CanvasEngine): void {
   (window as any).vttActiveTool = engine.activeTool;
 
+  const clearAllSelections = () => {
+    if (engine.selectedEntityId !== null) {
+      engine.selectedEntityId = null;
+    }
+    if (engine.selectedDrawingIds.size > 0) {
+      engine.selectedDrawingIds.clear();
+      engine.notifyDrawingSelectionChanged();
+    }
+  };
+
   const SHAPE_ICONS: Record<typeof engine.lineShape, string> = {
     doodle: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><path d="M3 17C6 14 7 19 10 16C13 13 14 18 17 15C19 13 20 12 21 11"/></svg>`,
     select: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><rect x="4" y="4" width="16" height="16" rx="2" stroke-dasharray="4 4"/><circle cx="4" cy="4" r="1.5" fill="currentColor"/><circle cx="20" cy="20" r="1.5" fill="currentColor"/></svg>`,
@@ -345,6 +355,7 @@ export function setupToolbarUI(engine: CanvasEngine): void {
         if (toolPopover.style.display === "flex" && toolPopover.getAttribute("data-popover-tool") === tool.id) {
           toolPopover.style.display = "none";
         } else {
+          clearAllSelections();
           toolPopover.setAttribute("data-popover-tool", tool.id);
           renderPopover(tool.id);
           toolPopover.style.display = "flex";
@@ -364,6 +375,7 @@ export function setupToolbarUI(engine: CanvasEngine): void {
       if (hasOptions(tool.id)) {
         e.preventDefault();
         e.stopPropagation();
+        clearAllSelections();
         engine.setTool(tool.id);
         bar.querySelectorAll(".tool-btn[data-tool-id]").forEach((b) => b.classList.remove("active"));
         btn.classList.add("active");
@@ -548,7 +560,7 @@ export function setupToolbarUI(engine: CanvasEngine): void {
 
   activeColorBtn.addEventListener("click", (e) => {
     e.stopPropagation();
-    engine.selectedEntityId = null;
+    clearAllSelections();
     colorPopover.style.display = colorPopover.style.display === "none" ? "flex" : "none";
   });
 
