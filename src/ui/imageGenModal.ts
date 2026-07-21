@@ -72,7 +72,7 @@ export async function openImageGenDescriptionModal(
       </div>
 
       <p style="margin: 0; font-size: 13px; color: #cbd5e1; line-height: 1.5;">
-        Enter a description of the scene or illustration. You can refer directly to named tokens on the map (e.g., <i>"Talon is drinking a glowing healing potion in a tavern"</i>).
+        Enter a description of the scene or illustration. You can refer directly to named tokens on the map (e.g., <i>"Jack shoots a green death ray at Robin"</i>).
         ${isProxy ? `<span style="display: block; margin-top: 6px; color: #c084fc; font-weight: 600;">🚀 Generating via proxy through ${getPeerUsername(proxyPeerId)}'s API key!</span>` : ""}
       </p>
 
@@ -80,7 +80,7 @@ export async function openImageGenDescriptionModal(
 
       <div style="display: flex; flex-direction: column; gap: 6px;">
         <label style="font-size: 12px; font-weight: 700; color: #38bdf8;">Scene Description & Action</label>
-        <textarea id="gemini-imagegen-desc-textarea" rows="4" placeholder="e.g. Talon Fowlfeast is drinking a glowing red healing potion inside a dimly lit medieval tavern..." style="padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.4); background: rgba(30, 41, 59, 0.8); color: #ffffff; font-size: 13px; outline: none; resize: vertical; font-family: inherit;">${savedDesc}</textarea>
+        <textarea id="gemini-imagegen-desc-textarea" rows="4" placeholder="e.g. Jack shoots a green death ray at Robin. Robin is disintegrated." style="padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.4); background: rgba(30, 41, 59, 0.8); color: #ffffff; font-size: 13px; outline: none; resize: vertical; font-family: inherit;"></textarea>
         <span style="font-size: 11px; color: #64748b; font-style: italic;">
           ✨ <b>Default Style:</b> Dark Fantasy Illustration (You can override this right in your prompt, e.g., "in a vibrant watercolor style" or "realistic oil painting").
         </span>
