@@ -10,6 +10,7 @@ import {
 } from "../types/vtt.js";
 import { sessionManager } from "../network/sessionManager.js";
 import { canSelectLockedImage } from "./lockedSelectionHelper.js";
+import { EffectEngine } from "../effects/effectEngine.js";
 
 export type ToolType = "select" | "pan" | "draw" | "line" | "fill" | "erase" | "hide" | "unhide" | "measure" | "ping" | "token" | "ephemeral" | "laser" | "enhance";
 
@@ -45,6 +46,7 @@ export interface ActivePing {
   y: number;
   createdAt: number;
   ttlMs: number;
+  effectId?: string;
 }
 
 export interface RemoteCursor {
@@ -72,6 +74,7 @@ export class CanvasEngine {
   // Tool state
   public activeTool: ToolType = "select";
   public ephemeralTool: "ping" | "measure" | "laser" = "laser";
+  public pingEffectId: string | null = null;
   public drawColor: string = "#38bdf8";
   public drawWidth: number = 8;
   public lineShape: "doodle" | "select" | "straight" | "rectangle" | "circle" | "cone" | "hexagon" | "spiral" | "arrow" = "doodle";
@@ -275,7 +278,7 @@ export class CanvasEngine {
     const pingId = "ping-" + Math.random().toString(36).substring(2, 7);
     const ttlMs = 2000;
 
-    this.handleEphemeralPayload({
+    const payload: EphemeralPayload = {
       type: "PING",
       pingId,
       peerId: sessionManager.myPeerId || "local",
@@ -284,20 +287,12 @@ export class CanvasEngine {
       x: worldX,
       y: worldY,
       pingStyle: "ripple",
-      ttlMs
-    });
+      ttlMs,
+      effectId: this.pingEffectId || undefined
+    };
 
-    sessionManager.sendEphemeral({
-      type: "PING",
-      pingId,
-      peerId: sessionManager.myPeerId || "local",
-      username: sessionManager.myUsername || "Me",
-      color: sessionManager.myColor || "#eab308",
-      x: worldX,
-      y: worldY,
-      pingStyle: "ripple",
-      ttlMs
-    });
+    this.handleEphemeralPayload(payload);
+    sessionManager.sendEphemeral(payload);
 
     this.notifyPingTriggered(true);
   }
@@ -816,10 +811,16 @@ export class CanvasEngine {
         x: payload.x,
         y: payload.y,
         createdAt: Date.now(),
-        ttlMs: payload.ttlMs
+        ttlMs: payload.ttlMs,
+        effectId: payload.effectId
       });
       const isLocal = payload.peerId === (sessionManager.myPeerId || "local");
       this.notifyPingTriggered(isLocal);
+
+      if (payload.effectId) {
+        const screenPos = this.worldToScreen(payload.x, payload.y);
+        EffectEngine.playAtScreenCoord(screenPos.x, screenPos.y, payload.effectId, Math.max(160, 180 * this.zoom));
+      }
 
       const doc = docStore.getDocument();
       const entities = Object.values(doc.entities);

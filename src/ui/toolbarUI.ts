@@ -6,6 +6,7 @@ import { sessionManager } from "../network/sessionManager.js";
 import { ImageEntity, TokenEntity } from "../types/vtt.js";
 import { openImportVttfxModal } from "./vttfxImportModal.js";
 import { openCharacterSheetModal, SHEET_ICON_SVG } from "./characterSheetModal.js";
+import { EFFECT_REGISTRY } from "../effects/effectDefs.js";
 
 const PALETTE_COLORS = [
   "#38bdf8", // Cyan
@@ -334,6 +335,58 @@ export function setupToolbarUI(engine: CanvasEngine): void {
         grid.appendChild(b);
       });
       toolPopover.appendChild(grid);
+
+      const pingAnimSection = document.createElement("div");
+      pingAnimSection.style.cssText = "display: flex; flex-direction: column; gap: 6px; margin-top: 4px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 6px;";
+
+      const pingAnimHeader = document.createElement("div");
+      pingAnimHeader.style.cssText = "display: flex; align-items: center; justify-content: space-between; font-size: 11px; font-weight: 600; color: #cbd5e1;";
+      pingAnimHeader.innerHTML = `<span>✨ Ping Animation (VTTFX)</span>`;
+
+      const previewBtn = document.createElement("button");
+      previewBtn.className = "btn-glass";
+      previewBtn.style.cssText = "padding: 2px 6px; font-size: 10px; border-radius: 4px; color: #38bdf8; cursor: pointer;";
+      previewBtn.textContent = "▶ Preview";
+      previewBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const centerWorld = engine.screenToWorld(window.innerWidth / 2, window.innerHeight / 2);
+        engine.triggerPing(centerWorld.x, centerWorld.y);
+      });
+      pingAnimHeader.appendChild(previewBtn);
+      pingAnimSection.appendChild(pingAnimHeader);
+
+      const selectEl = document.createElement("select");
+      selectEl.className = "btn-glass";
+      selectEl.style.cssText = "width: 100%; padding: 6px 8px; font-size: 12px; border-radius: 6px; background: rgba(15, 23, 42, 0.95); color: #f8fafc; border: 1px solid rgba(56, 189, 248, 0.45); cursor: pointer; outline: none; font-family: Outfit, sans-serif;";
+
+      const defaultOpt = document.createElement("option");
+      defaultOpt.value = "";
+      defaultOpt.textContent = "Default (Ripple Arc Only)";
+      defaultOpt.style.background = "#0f172a";
+      selectEl.appendChild(defaultOpt);
+
+      Object.values(EFFECT_REGISTRY).forEach((effect) => {
+        const opt = document.createElement("option");
+        opt.value = effect.id;
+        opt.textContent = effect.name ? `${effect.name}` : effect.id;
+        opt.style.background = "#0f172a";
+        if (engine.pingEffectId === effect.id) {
+          opt.selected = true;
+        }
+        selectEl.appendChild(opt);
+      });
+
+      selectEl.addEventListener("change", (e) => {
+        e.stopPropagation();
+        engine.pingEffectId = selectEl.value || null;
+      });
+
+      selectEl.addEventListener("click", (e) => {
+        e.stopPropagation();
+      });
+
+      pingAnimSection.appendChild(selectEl);
+      toolPopover.appendChild(pingAnimSection);
 
       const hint = document.createElement("div");
       hint.style.cssText = "font-size: 11px; color: #94a3b8; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 6px;";

@@ -231,6 +231,7 @@ export type EphemeralPayload =
       y: number;
       pingStyle: "ripple" | "arrow" | "warning";
       ttlMs: number;
+      effectId?: string;
     }
   | {
       type: "MEASURE_LINE";
