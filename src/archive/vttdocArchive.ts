@@ -13,7 +13,7 @@ export function updateLastVTTDocSaveTime(time: number = Date.now()): void {
   lastVTTDocSaveTime = time;
 }
 
-export function getMinuteTimestamp(): string {
+export function getTimestampWithSeconds(): string {
   const now = new Date();
   const pad = (n: number) => String(n).padStart(2, "0");
   const year = now.getFullYear();
@@ -21,7 +21,8 @@ export function getMinuteTimestamp(): string {
   const day = pad(now.getDate());
   const hours = pad(now.getHours());
   const mins = pad(now.getMinutes());
-  return `${year}-${month}-${day}_${hours}-${mins}`;
+  const secs = pad(now.getSeconds());
+  return `${year}-${month}-${day}_${hours}-${mins}-${secs}`;
 }
 
 export function setupUnloadSavePrompt(): void {
@@ -91,9 +92,9 @@ export async function exportVTTDocArchive(): Promise<string> {
   // 5. Generate ZIP buffer
   const zipBlob = await zip.generateAsync({ type: "blob" });
 
-  // 6. Generate filename: room name + timestamp with minute (no second)
+  // 6. Generate filename: room name + timestamp with minute & second
   const roomName = sessionManager.hostRoomId || cleanDoc.documentId || "vtt-room";
-  const filename = `${roomName}_${getMinuteTimestamp()}.vttdoc`;
+  const filename = `${roomName}_${getTimestampWithSeconds()}.vttdoc`;
 
   // 7. Save filename/path and archive blob into local storage & IDB
   try {
