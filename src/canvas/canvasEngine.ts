@@ -1615,11 +1615,34 @@ export class CanvasEngine {
       }
 
       if (img && img.complete && img.naturalWidth > 0) {
-        if (ent.type === "image" && ((imgEnt as any).isMap || (imgEnt as any).blendMode === "multiply")) {
+        const blendSetting = localStorage.getItem("vtt_map_blend_mode") || "auto";
+        const isFirefoxAndroid = typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent) && /Firefox/i.test(navigator.userAgent);
+        const rawBlend = (imgEnt as any).blendMode;
+
+        let effectiveBlend = "source-over";
+        if (blendSetting === "multiply") {
+          effectiveBlend = "multiply";
+        } else if (blendSetting === "normal") {
+          effectiveBlend = "source-over";
+        } else {
+          // "auto" mode: Firefox Android GeckoView composite operation bug workaround
+          if (isFirefoxAndroid) {
+            effectiveBlend = "source-over";
+          } else if (rawBlend === "multiply") {
+            effectiveBlend = "multiply";
+          }
+        }
+
+        if (effectiveBlend === "multiply") {
           const prevComp = ctx.globalCompositeOperation;
-          ctx.globalCompositeOperation = "multiply";
-          ctx.drawImage(img, -halfW, -halfH, displayW, displayH);
-          ctx.globalCompositeOperation = prevComp;
+          try {
+            ctx.globalCompositeOperation = "multiply";
+            ctx.drawImage(img, -halfW, -halfH, displayW, displayH);
+          } catch {
+            ctx.drawImage(img, -halfW, -halfH, displayW, displayH);
+          } finally {
+            ctx.globalCompositeOperation = prevComp;
+          }
         } else {
           ctx.drawImage(img, -halfW, -halfH, displayW, displayH);
         }

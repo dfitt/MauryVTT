@@ -140,6 +140,20 @@ export function openSettingsModal(engine: CanvasEngine): void {
           </div>
           <span style="font-size: 11px; color: #94a3b8; margin-top: 2px;">Capping FPS reduces CPU/GPU load, fan noise, and battery drain on laptops.</span>
         </div>
+
+        <!-- Map Blend Mode Compatibility -->
+        <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 6px; border-top: 1px solid rgba(255, 255, 255, 0.06); padding-top: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <label style="font-size: 13px; font-weight: 600; color: #e2e8f0;">Map Blend Compatibility Mode</label>
+            <span id="blend-val-txt" style="font-size: 12px; color: #e879f9; font-weight: 700;">${(localStorage.getItem("vtt_map_blend_mode") || "auto") === "auto" ? "Auto (Safe)" : (localStorage.getItem("vtt_map_blend_mode") === "normal" ? "Normal" : "Multiply")}</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button class="blend-preset-btn btn-glass ${(localStorage.getItem("vtt_map_blend_mode") || "auto") === "auto" ? "btn-primary" : ""}" data-val="auto" style="flex: 1; padding: 6px 10px; font-size: 12px; border-radius: 8px; cursor: pointer;">Auto (Safe)</button>
+            <button class="blend-preset-btn btn-glass ${localStorage.getItem("vtt_map_blend_mode") === "normal" ? "btn-primary" : ""}" data-val="normal" style="flex: 1; padding: 6px 10px; font-size: 12px; border-radius: 8px; cursor: pointer;">Normal (Opaque)</button>
+            <button class="blend-preset-btn btn-glass ${localStorage.getItem("vtt_map_blend_mode") === "multiply" ? "btn-primary" : ""}" data-val="multiply" style="flex: 1; padding: 6px 10px; font-size: 12px; border-radius: 8px; cursor: pointer;">Multiply</button>
+          </div>
+          <span style="font-size: 11px; color: #94a3b8; margin-top: 2px;">Auto mode fixes map rendering issues on Firefox Android where canvas multiply blending is not supported.</span>
+        </div>
       </div>
 
       <!-- Section 3: AI Configuration Shortcut -->
@@ -273,6 +287,19 @@ export function openSettingsModal(engine: CanvasEngine): void {
       localStorage.setItem("vtt_fps_limit", val);
       fpsTxt.textContent = val === "0" ? "60 FPS (Uncapped)" : `${val} FPS`;
       fpsBtns.forEach((b) => b.classList.remove("btn-primary"));
+      btn.classList.add("btn-primary");
+    });
+  });
+
+  // Map blend compatibility handlers
+  const blendBtns = modalEl.querySelectorAll<HTMLButtonElement>(".blend-preset-btn");
+  const blendTxt = modalEl.querySelector<HTMLElement>("#blend-val-txt")!;
+  blendBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const val = btn.getAttribute("data-val") || "auto";
+      localStorage.setItem("vtt_map_blend_mode", val);
+      blendTxt.textContent = val === "auto" ? "Auto (Safe)" : val === "normal" ? "Normal" : "Multiply";
+      blendBtns.forEach((b) => b.classList.remove("btn-primary"));
       btn.classList.add("btn-primary");
     });
   });
