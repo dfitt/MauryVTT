@@ -165,6 +165,45 @@ export class DocumentStore {
     }
   }
 
+  private applyAutoHpConditions(token: TokenEntity): void {
+    if (!token || token.hp === undefined || token.hp === "" || String(token.hp).trim() === "") return;
+    const numHp = Number(String(token.hp).trim());
+    if (isNaN(numHp)) return;
+
+    const currentMax = Number(token.maxHp !== undefined && token.maxHp !== "" ? token.maxHp : numHp);
+    const effects = new Set<string>(token.statusEffects || []);
+    let modified = false;
+
+    if (numHp <= 0) {
+      if (!effects.has("down")) {
+        effects.add("down");
+        modified = true;
+      }
+    } else {
+      if (effects.has("down")) {
+        effects.delete("down");
+        modified = true;
+      }
+    }
+
+    if (currentMax > 0 && numHp <= currentMax / 2) {
+      if (!effects.has("bloodied")) {
+        effects.add("bloodied");
+        modified = true;
+      }
+    } else if (currentMax > 0 && numHp > currentMax / 2) {
+      if (effects.has("bloodied")) {
+        effects.delete("bloodied");
+        modified = true;
+      }
+    }
+
+    if (modified) {
+      token.statusEffects = Array.from(effects);
+      token.updatedAt = Date.now();
+    }
+  }
+
   private syncNameBetweenSheetAndClaimedToken(username: string, newName?: string, source: "sheet" | "token" = "sheet"): void {
     if (!username) return;
     if (!this.doc.characterSheets) this.doc.characterSheets = {};
@@ -188,6 +227,9 @@ export class DocumentStore {
         if (sheet.maxHp !== undefined && tok.maxHp !== sheet.maxHp) {
           tok.maxHp = sheet.maxHp;
           tok.updatedAt = Date.now();
+        }
+        if (sheet.hp !== undefined || sheet.maxHp !== undefined) {
+          this.applyAutoHpConditions(tok);
         }
         if (sheet.hpHistory && JSON.stringify(tok.hpHistory) !== JSON.stringify(sheet.hpHistory)) {
           tok.hpHistory = [...sheet.hpHistory];
@@ -232,6 +274,7 @@ export class DocumentStore {
         this.doc.entities[op.entity.id] = op.entity;
         if (op.entity.type === "token") {
           const tok = op.entity as any;
+          this.applyAutoHpConditions(tok);
           if (tok.primaryOwnerUsername) {
             this.doc.primaryTokens[tok.primaryOwnerUsername] = tok.id;
             for (const ent of Object.values(this.doc.entities)) {
@@ -284,8 +327,11 @@ export class DocumentStore {
             }
 
             const patchToken = op.patch as Partial<TokenEntity>;
-            if (patchToken.hp !== undefined) {
-              this.recordHpAndCheckMax(updatedTok, patchToken.hp);
+            if (patchToken.hp !== undefined || patchToken.maxHp !== undefined) {
+              if (patchToken.hp !== undefined) {
+                this.recordHpAndCheckMax(updatedTok, patchToken.hp);
+              }
+              this.applyAutoHpConditions(updatedTok);
             }
             if (patchToken.label !== undefined && newOwner) {
               this.syncNameBetweenSheetAndClaimedToken(newOwner, patchToken.label, "token");
