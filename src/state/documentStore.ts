@@ -181,22 +181,25 @@ export class DocumentStore {
         effects.add("down");
         modified = true;
       }
+      if (effects.has("bloodied")) {
+        effects.delete("bloodied");
+        modified = true;
+      }
     } else {
       if (effects.has("down")) {
         effects.delete("down");
         modified = true;
       }
-    }
-
-    if (currentMax > 0 && numHp <= currentMax / 2) {
-      if (!effects.has("bloodied")) {
-        effects.add("bloodied");
-        modified = true;
-      }
-    } else if (currentMax > 0 && numHp > currentMax / 2) {
-      if (effects.has("bloodied")) {
-        effects.delete("bloodied");
-        modified = true;
+      if (currentMax > 0 && numHp <= currentMax / 2) {
+        if (!effects.has("bloodied")) {
+          effects.add("bloodied");
+          modified = true;
+        }
+      } else if (currentMax > 0 && numHp > currentMax / 2) {
+        if (effects.has("bloodied")) {
+          effects.delete("bloodied");
+          modified = true;
+        }
       }
     }
 
