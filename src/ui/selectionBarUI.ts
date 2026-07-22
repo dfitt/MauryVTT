@@ -369,16 +369,51 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
 
       // Conditions Selector
       // Add custom conditions saved in session vttdoc
-      const customBundles = docStore.getDocument().customVttfxBundles || {};
-      const customConditions: { id: string; label: string }[] = [];
+      const currentDoc = docStore.getDocument();
+      const customCondMap = currentDoc.customConditions || {};
+      const customBundles = currentDoc.customVttfxBundles || {};
+      const customConditions: { id: string; label: string; iconSvg?: string }[] = [];
+      const addedIds = new Set<string>(BASE_CONDITIONS.map(bc => bc.id));
+
+      // 1. From currentDoc.customConditions
+      for (const cond of Object.values(customCondMap)) {
+        if (cond && cond.id && !addedIds.has(cond.id)) {
+          addedIds.add(cond.id);
+          customConditions.push({
+            id: cond.id,
+            label: cond.name || cond.id,
+            iconSvg: cond.iconSvg
+          });
+        }
+      }
+
+      // 2. From currentDoc.customVttfxBundles (for legacy/imported condition bundles)
       for (const bundle of Object.values(customBundles)) {
-        if (bundle && Array.isArray(bundle.effects)) {
-          const isBundleCond = bundle.isCondition === true || (bundle.bundleName && bundle.bundleName.startsWith("Condition:"));
-          for (const eff of bundle.effects) {
-            const isEffCond = eff.isCondition === true || (isBundleCond && eff.isCondition !== false);
-            if (isEffCond && eff.id && !BASE_CONDITIONS.some((bc) => bc.id === eff.id)) {
-              const name = eff.name || eff.id;
-              customConditions.push({ id: eff.id, label: `✨ ${name}` });
+        if (bundle) {
+          if (Array.isArray((bundle as any).conditions)) {
+            for (const cond of (bundle as any).conditions) {
+              if (cond && cond.id && !addedIds.has(cond.id)) {
+                addedIds.add(cond.id);
+                customConditions.push({
+                  id: cond.id,
+                  label: cond.name || cond.id,
+                  iconSvg: cond.iconSvg
+                });
+              }
+            }
+          }
+          if (Array.isArray(bundle.effects)) {
+            const isBundleCond = bundle.isCondition === true || (bundle.bundleName && bundle.bundleName.startsWith("Condition:"));
+            for (const eff of bundle.effects) {
+              const isEffCond = eff.isCondition === true || (isBundleCond && eff.isCondition !== false);
+              if (isEffCond && eff.id && !addedIds.has(eff.id)) {
+                addedIds.add(eff.id);
+                customConditions.push({
+                  id: eff.id,
+                  label: eff.name || eff.id,
+                  iconSvg: eff.iconSvg
+                });
+              }
             }
           }
         }
@@ -464,6 +499,12 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
         });
 
         itemLabel.appendChild(cb);
+        if ((c as any).iconSvg) {
+          const iconSpan = document.createElement("span");
+          iconSpan.style.cssText = "display: inline-flex; align-items: center; justify-content: center; width: 1.3em; height: 1.3em; flex-shrink: 0; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.6));";
+          iconSpan.innerHTML = (c as any).iconSvg;
+          itemLabel.appendChild(iconSpan);
+        }
         const textSpan = document.createElement("span");
         textSpan.textContent = c.label;
         itemLabel.appendChild(textSpan);

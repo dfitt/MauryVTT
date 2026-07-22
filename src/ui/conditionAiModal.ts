@@ -206,22 +206,11 @@ export function openConditionPreviewModal(vttfxItem: ConditionData | any, origPr
     modal.remove();
 
     vttfxItem.isCondition = true;
-    const finalBundle: VttfxBundle = {
-      version: "1.0",
-      bundleName: `Condition: ${vttfxItem.name}`,
-      isCondition: true,
-      effects: [vttfxItem],
-      conditions: [vttfxItem]
-    };
 
-    // Save bundle and structured ConditionData in document store (synced across P2P and saved with .vttdoc)
+    // Save structured ConditionData in document store (synced across P2P and saved with .vttdoc)
     sessionManager.dispatchOperation({
       opType: "REGISTER_CONDITION",
       condition: vttfxItem as ConditionData
-    } as any);
-    sessionManager.dispatchOperation({
-      opType: "REGISTER_VTTFX_BUNDLE",
-      bundle: finalBundle
     } as any);
 
     // Broadcast system message

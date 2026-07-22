@@ -464,6 +464,8 @@ export async function callGeminiConditionGeneration(apiKey: string, iconDesc: st
 Your task is to generate exactly ONE single looping status condition effect adhering to the dedicated ConditionData JSON datatype.
 The ConditionData datatype strictly separates the status badge icon ("iconSvg") from the bespoke token aura visual animation and particles ("animation").
 
+IMPORTANT: Do NOT generate a full-screen or burst action VTTFX. This is strictly a TOKEN STATUS CONDITION effect that will loop continuously on tokens with this status condition.
+
 You MUST output a single valid JSON object strictly adhering to the following structure:
 {
   "id": "unique_snake_case_condition_id",
@@ -472,7 +474,7 @@ You MUST output a single valid JSON object strictly adhering to the following st
   "iconSvg": "<svg viewBox='0 0 64 64' width='1.25em' height='1.25em' data-vtt-icon='unique_snake_case_condition_id' style='vertical-align:-0.25em; display:inline-block; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.85));'>...</svg>",
   "durationMs": 2000,
   "animation": {
-    "effectSvg": "<style>@keyframes vttCondCustom1 { ... } @keyframes vttCondCustom2 { ... }</style><div style='position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;'><svg viewBox='0 0 120 120' width='115%' height='115%' style='position: absolute; animation: vttCondCustom1 2s ease-in-out infinite;'>...</svg></div>",
+    "effectSvg": "<style>@keyframes vttCondCustom1 { 0% { transform: rotate(0deg) scale(0.98); opacity: 0.7; } 50% { transform: rotate(180deg) scale(1.04); opacity: 0.95; } 100% { transform: rotate(360deg) scale(0.98); opacity: 0.7; } }</style><div style='position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;'><svg viewBox='0 0 120 120' width='115%' height='115%' style='position: absolute; animation: vttCondCustom1 3s ease-in-out infinite;'>...</svg></div>",
     "colors": ["#ff4500", "#ff8c00", "#ffd700"],
     "shape": "ember",
     "count": 25,
@@ -491,7 +493,7 @@ CRITICAL RULES FOR CONDITIONS:
 4. "animation.colors": MUST contain 2 to 4 distinct, vibrant hex color codes strictly matching the requested condition theme (e.g. fire/flame = ["#ff3300", "#ff9900", "#ffcc00"]; ice/frost = ["#00f2fe", "#4facfe", "#ffffff"]; void/shadow = ["#bf5af2", "#7e22ce", "#3b0764"]; poison/acid/nature = ["#30d158", "#34c759", "#a3e635"]; lightning/electric = ["#ffd60a", "#ff9f0a", "#e0f2fe"]).
 5. "animation.shape": Choose the shape fitting the condition: "ember" (fire/flames), "sparkle" (magic/holy/stars), "splinter" (ice/spikes/vines/void), "circle" (mist/bubbles/aura), or "note" (charm/music/love).
 6. "animation.gravity": Use negative values (-40 to -10) for rising embers/bubbles, positive values (+10 to +30) for falling snow/frost/acid, or 0 for orbiting sparkles.
-7. "animation.effectSvg": MUST be a CONTINUOUSLY LOOPING bespoke status aura overlay with unique CSS @keyframes (prefixed with vttCond, e.g. vttCondFlame, vttCondFrost, vttCondVoid) featuring custom elements like elemental runes, orbiting shards, glowing tendrils, or pulsing rings.
+7. "animation.effectSvg": MUST be a CONTINUOUSLY LOOPING compact token aura overlay (prefixed with vttCond, e.g. vttCondFlame, vttCondFrost, vttCondVoid) framing a token. It should NOT be a burst or action VFX.
 8. User Condition Description: "${iconDesc || animDesc}"
 
 Return ONLY valid JSON without any markdown formatting or commentary.`;
