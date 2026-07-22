@@ -138,6 +138,7 @@ export interface TokenEntity extends BaseEntity {
   description?: string;
   secret?: boolean;
   secretPeerId?: string;
+  secretUsername?: string;
 }
 
 export interface LineEntity extends BaseEntity {

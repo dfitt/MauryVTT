@@ -1,4 +1,4 @@
-import { CanvasEngine } from "../canvasEngine.js";
+import { CanvasEngine, isMySecretToken } from "../canvasEngine.js";
 import { docStore } from "../../state/documentStore.js";
 import { sessionManager } from "../../network/sessionManager.js";
 import { CanvasEntity, ImageEntity, TokenEntity } from "../../types/vtt.js";
@@ -119,11 +119,7 @@ export function bindSelectTool(engine: CanvasEngine): void {
       }
       if (ent.type === "token") {
         const tok = ent as TokenEntity;
-        if (tok.secret) {
-          const myPeerId = sessionManager.myPeerId || "local";
-          const isMySecret = tok.secretPeerId === myPeerId || tok.secretPeerId === "local";
-          if (!isMySecret) continue;
-        }
+        if (!isMySecretToken(tok)) continue;
       }
       if (ent.type === "image" || ent.type === "token") {
         const img = ent as ImageEntity | TokenEntity;

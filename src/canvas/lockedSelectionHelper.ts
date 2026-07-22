@@ -21,9 +21,10 @@ export function canSelectLockedImage(ent: CanvasEntity): boolean {
   }
   // setting === "own" (or legacy "true" which now defaults to "own" behavior per user request)
   const myPeerId = sessionManager.myPeerId || "local";
+  const myUsername = (sessionManager.myUsername || localStorage.getItem("maury_vtt_username") || "Me").toLowerCase().trim();
   const locker = (ent as any).lockedBy || ent.lastModifiedBy;
   if (!locker) {
     return false;
   }
-  return locker === myPeerId;
+  return locker === myPeerId || locker === "local" || locker.toLowerCase().trim() === myUsername;
 }

@@ -1,4 +1,4 @@
-import { CanvasEngine } from "../canvas/canvasEngine.js";
+import { CanvasEngine, isMySecretToken } from "../canvas/canvasEngine.js";
 import { sessionManager } from "../network/sessionManager.js";
 import { hostEngine } from "../network/p2pHost.js";
 import { docStore } from "../state/documentStore.js";
@@ -83,11 +83,7 @@ export async function openImageGenDescriptionModal(
   for (const ent of Object.values(doc.entities)) {
     if (ent.type === "token" && ent.label && ent.label.trim() !== "") {
       const tok = ent as TokenEntity;
-      if (tok.secret) {
-        const myPeerId = sessionManager.myPeerId || "local";
-        const isMySecret = tok.secretPeerId === myPeerId || tok.secretPeerId === "local";
-        if (!isMySecret) continue;
-      }
+      if (!isMySecretToken(tok)) continue;
       const labelClean = ent.label.trim();
       if (!seenNames.has(labelClean.toLowerCase())) {
         seenNames.add(labelClean.toLowerCase());

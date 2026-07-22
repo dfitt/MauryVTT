@@ -461,7 +461,8 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
           id: token.id,
           patch: {
             secret: newSecret,
-            secretPeerId: newSecret ? myPeerId : undefined
+            secretPeerId: newSecret ? myPeerId : undefined,
+            secretUsername: newSecret ? myUsername : undefined
           } as any
         });
       });

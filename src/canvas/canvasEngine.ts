@@ -14,6 +14,20 @@ import { EffectEngine } from "../effects/effectEngine.js";
 import { BASE_CONDITIONS } from "../ui/selectionBarUI.js";
 import { EFFECT_REGISTRY } from "../effects/effectDefs.js";
 
+export function isMySecretToken(tok: TokenEntity): boolean {
+  if (!tok.secret) return true;
+  const myPeerId = sessionManager.myPeerId || "local";
+  const myUsername = (sessionManager.myUsername || localStorage.getItem("maury_vtt_username") || "Me").toLowerCase().trim();
+
+  if (tok.secretPeerId && (tok.secretPeerId === myPeerId || tok.secretPeerId === "local")) {
+    return true;
+  }
+  if (tok.secretUsername && tok.secretUsername.toLowerCase().trim() === myUsername) {
+    return true;
+  }
+  return false;
+}
+
 export type ToolType = "select" | "pan" | "draw" | "line" | "fill" | "erase" | "hide" | "unhide" | "measure" | "ping" | "token" | "ephemeral" | "laser" | "enhance" | "map" | "image" | "ai";
 
 export interface ActiveLaser {
@@ -1053,11 +1067,7 @@ export class CanvasEngine {
     const sortedTokens = [...tokens].sort((a, b) => a.zIndex - b.zIndex);
     for (const ent of sortedTokens) {
       const tok = ent as TokenEntity;
-      if (tok.secret) {
-        const myPeerId = sessionManager.myPeerId || "local";
-        const isMySecret = tok.secretPeerId === myPeerId || tok.secretPeerId === "local";
-        if (!isMySecret) continue;
-      }
+      if (!isMySecretToken(tok)) continue;
       const gx = Math.floor(tok.position.x / gridSizePx);
       const gy = Math.floor(tok.position.y / gridSizePx);
       const cellKey = `${gx},${gy}`;
@@ -1526,11 +1536,7 @@ export class CanvasEngine {
     for (const ent of Object.values(doc.entities)) {
       if (ent.type !== "token") continue;
       const tok = ent as TokenEntity;
-      if (tok.secret) {
-        const myPeerId = sessionManager.myPeerId || "local";
-        const isMySecret = tok.secretPeerId === myPeerId || tok.secretPeerId === "local";
-        if (!isMySecret) continue;
-      }
+      if (!isMySecretToken(tok)) continue;
 
       let targetScale = 1.0;
       if (!this.isTouchInput && this.selectedEntityId !== tok.id && curGx !== null && curGy !== null) {
@@ -1656,9 +1662,7 @@ export class CanvasEngine {
       if (ent.type === "token") {
         const tok = ent as TokenEntity;
         if (tok.secret) {
-          const myPeerId = sessionManager.myPeerId || "local";
-          const isMySecret = tok.secretPeerId === myPeerId || tok.secretPeerId === "local";
-          if (!isMySecret) {
+          if (!isMySecretToken(tok)) {
             ctx.restore();
             return;
           }
