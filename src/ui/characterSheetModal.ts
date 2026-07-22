@@ -357,22 +357,54 @@ export function openCharacterSheetModal(engine?: CanvasEngine): void {
     const currentDoc = docStore.getDocument();
     const tokenEnt = findMyClaimedToken(currentDoc, uname);
     const sheet = currentDoc.characterSheets?.[uname];
-    const history = (tokenEnt?.hpHistory || sheet?.hpHistory || []).slice(-6);
-    if (history.length === 0) return;
+    const fullHistory = (tokenEnt?.hpHistory || sheet?.hpHistory || []);
+    if (fullHistory.length === 0) return;
+
+    const displayCount = 11;
+    const startIndex = Math.max(0, fullHistory.length - displayCount);
+    const historySlice = fullHistory.slice(startIndex);
 
     hpHistoryPopup.innerHTML = `<div style="font-size: 10px; color: #cbd5e1; font-weight: 800; text-transform: uppercase; padding: 2px 4px; border-bottom: 1px solid rgba(244, 63, 94, 0.3); margin-bottom: 2px;">Recent HP</div>`;
-    history.forEach((entry) => {
-      const val = typeof entry === "object" && entry !== null ? String((entry as any).val ?? (entry as any).hp) : String(entry);
+    historySlice.forEach((entry, idx) => {
+      const globalIdx = startIndex + idx;
+      const valStr = typeof entry === "object" && entry !== null ? String((entry as any).val ?? (entry as any).hp) : String(entry);
+      const numVal = Number(valStr);
       const ts = typeof entry === "object" && entry !== null ? (entry as any).timestamp : undefined;
       const timeAgo = formatTimeAgo(ts);
+
+      let changeHtml = "";
+      if (globalIdx === 0) {
+        changeHtml = `<span style="font-size: 11px; color: #94a3b8; font-weight: 600; margin-left: 4px;">(init)</span>`;
+      } else {
+        const prevEntry = fullHistory[globalIdx - 1];
+        const prevValStr = typeof prevEntry === "object" && prevEntry !== null ? String((prevEntry as any).val ?? (prevEntry as any).hp) : String(prevEntry);
+        const prevNumVal = Number(prevValStr);
+
+        if (!isNaN(numVal) && !isNaN(prevNumVal)) {
+          const diff = numVal - prevNumVal;
+          if (diff > 0) {
+            changeHtml = `<span style="font-size: 11px; color: #4ade80; font-weight: 700; margin-left: 4px;">(+${diff})</span>`;
+          } else if (diff < 0) {
+            changeHtml = `<span style="font-size: 11px; color: #f87171; font-weight: 700; margin-left: 4px;">(${diff})</span>`;
+          } else {
+            changeHtml = `<span style="font-size: 11px; color: #94a3b8; font-weight: 600; margin-left: 4px;">(+0)</span>`;
+          }
+        }
+      }
 
       const btn = document.createElement("button");
       btn.className = "btn-glass btn-sm";
       btn.style.cssText = "width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 8px; font-weight: 800; color: #fda4af; cursor: pointer; border-radius: 4px;";
-      btn.innerHTML = `<span style="font-size: 13px; font-weight: 900;">${val}</span>` + (timeAgo ? `<span style="font-size: 10px; color: #94a3b8; font-weight: 500;">${timeAgo}</span>` : "");
+      btn.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 2px;">
+          <span style="font-size: 13px; font-weight: 900;">${valStr}</span>
+          ${changeHtml}
+        </div>
+        ${timeAgo ? `<span style="font-size: 10px; color: #94a3b8; font-weight: 500;">${timeAgo}</span>` : ""}
+      `;
       btn.addEventListener("mousedown", (e) => {
         e.preventDefault();
-        hpInput.value = val;
+        hpInput.value = valStr;
         saveSheetFields(true);
         hpHistoryPopup.style.display = "none";
       });
