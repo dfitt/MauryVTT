@@ -1355,6 +1355,7 @@ export class CanvasEngine {
 
     for (const [key, overlay] of this.conditionOverlays.entries()) {
       if (!this.activeConditionKeys.has(key)) {
+        if ((overlay as any)._condIntervalId) clearInterval((overlay as any)._condIntervalId);
         if (overlay.parentElement) overlay.parentElement.removeChild(overlay);
         this.conditionOverlays.delete(key);
       }
@@ -2048,82 +2049,81 @@ export class CanvasEngine {
           ctx.arc(0, 0, auraRadius, 0, Math.PI * 2);
           ctx.stroke();
 
-          // Draw bespoke condition SVG artwork overlay if present
+          // Render condition effects via DOM overlay (SVG animation + CSS particles)
           const animSvg = def.conditionData?.animation?.effectSvg || (def.renderSvg ? def.renderSvg() : "");
-          if (animSvg && animSvg.includes("<svg")) {
-            const key = `${ent.id}_${effId}`;
-            this.activeConditionKeys.add(key);
-            let overlay = this.conditionOverlays.get(key);
-            if (!overlay) {
-              overlay = document.createElement("div");
-              overlay.className = "vtt-condition-overlay";
-              overlay.style.position = "fixed";
-              overlay.style.pointerEvents = "none";
-              overlay.style.zIndex = "10";
-              overlay.style.display = "flex";
-              overlay.style.alignItems = "center";
-              overlay.style.justifyContent = "center";
-              overlay.innerHTML = animSvg;
-              document.body.appendChild(overlay);
-              this.conditionOverlays.set(key, overlay);
-            }
+          const key = `${ent.id}_${effId}`;
+          this.activeConditionKeys.add(key);
+          let overlay = this.conditionOverlays.get(key);
+          if (!overlay) {
+            overlay = document.createElement("div");
+            overlay.className = "vtt-condition-overlay";
+            overlay.style.position = "fixed";
+            overlay.style.pointerEvents = "none";
+            overlay.style.zIndex = "10";
+            overlay.style.overflow = "visible";
 
-            const screenPos = this.worldToScreen(renderX, renderY);
-            const animSize = auraRadius * 2.2 * this.zoom;
-            overlay.style.width = `${animSize}px`;
-            overlay.style.height = `${animSize}px`;
-            overlay.style.left = `${screenPos.x - animSize / 2}px`;
-            overlay.style.top = `${screenPos.y - animSize / 2}px`;
+            // SVG animation layer
+            const svgLayer = document.createElement("div");
+            svgLayer.className = "vtt-cond-svg-layer";
+            svgLayer.style.cssText = "position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none;";
+            if (animSvg) svgLayer.innerHTML = animSvg;
+            overlay.appendChild(svgLayer);
+
+            // Particle container layer
+            const particleLayer = document.createElement("div");
+            particleLayer.className = "vtt-cond-particle-layer";
+            particleLayer.style.cssText = "position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; overflow: visible;";
+            overlay.appendChild(particleLayer);
+
+            document.body.appendChild(overlay);
+            this.conditionOverlays.set(key, overlay);
+
+            // Start particle spawn loop matching the preview modal's approach
+            const spawnParticles = () => {
+              if (!overlay || !overlay.parentElement) return;
+              const pLayer = overlay.querySelector(".vtt-cond-particle-layer");
+              if (!pLayer) return;
+              const p = pConfig;
+              const count = Math.min(p?.count || 12, 30);
+              const overlayW = overlay.offsetWidth || 120;
+              const maxDist = overlayW * 0.45;
+              for (let pi = 0; pi < count; pi++) {
+                const pEl = document.createElement("div");
+                const color = particleColors[pi % particleColors.length];
+                const minSize = p?.sizeRangePx?.[0] || 3;
+                const maxSize = p?.sizeRangePx?.[1] || 7;
+                const size = minSize + Math.random() * (maxSize - minSize);
+                const angle = Math.random() * Math.PI * 2;
+                const dist = 8 + Math.random() * maxDist;
+                const dx = Math.cos(angle) * dist;
+                const grav = p?.gravity || 0;
+                const dy = Math.sin(angle) * dist + (grav !== 0 ? grav * 0.3 : 0);
+                const lifeMs = p?.lifeMs || 1200;
+                const shape = p?.shape || "sparkle";
+                const borderRadius = (shape === "circle" || shape === "sparkle" || shape === "note") ? "50%" : "2px";
+                pEl.style.cssText = `position: absolute; width: ${size}px; height: ${size}px; background: ${color}; border-radius: ${borderRadius}; box-shadow: 0 0 ${size * 1.5}px ${color}; opacity: 1; transition: transform ${lifeMs}ms ease-out, opacity ${lifeMs}ms ease-out; pointer-events: none;`;
+                pLayer.appendChild(pEl);
+                requestAnimationFrame(() => {
+                  pEl.style.transform = `translate(${dx}px, ${dy}px) scale(0.15)`;
+                  pEl.style.opacity = "0";
+                });
+                setTimeout(() => { if (pEl.parentElement) pEl.parentElement.removeChild(pEl); }, lifeMs + 50);
+              }
+            };
+            spawnParticles();
+            const loopMs = (def.durationMs || 2000) * 0.6;
+            const intervalId = setInterval(spawnParticles, loopMs);
+            (overlay as any)._condIntervalId = intervalId;
           }
 
-          // Draw bespoke orbiting symbols/particles matching condition shape & theme
-          ctx.shadowColor = accentColor;
-          ctx.shadowBlur = 8 / this.zoom;
-          const particleCount = pConfig ? Math.min(Math.max((pConfig.count || 25) / 4, 3), 6) : 4;
-          const pShape = pConfig?.shape || "sparkle";
-          const gravity = pConfig?.gravity || 0;
+          const screenPos = this.worldToScreen(renderX, renderY);
+          const animSize = auraRadius * 2.2 * this.zoom;
+          overlay.style.width = `${animSize}px`;
+          overlay.style.height = `${animSize}px`;
+          overlay.style.left = `${screenPos.x - animSize / 2}px`;
+          overlay.style.top = `${screenPos.y - animSize / 2}px`;
 
-          const rotSpeed = now / 650;
-          for (let pIdx = 0; pIdx < particleCount; pIdx++) {
-            const pAngle = rotSpeed + (pIdx * Math.PI * 2) / particleCount;
-            const gravOffset = gravity !== 0 ? Math.sin((now / 800) + pIdx) * (gravity * 0.2 / this.zoom) : 0;
-            const px = Math.cos(pAngle) * auraRadius;
-            const py = Math.sin(pAngle) * auraRadius + gravOffset;
-            const pColor = particleColors[pIdx % particleColors.length];
-
-            ctx.fillStyle = pColor;
-            ctx.globalAlpha = 0.75 + 0.25 * Math.sin(now / 180 + pIdx);
-
-            if (pShape === "ember") {
-              ctx.font = `${Math.max(12, 15 / this.zoom)}px sans-serif`;
-              ctx.textAlign = "center";
-              ctx.textBaseline = "middle";
-              ctx.fillText("🔥", px, py);
-            } else if (pShape === "splinter") {
-              ctx.font = `${Math.max(12, 15 / this.zoom)}px sans-serif`;
-              ctx.textAlign = "center";
-              ctx.textBaseline = "middle";
-              ctx.fillText("❄️", px, py);
-            } else if (pShape === "note") {
-              ctx.font = `${Math.max(12, 15 / this.zoom)}px sans-serif`;
-              ctx.textAlign = "center";
-              ctx.textBaseline = "middle";
-              ctx.fillText("💖", px, py);
-            } else if (pShape === "sparkle") {
-              ctx.font = `${Math.max(12, 15 / this.zoom)}px sans-serif`;
-              ctx.textAlign = "center";
-              ctx.textBaseline = "middle";
-              ctx.fillText("✨", px, py);
-            } else {
-              // Glowing orb
-              const orbRadius = Math.max(3, 4.5 / this.zoom);
-              ctx.beginPath();
-              ctx.arc(px, py, orbRadius, 0, Math.PI * 2);
-              ctx.fill();
-            }
-          }
-
-          // Draw status badge / icon
+          // Draw status badge / icon on canvas
           ctx.shadowBlur = 0;
           ctx.globalAlpha = 1.0;
           if (def.iconSvg) {
