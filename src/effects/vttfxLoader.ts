@@ -8,12 +8,14 @@ export interface VttfxEffectItem {
   durationMs: number;
   effectSvg: string;
   particles?: ParticleConfig;
+  isCondition?: boolean;
 }
 
 export interface VttfxBundle {
   version: string;
   bundleName: string;
   effects: VttfxEffectItem[];
+  isCondition?: boolean;
 }
 
 export function registerEffectFromVttfxItem(item: VttfxEffectItem): void {
@@ -23,7 +25,8 @@ export function registerEffectFromVttfxItem(item: VttfxEffectItem): void {
     renderSvg: () => item.effectSvg,
     particles: item.particles,
     name: item.name,
-    iconSvg: item.iconSvg
+    iconSvg: item.iconSvg,
+    isCondition: item.isCondition
   });
   if (item.iconSvg) {
     registerCustomRollIcon(item.id, item.name, item.iconSvg);
@@ -35,7 +38,11 @@ export function loadVttfxBundleFromBundle(bundle: VttfxBundle): void {
     console.warn("Invalid VttfxBundle provided.");
     return;
   }
+  const isBundleCondition = bundle.isCondition || (bundle.bundleName && bundle.bundleName.startsWith("Condition:"));
   for (const item of bundle.effects) {
+    if (isBundleCondition) {
+      item.isCondition = true;
+    }
     registerEffectFromVttfxItem(item);
   }
   console.log(`Loaded VTTFX Bundle '${bundle.bundleName}' (${bundle.effects.length} effects).`);

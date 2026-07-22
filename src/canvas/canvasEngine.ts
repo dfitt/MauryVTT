@@ -11,6 +11,8 @@ import {
 import { sessionManager } from "../network/sessionManager.js";
 import { canSelectLockedImage } from "./lockedSelectionHelper.js";
 import { EffectEngine } from "../effects/effectEngine.js";
+import { BASE_CONDITIONS } from "../ui/selectionBarUI.js";
+import { EFFECT_REGISTRY } from "../effects/effectDefs.js";
 
 export type ToolType = "select" | "pan" | "draw" | "line" | "fill" | "erase" | "hide" | "unhide" | "measure" | "ping" | "token" | "ephemeral" | "laser" | "enhance" | "map" | "image" | "ai";
 
@@ -124,6 +126,7 @@ export class CanvasEngine {
 
   // Image cache
   private imageElements: Map<string, HTMLImageElement> = new Map();
+  private svgImageCache: Map<string, HTMLImageElement> = new Map();
   private loadingAssets: Set<string> = new Set();
 
   // Interaction handlers
@@ -1995,6 +1998,59 @@ export class CanvasEngine {
           ctx.restore();
         }
 
+        // Custom / AI Generated Conditions
+        let customIdx = 0;
+        for (let i = 0; i < effects.length; i++) {
+          const effId = effects[i];
+          if (BASE_CONDITIONS.some((bc: { id: string }) => bc.id === effId)) continue;
+          const def = EFFECT_REGISTRY[effId];
+          if (!def) continue;
+
+          ctx.save();
+          // Draw pulsing aura ring around token
+          const pulse = 0.5 + 0.35 * Math.sin(now / 250 + customIdx);
+          ctx.strokeStyle = `rgba(56, 189, 248, ${pulse})`;
+          ctx.lineWidth = Math.max(2.5, 4 / this.zoom);
+          ctx.shadowColor = "#38bdf8";
+          ctx.shadowBlur = 10 / this.zoom;
+          const auraRadius = Math.max(displayW, displayH) * 0.58 + (customIdx * 4 / this.zoom);
+          ctx.beginPath();
+          ctx.arc(0, 0, auraRadius, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // Draw status badge / icon
+          ctx.shadowBlur = 0;
+          if (def.iconSvg) {
+            if (def.iconSvg.includes("<svg")) {
+              const cachedImg = this.getOrCacheSvgImage(`cond_icon_${effId}`, def.iconSvg);
+              if (cachedImg && cachedImg.complete && cachedImg.naturalWidth > 0) {
+                const iconSize = Math.max(18, 26 / this.zoom);
+                const ox = (customIdx % 2 === 0 ? 1 : -1) * (halfW * 0.55);
+                const oy = -halfH * 0.65 - Math.floor(customIdx / 2) * (iconSize + 4 / this.zoom);
+                ctx.drawImage(cachedImg, ox - iconSize / 2, oy - iconSize / 2, iconSize, iconSize);
+              } else {
+                ctx.font = `${Math.max(13, 16 / this.zoom)}px sans-serif`;
+                ctx.textAlign = "center";
+                ctx.fillText("✨", 0, -halfH * 0.75);
+              }
+            } else {
+              // Emoji or short text
+              ctx.font = `${Math.max(14, 18 / this.zoom)}px sans-serif`;
+              ctx.textAlign = "center";
+              const ox = (customIdx % 2 === 0 ? 1 : -1) * (halfW * 0.5);
+              const oy = -halfH * 0.65;
+              ctx.fillText(def.iconSvg, ox, oy);
+            }
+          } else {
+            ctx.font = `${Math.max(13, 16 / this.zoom)}px Outfit, sans-serif`;
+            ctx.fillStyle = "#38bdf8";
+            ctx.textAlign = "center";
+            ctx.fillText(`✨ ${def.name || effId}`, 0, -halfH * 0.75);
+          }
+          ctx.restore();
+          customIdx++;
+        }
+
         const isHoveredOrSelected = hoverScale > 1.05 || this.selectedEntityId === ent.id;
         if (token.label && isHoveredOrSelected) {
           ctx.font = `600 ${Math.max(12, 14 / this.zoom)}px Outfit, sans-serif`;
@@ -2093,6 +2149,23 @@ export class CanvasEngine {
       this.loadingAssets.delete(assetHash);
     };
     img.src = url;
+  }
+
+  private getOrCacheSvgImage(key: string, svgContent: string): HTMLImageElement | null {
+    if (this.svgImageCache.has(key)) {
+      return this.svgImageCache.get(key)!;
+    }
+    let pureSvg = svgContent;
+    const svgMatch = svgContent.match(/<svg[\s\S]*?<\/svg>/i);
+    if (svgMatch) {
+      pureSvg = svgMatch[0];
+    }
+    if (!pureSvg.includes("<svg")) return null;
+
+    const img = new Image();
+    img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(pureSvg);
+    this.svgImageCache.set(key, img);
+    return img;
   }
 
   private drawMeasurement(ctx: CanvasRenderingContext2D, m: ActiveMeasurement): void {

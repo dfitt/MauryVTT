@@ -296,9 +296,14 @@ export function setupVttfxProxyListeners(): void {
           return;
         }
 
-        console.log(`[VttfxProxy] Local machine is processing VTTFX proxy generation via API...`);
+        console.log(`[VttfxProxy] Local machine is processing VTTFX proxy generation via API... (isCondition: ${payload.isCondition})`);
         try {
-          const item = await callGeminiVttfxGeneration(apiKey, payload.iconDesc, payload.animDesc);
+          const item = payload.isCondition
+            ? await callGeminiConditionGeneration(apiKey, payload.iconDesc, payload.animDesc)
+            : await callGeminiVttfxGeneration(apiKey, payload.iconDesc, payload.animDesc);
+          if (payload.isCondition) {
+            item.isCondition = true;
+          }
           console.log(`[VttfxProxy] Proxy generation succeeded. Dispatching VTTFX_PROXY_RES for ID: ${payload.reqId}`);
           sessionManager.sendEphemeral({
             type: "VTTFX_PROXY_RES",
@@ -333,6 +338,7 @@ export function setupVttfxProxyListeners(): void {
           showEnhanceToast(`❌ VTTFX generation via ${friendName}'s API key failed: ${payload.error}`, 10000);
         } else if (payload.status === "success" && payload.vttfxItem) {
           if (payload.isCondition) {
+            payload.vttfxItem.isCondition = true;
             openConditionPreviewModal(payload.vttfxItem, payload.iconDesc || "", payload.proxyPeerId);
           } else {
             console.log(`[VttfxProxy] Proxy reported success. Opening preview modal for generated VTTFX: ${payload.vttfxItem.name}`);
@@ -430,6 +436,103 @@ Return ONLY valid JSON without any markdown formatting or commentary.`;
       if (!item.durationMs || typeof item.durationMs !== "number") {
         item.durationMs = 850;
       }
+      return item;
+    } catch (err: any) {
+      errorsCollected.push(`[${model}] Exception: ${err.message || err}`);
+    }
+  }
+
+  throw new Error(`All models failed: ${errorsCollected.join("; ")}`);
+}
+
+export async function callGeminiConditionGeneration(apiKey: string, iconDesc: string, animDesc: string): Promise<VttfxEffectItem> {
+  const modelsToTry = [
+    "gemini-3.5-flash",
+    "gemini-3.0-flash",
+    "gemini-2.5-flash",
+    "gemini-1.5-flash"
+  ];
+
+  const instructions = `You are a master SVG icon designer and CSS animation engineer for a dark-fantasy Virtual Tabletop (VTT).
+Your task is to generate exactly ONE single looping status condition effect (VttfxEffectItem) consisting of 1 clean SVG status badge icon and 1 rich, looping aura/status visual animation suitable for encircling a token on the canvas.
+You MUST output a single valid JSON object strictly adhering to the following structure:
+{
+  "id": "unique_snake_case_condition_id",
+  "name": "Short Condition Name",
+  "iconSvg": "<svg viewBox='0 0 64 64' width='1.25em' height='1.25em' data-vtt-icon='unique_snake_case_condition_id' style='vertical-align:-0.25em; display:inline-block; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.85));'>...</svg>",
+  "durationMs": 2000,
+  "effectSvg": "<style>@keyframes vttCondPulse { 0%, 100% { transform: scale(1); opacity: 0.8; } 50% { transform: scale(1.08); opacity: 1; } } @keyframes vttCondRotate { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style><div style='position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;'><svg viewBox='0 0 120 120' width='110%' height='110%' style='position: absolute; animation: vttCondPulse 2s ease-in-out infinite, vttCondRotate 8s linear infinite;'>...</svg></div>",
+  "particles": {
+    "count": 20,
+    "colors": ["#38bdf8", "#e0f2fe", "#7dd3fc"],
+    "speedRange": [15, 45],
+    "sizeRangePx": [2, 5],
+    "gravity": -15,
+    "shape": "circle",
+    "lifeMs": 1500
+  },
+  "isCondition": true
+}
+
+CRITICAL RULES FOR CONDITIONS:
+1. "id" must be a clean, unique snake_case string.
+2. "isCondition": MUST be true.
+3. "iconSvg": Must be a high-quality 64x64 SVG status badge or symbol fitting the condition. Must contain data-vtt-icon="unique_snake_case_condition_id".
+4. "effectSvg": Must be a CONTINUOUSLY LOOPING status aura/overlay that surrounds or emanates from a token (using CSS infinite animations like pulse, orbit, glow, or floating runes). Unlike one-shot explosions, it should loop continuously!
+5. "durationMs": Set to between 1800 and 2500 for smooth looping.
+6. "particles": Optional looping ambient particles drifting around the token.
+7. User Condition Description: "${iconDesc || animDesc}"
+
+Return ONLY valid JSON without any markdown formatting or commentary.`;
+
+  const errorsCollected: string[] = [];
+  for (const model of modelsToTry) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+      const resp = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: instructions }] }],
+          generationConfig: {
+            responseMimeType: "application/json"
+          }
+        })
+      });
+
+      if (!resp.ok) {
+        const errTxt = await resp.text();
+        errorsCollected.push(`[${model}] HTTP ${resp.status}: ${errTxt.substring(0, 150)}`);
+        continue;
+      }
+
+      const data = await resp.json();
+      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!rawText) {
+        errorsCollected.push(`[${model}] No text returned.`);
+        continue;
+      }
+
+      let cleanJson = rawText.trim();
+      if (cleanJson.startsWith("```json")) {
+        cleanJson = cleanJson.substring(7);
+      } else if (cleanJson.startsWith("```")) {
+        cleanJson = cleanJson.substring(3);
+      }
+      if (cleanJson.endsWith("```")) {
+        cleanJson = cleanJson.substring(0, cleanJson.length - 3);
+      }
+      cleanJson = cleanJson.trim();
+
+      const item: VttfxEffectItem = JSON.parse(cleanJson);
+      if (!item.id || !item.name || !item.iconSvg || !item.effectSvg) {
+        errorsCollected.push(`[${model}] Missing required properties in generated item.`);
+        continue;
+      }
+      if (!item.durationMs || typeof item.durationMs !== "number") {
+        item.durationMs = 2000;
+      }
+      item.isCondition = true;
       return item;
     } catch (err: any) {
       errorsCollected.push(`[${model}] Exception: ${err.message || err}`);

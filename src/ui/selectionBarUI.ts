@@ -5,6 +5,34 @@ import { TokenEntity } from "../types/vtt.js";
 import { formatTimeAgo } from "./characterSheetModal.js";
 import { openConditionGenerateModal } from "./conditionAiModal.js";
 
+export const BASE_CONDITIONS: { id: string; label: string }[] = [
+  { id: "concentrating", label: "🧘 Concentrating" },
+  { id: "bloodied", label: "🩸 Bloodied" },
+  { id: "restrained", label: "⛓️ Restrained" },
+  { id: "stunned", label: "💫 Stunned" },
+  { id: "exhausted", label: "🥱 Exhausted" },
+  { id: "down", label: "💀 Down" },
+  { id: "flying", label: "🪽 Flying" },
+  { id: "blessed", label: "✨ Blessed" },
+  { id: "blind", label: "🕶️ Blind" },
+  { id: "charmed", label: "😍 Charmed" },
+  { id: "frightened", label: "😱 Frightened" },
+  { id: "drunk", label: "🥴 Drunk" },
+  { id: "invisible", label: "🫥 Invisible" },
+  { id: "paralyzed", label: "⚡ Paralyzed" },
+  { id: "prone", label: "🛌 Prone" },
+  { id: "unconscious", label: "😴 Unconscious" },
+  { id: "bitchy", label: "💅 Bitchy" },
+  { id: "bitchin", label: "🔥 Bitchin'" },
+  { id: "inspired", label: "💡 Inspired" },
+  { id: "frenzied", label: "💢 Frenzied" },
+  { id: "hidden", label: "🥷 Hidden" },
+  { id: "hungry", label: "🍗 Hungry" },
+  { id: "sleepy", label: "😪 Sleepy" },
+  { id: "poisoned", label: "🤢 Poisoned" },
+  { id: "confused", label: "❓ Confused" }
+];
+
 export function setupSelectionBarUI(engine: CanvasEngine): void {
   const bar = document.createElement("div");
   bar.id = "selection-toolbar";
@@ -340,42 +368,14 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
       bar.appendChild(mineBtn);
 
       // Conditions Selector
-      // Conditions Selector
-      const BASE_CONDITIONS = [
-        { id: "concentrating", label: "🧘 Concentrating" },
-        { id: "bloodied", label: "🩸 Bloodied" },
-        { id: "restrained", label: "⛓️ Restrained" },
-        { id: "stunned", label: "💫 Stunned" },
-        { id: "exhausted", label: "🥱 Exhausted" },
-        { id: "down", label: "💀 Down" },
-        { id: "flying", label: "🪽 Flying" },
-        { id: "blessed", label: "✨ Blessed" },
-        { id: "blind", label: "🕶️ Blind" },
-        { id: "charmed", label: "😍 Charmed" },
-        { id: "frightened", label: "😱 Frightened" },
-        { id: "drunk", label: "🥴 Drunk" },
-        { id: "invisible", label: "🫥 Invisible" },
-        { id: "paralyzed", label: "⚡ Paralyzed" },
-        { id: "prone", label: "🛌 Prone" },
-        { id: "unconscious", label: "😴 Unconscious" },
-        { id: "bitchy", label: "💅 Bitchy" },
-        { id: "bitchin", label: "🔥 Bitchin'" },
-        { id: "inspired", label: "💡 Inspired" },
-        { id: "frenzied", label: "💢 Frenzied" },
-        { id: "hidden", label: "🥷 Hidden" },
-        { id: "hungry", label: "🍗 Hungry" },
-        { id: "sleepy", label: "😪 Sleepy" },
-        { id: "poisoned", label: "🤢 Poisoned" },
-        { id: "confused", label: "❓ Confused" }
-      ];
-
       // Add custom conditions saved in session vttdoc
       const customBundles = docStore.getDocument().customVttfxBundles || {};
       const customConditions: { id: string; label: string }[] = [];
       for (const bundle of Object.values(customBundles)) {
         if (bundle && Array.isArray(bundle.effects)) {
+          const isBundleCond = bundle.isCondition || (bundle.bundleName && bundle.bundleName.startsWith("Condition:"));
           for (const eff of bundle.effects) {
-            if (eff.id && !BASE_CONDITIONS.some((bc) => bc.id === eff.id)) {
+            if ((eff.isCondition || isBundleCond) && eff.id && !BASE_CONDITIONS.some((bc) => bc.id === eff.id)) {
               const name = eff.name || eff.id;
               customConditions.push({ id: eff.id, label: `✨ ${name}` });
             }

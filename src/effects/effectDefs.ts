@@ -16,6 +16,7 @@ export interface VttEffectDefinition {
   particles?: ParticleConfig;
   name?: string;
   iconSvg?: string;
+  isCondition?: boolean;
 }
 
 export const EFFECT_REGISTRY: Record<string, VttEffectDefinition> = {};

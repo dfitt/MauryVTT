@@ -2,7 +2,7 @@ import { sessionManager } from "../network/sessionManager.js";
 import { docStore } from "../state/documentStore.js";
 import { VttfxEffectItem, VttfxBundle } from "../effects/vttfxLoader.js";
 import { openGeminiApiKeyModal, checkOrFindProxyPeer, showEnhanceToast, getPeerUsername } from "./enhanceModal.js";
-import { callGeminiVttfxGeneration } from "./vttfxGenerateModal.js";
+import { callGeminiConditionGeneration } from "./vttfxGenerateModal.js";
 import { ChatMessage, TokenEntity } from "../types/vtt.js";
 
 export async function openConditionGenerateModal(): Promise<void> {
@@ -134,7 +134,8 @@ function openConditionGenerateDescriptionModal(hasProxy: boolean, proxyPeerId: s
       }
       showEnhanceToast("✨ Generating AI Token Condition & animation... (~15-25s)", 30000);
       try {
-        const item = await callGeminiVttfxGeneration(apiKey, conditionPrompt, conditionPrompt);
+        const item = await callGeminiConditionGeneration(apiKey, conditionPrompt, conditionPrompt);
+        item.isCondition = true;
         openConditionPreviewModal(item, conditionPrompt, null);
       } catch (err: any) {
         console.error("[ConditionGen] Generation failed:", err);
@@ -156,6 +157,7 @@ function openConditionGenerateDescriptionModal(hasProxy: boolean, proxyPeerId: s
 }
 
 export function openConditionPreviewModal(vttfxItem: VttfxEffectItem, origPrompt: string, proxyPeerId: string | null): void {
+  vttfxItem.isCondition = true;
   let oldModal = document.getElementById("condition-preview-modal");
   if (oldModal) oldModal.remove();
 
@@ -241,9 +243,11 @@ export function openConditionPreviewModal(vttfxItem: VttfxEffectItem, origPrompt
     if (animationTimer) clearInterval(animationTimer);
     modal.remove();
 
+    vttfxItem.isCondition = true;
     const finalBundle: VttfxBundle = {
       version: "1.0",
       bundleName: `Condition: ${vttfxItem.name}`,
+      isCondition: true,
       effects: [vttfxItem]
     };
 
@@ -292,8 +296,11 @@ export function openConditionPreviewModal(vttfxItem: VttfxEffectItem, origPrompt
       const apiKey = localStorage.getItem("gemini_api_key");
       if (apiKey) {
         showEnhanceToast("🔄 Retrying Condition generation... (~15-25s)", 30000);
-        callGeminiVttfxGeneration(apiKey, origPrompt, origPrompt)
-          .then((item) => openConditionPreviewModal(item, origPrompt, null))
+        callGeminiConditionGeneration(apiKey, origPrompt, origPrompt)
+          .then((item) => {
+            item.isCondition = true;
+            openConditionPreviewModal(item, origPrompt, null);
+          })
           .catch((err) => showEnhanceToast(`❌ Retry failed: ${err.message || err}`, 8000));
       }
     }
