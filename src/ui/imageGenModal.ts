@@ -8,6 +8,35 @@ import { openGeminiApiKeyModal, checkOrFindProxyPeer, showEnhanceToast, getPeerU
 
 let imageGenProxyListenersSetup = false;
 
+export function isTokenMentionedInPrompt(tokenLabel: string, prompt: string): boolean {
+  if (!tokenLabel || !prompt) return false;
+
+  const cleanPrompt = prompt.toLowerCase().replace(/'s\b/g, "");
+  const cleanLabel = tokenLabel.trim().toLowerCase().replace(/'s\b/g, "");
+  if (!cleanLabel || !cleanPrompt) return false;
+
+  const escapedLabel = cleanLabel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const fullLabelRegex = new RegExp(`\\b${escapedLabel}\\b`, "i");
+  if (fullLabelRegex.test(cleanPrompt)) return true;
+
+  const promptWords = new Set(cleanPrompt.match(/\b[a-z0-9-]+\b/g) || []);
+  const labelWords = cleanLabel.split(/[^a-z0-9-]+/i).filter((w) => w.length > 0);
+
+  const STOP_WORDS = new Set([
+    "the", "a", "an", "of", "in", "to", "for", "with", "on", "at", "by", "from",
+    "and", "or", "is", "it", "as", "be", "this", "that", "my", "your", "his", "her", "their"
+  ]);
+
+  for (const word of labelWords) {
+    if (labelWords.length > 1 && STOP_WORDS.has(word)) continue;
+    if (promptWords.has(word)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 export async function openAiImageGenerateModal(
   engine: CanvasEngine,
   isProxy: boolean = false,
@@ -198,10 +227,16 @@ export async function openImageGenDescriptionModal(
     localStorage.setItem("gemini_image_custom_prompt", desc);
     modal.remove();
 
-    // Prepare reference base64 data for all selected tokens
+    // Only include character reference details for tokens mentioned in the prompt text
+    const tokensToInclude = selectedTokens.filter((tok) =>
+      isTokenMentionedInPrompt(tok.label, desc)
+    );
+    console.log(`[ImageGen] Prompt mentions ${tokensToInclude.length}/${selectedTokens.length} tokens:`, tokensToInclude.map((t) => t.label));
+
+    // Prepare reference base64 data for matched tokens
     const doc = docStore.getDocument();
     const tokenRefs: { label: string; base64: string; mimeType: string; description?: string }[] = [];
-    for (const tok of selectedTokens) {
+    for (const tok of tokensToInclude) {
       if (tok.assetHash) {
         const blob = await assetStore.getAsset(tok.assetHash);
         if (blob) {
