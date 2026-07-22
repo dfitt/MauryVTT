@@ -13,6 +13,8 @@ import { openVttfxGenerateModal } from "./vttfxGenerateModal.js";
 import { openAiImageGenerateModal } from "./imageGenModal.js";
 import { openConditionGenerateModal } from "./conditionAiModal.js";
 
+const INVISIBLE_INK_SVG = `<svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" style="display: block; border-radius: 50%;"><circle cx="12" cy="12" r="11" fill="#000000" stroke="#38bdf8" stroke-width="1.2"/><path d="M12 5C7 5 2.73 8.11 1 12.5C2.73 16.89 7 20 12 20C17 20 21.27 16.89 23 12.5C21.27 8.11 17 5 12 5ZM12 17.5C9.24 17.5 7 15.26 7 12.5C7 9.74 9.24 7.5 12 7.5C14.76 7.5 17 10.74 17 12.5C17 16.26 14.76 18.5 12 18.5ZM12 9.5C10.34 9.5 9 10.84 9 12.5C9 14.16 10.34 15.5 12 15.5C13.66 15.5 15 14.16 15 12.5C15 10.84 13.66 9.5 12 9.5Z" fill="#38bdf8"/></svg>`;
+
 const PALETTE_COLORS = [
   "#38bdf8", // Cyan
   "#f43f5e", // Rose
@@ -25,7 +27,8 @@ const PALETTE_COLORS = [
   "#6366f1", // Indigo
   "#f8fafc", // White
   "#000000", // Black
-  "fog"      // Fog of War (special color)
+  "fog",     // Fog of War (special color)
+  "invisible_ink" // Invisible Ink (special color)
 ];
 
 function isMobilePhone(): boolean {
@@ -622,6 +625,13 @@ export function setupToolbarUI(engine: CanvasEngine): void {
     activeColorBtn.style.background = "repeating-linear-gradient(45deg, #64748b 0px, #64748b 3px, #0f172a 3px, #0f172a 8px)";
     activeColorBtn.style.border = "1.5px solid #94a3b8";
     activeColorBtn.innerHTML = "";
+  } else if (defaultColor === "invisible_ink") {
+    activeColorBtn.style.background = "#000000";
+    activeColorBtn.style.border = "1.5px solid #38bdf8";
+    activeColorBtn.style.display = "flex";
+    activeColorBtn.style.alignItems = "center";
+    activeColorBtn.style.justifyContent = "center";
+    activeColorBtn.innerHTML = INVISIBLE_INK_SVG;
   } else {
     activeColorBtn.style.backgroundColor = defaultColor;
     activeColorBtn.style.border = "";
@@ -643,6 +653,15 @@ export function setupToolbarUI(engine: CanvasEngine): void {
       activeColorBtn.style.border = "1.5px solid #94a3b8";
       activeColorBtn.innerHTML = "";
       activeColorBtn.setAttribute("data-tooltip", "Current Drawing Color: Fog of War");
+    } else if (color === "invisible_ink") {
+      activeColorBtn.style.background = "#000000";
+      activeColorBtn.style.backgroundColor = "#000000";
+      activeColorBtn.style.border = "1.5px solid #38bdf8";
+      activeColorBtn.style.display = "flex";
+      activeColorBtn.style.alignItems = "center";
+      activeColorBtn.style.justifyContent = "center";
+      activeColorBtn.innerHTML = INVISIBLE_INK_SVG;
+      activeColorBtn.setAttribute("data-tooltip", "Current Drawing Color: Invisible Ink (Black, renders only for you)");
     } else {
       activeColorBtn.style.background = color;
       activeColorBtn.style.backgroundColor = color;
@@ -669,6 +688,14 @@ export function setupToolbarUI(engine: CanvasEngine): void {
       swatch.style.overflow = "hidden";
       swatch.innerHTML = "";
       swatch.setAttribute("data-tooltip", "Drawing Color: Fog of War (Pure black to others, semi-transparent to you)");
+    } else if (color === "invisible_ink") {
+      swatch.style.backgroundColor = "#000000";
+      swatch.style.border = "1.5px solid #38bdf8";
+      swatch.style.display = "flex";
+      swatch.style.alignItems = "center";
+      swatch.style.justifyContent = "center";
+      swatch.innerHTML = INVISIBLE_INK_SVG;
+      swatch.setAttribute("data-tooltip", "Drawing Color: Invisible Ink (Black, renders only for you)");
     } else {
       swatch.style.backgroundColor = color;
       swatch.style.border = "";

@@ -1128,6 +1128,8 @@ export class CanvasEngine {
         if (this.fillBucket) {
           if (this.drawColor === "fog") {
             ctx.fillStyle = "rgba(0, 0, 0, 0.45)";
+          } else if (this.drawColor === "invisible_ink") {
+            ctx.fillStyle = "#000000";
           } else {
             ctx.fillStyle = this.drawColor;
           }
@@ -1143,6 +1145,8 @@ export class CanvasEngine {
           const fillY = Math.round((this.hoverWorldPos.y - (size * span) / 2) / size) * size;
           if (this.drawColor === "fog") {
             ctx.fillStyle = "rgba(0, 0, 0, 0.45)";
+          } else if (this.drawColor === "invisible_ink") {
+            ctx.fillStyle = "#000000";
           } else {
             ctx.fillStyle = this.drawColor;
           }
@@ -1169,6 +1173,9 @@ export class CanvasEngine {
         ctx.arc(this.hoverWorldPos.x, this.hoverWorldPos.y, (this.drawWidth || 4) / 2, 0, Math.PI * 2);
         if (this.drawColor === "fog") {
           ctx.fillStyle = "rgba(0, 0, 0, 0.45)";
+          ctx.strokeStyle = "#ffffff";
+        } else if (this.drawColor === "invisible_ink") {
+          ctx.fillStyle = "#000000";
           ctx.strokeStyle = "#ffffff";
         } else {
           ctx.fillStyle = this.drawColor;
@@ -1197,7 +1204,11 @@ export class CanvasEngine {
       for (let i = 1; i < this.draftPoints.length; i++) {
         ctx.lineTo(this.draftPoints[i][0], this.draftPoints[i][1]);
       }
-      ctx.strokeStyle = this.drawColor;
+      if (this.drawColor === "invisible_ink") {
+        ctx.strokeStyle = "#000000";
+      } else {
+        ctx.strokeStyle = this.drawColor;
+      }
       ctx.lineWidth = this.drawWidth;
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
@@ -1406,8 +1417,15 @@ export class CanvasEngine {
           continue;
         }
 
-        ctx.fillStyle = cell.fillColor;
-        ctx.fillRect(gx, gy, size, size);
+        if (cell.fillColor === "invisible_ink") {
+          const isMine = cell.fillCreator && (cell.fillCreator === sessionManager.myPeerId || cell.fillCreator === "local");
+          if (!isMine) continue;
+          ctx.fillStyle = "#000000";
+          ctx.fillRect(gx, gy, size, size);
+        } else {
+          ctx.fillStyle = cell.fillColor;
+          ctx.fillRect(gx, gy, size, size);
+        }
       }
     }
 
@@ -1444,6 +1462,12 @@ export class CanvasEngine {
         const isMine = creator && (creator === sessionManager.myPeerId || creator === "local");
         ctx.fillStyle = isMine ? "rgba(0, 0, 0, 0.45)" : "#000000";
         ctx.fillRect(gx, gy, size, size);
+      } else if (cell.fillColor === "invisible_ink") {
+        const isMine = cell.fillCreator && (cell.fillCreator === sessionManager.myPeerId || cell.fillCreator === "local");
+        if (isMine) {
+          ctx.fillStyle = "#000000";
+          ctx.fillRect(gx, gy, size, size);
+        }
       } else if (cell.fillColor) {
         ctx.fillStyle = cell.fillColor;
         ctx.fillRect(gx, gy, size, size);
@@ -1544,23 +1568,44 @@ export class CanvasEngine {
         if (l.fillColor === "fog") {
           const isMine = l.lastModifiedBy === sessionManager.myPeerId || l.lastModifiedBy === "local";
           ctx.fillStyle = isMine ? "rgba(0, 0, 0, 0.45)" : "#000000";
+          ctx.fill();
+        } else if (l.fillColor === "invisible_ink") {
+          const isMine = l.lastModifiedBy === sessionManager.myPeerId || l.lastModifiedBy === "local";
+          if (isMine) {
+            ctx.fillStyle = "#000000";
+            ctx.fill();
+          }
         } else {
           ctx.fillStyle = l.fillColor;
+          ctx.fill();
         }
-        ctx.fill();
       }
       if (l.strokeColor === "fog") {
         const isMine = l.lastModifiedBy === sessionManager.myPeerId || l.lastModifiedBy === "local";
         ctx.strokeStyle = isMine ? "rgba(0, 0, 0, 0.45)" : "#000000";
         ctx.globalAlpha = isMine ? 0.45 : 1.0;
+        ctx.lineWidth = l.strokeWidth;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.stroke();
+      } else if (l.strokeColor === "invisible_ink") {
+        const isMine = l.lastModifiedBy === sessionManager.myPeerId || l.lastModifiedBy === "local";
+        if (isMine) {
+          ctx.strokeStyle = "#000000";
+          ctx.globalAlpha = 1.0;
+          ctx.lineWidth = l.strokeWidth;
+          ctx.lineCap = "round";
+          ctx.lineJoin = "round";
+          ctx.stroke();
+        }
       } else {
         ctx.strokeStyle = l.strokeColor;
         ctx.globalAlpha = l.strokeOpacity;
+        ctx.lineWidth = l.strokeWidth;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.stroke();
       }
-      ctx.lineWidth = l.strokeWidth;
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-      ctx.stroke();
     } else if (ent.type === "image" || ent.type === "token") {
       const imgEnt = ent as ImageEntity | TokenEntity;
       this.ensureImageLoaded(imgEnt.assetHash);
