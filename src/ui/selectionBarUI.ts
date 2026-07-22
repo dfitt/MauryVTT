@@ -3,6 +3,7 @@ import { docStore } from "../state/documentStore.js";
 import { sessionManager } from "../network/sessionManager.js";
 import { TokenEntity } from "../types/vtt.js";
 import { formatTimeAgo } from "./characterSheetModal.js";
+import { openConditionGenerateModal } from "./conditionAiModal.js";
 
 export function setupSelectionBarUI(engine: CanvasEngine): void {
   const bar = document.createElement("div");
@@ -339,7 +340,8 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
       bar.appendChild(mineBtn);
 
       // Conditions Selector
-      const AVAILABLE_CONDITIONS = [
+      // Conditions Selector
+      const BASE_CONDITIONS = [
         { id: "concentrating", label: "🧘 Concentrating" },
         { id: "bloodied", label: "🩸 Bloodied" },
         { id: "restrained", label: "⛓️ Restrained" },
@@ -366,6 +368,22 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
         { id: "poisoned", label: "🤢 Poisoned" },
         { id: "confused", label: "❓ Confused" }
       ];
+
+      // Add custom conditions saved in session vttdoc
+      const customBundles = docStore.getDocument().customVttfxBundles || {};
+      const customConditions: { id: string; label: string }[] = [];
+      for (const bundle of Object.values(customBundles)) {
+        if (bundle && Array.isArray(bundle.effects)) {
+          for (const eff of bundle.effects) {
+            if (eff.id && !BASE_CONDITIONS.some((bc) => bc.id === eff.id)) {
+              const name = eff.name || eff.id;
+              customConditions.push({ id: eff.id, label: `✨ ${name}` });
+            }
+          }
+        }
+      }
+
+      const AVAILABLE_CONDITIONS = [...BASE_CONDITIONS, ...customConditions];
 
       const condContainer = document.createElement("div");
       activeCondContainer = condContainer;
@@ -402,6 +420,18 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
         z-index: 3500;
       `;
+
+      // Top Action: AI Condition Generator Button
+      const aiGenBtn = document.createElement("button");
+      aiGenBtn.style.cssText = "grid-column: span 2; padding: 6px 10px; border-radius: 8px; background: linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(192, 132, 252, 0.25)); border: 1px solid #38bdf8; color: #f8fafc; font-weight: 700; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 4px; transition: all 0.15s ease;";
+      aiGenBtn.innerHTML = `<span>✨ Generate AI Condition (with Animation)</span>`;
+      aiGenBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        isCondPopoverOpen = false;
+        condPopover.style.display = "none";
+        openConditionGenerateModal();
+      });
+      condPopover.appendChild(aiGenBtn);
 
       AVAILABLE_CONDITIONS.forEach((c) => {
         const hasCond = (token.statusEffects || []).includes(c.id);

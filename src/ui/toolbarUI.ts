@@ -11,6 +11,7 @@ import { showEnhanceToast } from "./enhanceModal.js";
 import { openAiTokenGenerateModal, setupTokenProxyListeners } from "./tokenAiModal.js";
 import { openVttfxGenerateModal } from "./vttfxGenerateModal.js";
 import { openAiImageGenerateModal } from "./imageGenModal.js";
+import { openConditionGenerateModal } from "./conditionAiModal.js";
 
 const PALETTE_COLORS = [
   "#38bdf8", // Cyan
@@ -436,10 +437,11 @@ export function setupToolbarUI(engine: CanvasEngine): void {
       const grid = document.createElement("div");
       grid.style.cssText = "display: flex; flex-direction: column; gap: 6px;";
       
-      const aiOptions: { id: "enhance" | "token" | "vttfx" | "imageGen"; label: string; desc: string; icon: string }[] = [
+      const aiOptions: { id: "enhance" | "token" | "vttfx" | "imageGen" | "condition"; label: string; desc: string; icon: string }[] = [
         { id: "enhance", label: "AI Map Enhance", desc: "/enhance - Draw selection box on canvas", icon: AI_ICONS.enhance },
         { id: "token", label: "AI Token Generator", desc: "Generate token art from description", icon: AI_ICONS.token },
         { id: "vttfx", label: "AI VTTFX Generator", desc: "Generate animated spell & status VFX", icon: AI_ICONS.vttfx },
+        { id: "condition", label: "AI Condition Generator", desc: "Generate custom token status condition & animation", icon: "🏷️" },
         { id: "imageGen", label: "AI Scene / Illustration", desc: "Generate Dark Fantasy scene art referencing tokens", icon: AI_ICONS.imageGen }
       ];
 
@@ -450,7 +452,7 @@ export function setupToolbarUI(engine: CanvasEngine): void {
         b.style.cssText = `padding: 8px 10px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 10px; text-align: left; ${active ? "background: rgba(192, 132, 252, 0.25); border: 1px solid #c084fc; color: #ffffff; font-weight: 700;" : "color: #cbd5e1;"}`;
         b.innerHTML = `<span style="font-size: 18px; display: flex; align-items: center;">${o.icon}</span><div style="display: flex; flex-direction: column;"><span style="font-size: 13px;">${o.label}</span><span style="font-size: 11px; color: #94a3b8; font-weight: 400;">${o.desc}</span></div>`;
         b.addEventListener("click", () => {
-          engine.aiTool = o.id;
+          engine.aiTool = o.id as any;
           updateMainAiIcon();
           engine.setTool("ai");
           bar.querySelectorAll(".tool-btn[data-tool-id]").forEach((btnEl) => btnEl.classList.remove("active"));
@@ -465,6 +467,8 @@ export function setupToolbarUI(engine: CanvasEngine): void {
             openAiTokenGenerateModal(engine, createAndDispatchToken);
           } else if (o.id === "vttfx") {
             openVttfxGenerateModal();
+          } else if (o.id === "condition") {
+            openConditionGenerateModal();
           } else if (o.id === "imageGen") {
             openAiImageGenerateModal(engine);
           }

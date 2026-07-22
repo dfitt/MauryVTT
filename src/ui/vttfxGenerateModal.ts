@@ -1,6 +1,7 @@
 import { sessionManager } from "../network/sessionManager.js";
 import { VttfxEffectItem, VttfxBundle, registerEffectFromVttfxItem } from "../effects/vttfxLoader.js";
 import { openGeminiApiKeyModal, checkOrFindProxyPeer, showEnhanceToast, getPeerUsername } from "./enhanceModal.js";
+import { openConditionPreviewModal } from "./conditionAiModal.js";
 import { ChatMessage } from "../types/vtt.js";
 
 export async function openVttfxGenerateModal(): Promise<void> {
@@ -307,7 +308,8 @@ export function setupVttfxProxyListeners(): void {
             status: "success",
             vttfxItem: item,
             iconDesc: payload.iconDesc,
-            animDesc: payload.animDesc
+            animDesc: payload.animDesc,
+            isCondition: payload.isCondition
           });
         } catch (err: any) {
           const errMsg = err.message || String(err);
@@ -330,8 +332,12 @@ export function setupVttfxProxyListeners(): void {
           const friendName = getPeerUsername(payload.proxyPeerId);
           showEnhanceToast(`❌ VTTFX generation via ${friendName}'s API key failed: ${payload.error}`, 10000);
         } else if (payload.status === "success" && payload.vttfxItem) {
-          console.log(`[VttfxProxy] Proxy reported success. Opening preview modal for generated VTTFX: ${payload.vttfxItem.name}`);
-          openVttfxPreviewModal(payload.vttfxItem, payload.iconDesc || "", payload.animDesc || "", payload.proxyPeerId);
+          if (payload.isCondition) {
+            openConditionPreviewModal(payload.vttfxItem, payload.iconDesc || "", payload.proxyPeerId);
+          } else {
+            console.log(`[VttfxProxy] Proxy reported success. Opening preview modal for generated VTTFX: ${payload.vttfxItem.name}`);
+            openVttfxPreviewModal(payload.vttfxItem, payload.iconDesc || "", payload.animDesc || "", payload.proxyPeerId);
+          }
         }
       }
     }

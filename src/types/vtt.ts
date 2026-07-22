@@ -298,6 +298,7 @@ export type EphemeralPayload =
       proxyPeerId: string;
       iconDesc: string;
       animDesc: string;
+      isCondition?: boolean;
     }
   | {
       type: "VTTFX_PROXY_RES";
@@ -308,6 +309,7 @@ export type EphemeralPayload =
       vttfxItem?: any;
       iconDesc?: string;
       animDesc?: string;
+      isCondition?: boolean;
       error?: string;
     }
   | {
