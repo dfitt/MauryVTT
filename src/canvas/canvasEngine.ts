@@ -2014,19 +2014,78 @@ export class CanvasEngine {
           if (!def) continue;
 
           ctx.save();
-          // Draw pulsing aura ring around token
-          const pulse = 0.5 + 0.35 * Math.sin(now / 250 + customIdx);
-          ctx.strokeStyle = `rgba(56, 189, 248, ${pulse})`;
-          ctx.lineWidth = Math.max(2.5, 4 / this.zoom);
-          ctx.shadowColor = "#38bdf8";
-          ctx.shadowBlur = 10 / this.zoom;
-          const auraRadius = Math.max(displayW, displayH) * 0.58 + (customIdx * 4 / this.zoom);
+
+          // Extract bespoke condition colors from particles or def
+          const particleColors = def.particles?.colors && def.particles.colors.length > 0
+            ? def.particles.colors
+            : ["#38bdf8", "#c084fc"];
+          const primaryColor = particleColors[0] || "#38bdf8";
+          const accentColor = particleColors[1] || particleColors[0] || "#c084fc";
+
+          // Draw bespoke pulsing aura ring in condition's primary color
+          const pulse = 0.45 + 0.4 * Math.sin(now / 220 + customIdx * 1.5);
+          ctx.strokeStyle = primaryColor;
+          ctx.globalAlpha = pulse;
+          ctx.lineWidth = Math.max(3, 4.5 / this.zoom);
+          ctx.shadowColor = primaryColor;
+          ctx.shadowBlur = 12 / this.zoom;
+
+          const auraRadius = Math.max(displayW, displayH) * 0.58 + (customIdx * 5 / this.zoom);
           ctx.beginPath();
           ctx.arc(0, 0, auraRadius, 0, Math.PI * 2);
           ctx.stroke();
 
+          // Draw bespoke orbiting symbols/particles matching condition shape & theme
+          ctx.shadowColor = accentColor;
+          ctx.shadowBlur = 8 / this.zoom;
+          const pConfig = def.particles;
+          const particleCount = pConfig ? Math.min(Math.max(pConfig.count / 4, 3), 6) : 4;
+          const pShape = pConfig?.shape || "sparkle";
+          const gravity = pConfig?.gravity || 0;
+
+          const rotSpeed = now / 650;
+          for (let pIdx = 0; pIdx < particleCount; pIdx++) {
+            const pAngle = rotSpeed + (pIdx * Math.PI * 2) / particleCount;
+            const gravOffset = gravity !== 0 ? Math.sin((now / 800) + pIdx) * (gravity * 0.2 / this.zoom) : 0;
+            const px = Math.cos(pAngle) * auraRadius;
+            const py = Math.sin(pAngle) * auraRadius + gravOffset;
+            const pColor = particleColors[pIdx % particleColors.length];
+
+            ctx.fillStyle = pColor;
+            ctx.globalAlpha = 0.75 + 0.25 * Math.sin(now / 180 + pIdx);
+
+            if (pShape === "ember") {
+              ctx.font = `${Math.max(12, 15 / this.zoom)}px sans-serif`;
+              ctx.textAlign = "center";
+              ctx.textBaseline = "middle";
+              ctx.fillText("🔥", px, py);
+            } else if (pShape === "splinter") {
+              ctx.font = `${Math.max(12, 15 / this.zoom)}px sans-serif`;
+              ctx.textAlign = "center";
+              ctx.textBaseline = "middle";
+              ctx.fillText("❄️", px, py);
+            } else if (pShape === "note") {
+              ctx.font = `${Math.max(12, 15 / this.zoom)}px sans-serif`;
+              ctx.textAlign = "center";
+              ctx.textBaseline = "middle";
+              ctx.fillText("💖", px, py);
+            } else if (pShape === "sparkle") {
+              ctx.font = `${Math.max(12, 15 / this.zoom)}px sans-serif`;
+              ctx.textAlign = "center";
+              ctx.textBaseline = "middle";
+              ctx.fillText("✨", px, py);
+            } else {
+              // Glowing orb
+              const orbRadius = Math.max(3, 4.5 / this.zoom);
+              ctx.beginPath();
+              ctx.arc(px, py, orbRadius, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+
           // Draw status badge / icon
           ctx.shadowBlur = 0;
+          ctx.globalAlpha = 1.0;
           if (def.iconSvg) {
             if (def.iconSvg.includes("<svg")) {
               const cachedImg = this.getOrCacheSvgImage(`cond_icon_${effId}`, def.iconSvg);
@@ -2050,7 +2109,7 @@ export class CanvasEngine {
             }
           } else {
             ctx.font = `${Math.max(13, 16 / this.zoom)}px Outfit, sans-serif`;
-            ctx.fillStyle = "#38bdf8";
+            ctx.fillStyle = primaryColor;
             ctx.textAlign = "center";
             ctx.fillText(`✨ ${def.name || effId}`, 0, -halfH * 0.75);
           }

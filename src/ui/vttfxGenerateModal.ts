@@ -458,34 +458,36 @@ export async function callGeminiConditionGeneration(apiKey: string, iconDesc: st
   ];
 
   const instructions = `You are a master SVG icon designer and CSS animation engineer for a dark-fantasy Virtual Tabletop (VTT).
-Your task is to generate exactly ONE single looping status condition effect (VttfxEffectItem) consisting of 1 clean SVG status badge icon and 1 rich, looping aura/status visual animation suitable for encircling a token on the canvas.
+Your task is to generate exactly ONE single looping status condition effect (VttfxEffectItem) consisting of 1 clean SVG status badge icon and 1 rich, BESPOKE looping aura/status visual animation specifically customized for the requested condition description.
+
 You MUST output a single valid JSON object strictly adhering to the following structure:
 {
   "id": "unique_snake_case_condition_id",
   "name": "Short Condition Name",
   "iconSvg": "<svg viewBox='0 0 64 64' width='1.25em' height='1.25em' data-vtt-icon='unique_snake_case_condition_id' style='vertical-align:-0.25em; display:inline-block; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.85));'>...</svg>",
   "durationMs": 2000,
-  "effectSvg": "<style>@keyframes vttCondPulse { 0%, 100% { transform: scale(1); opacity: 0.8; } 50% { transform: scale(1.08); opacity: 1; } } @keyframes vttCondRotate { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style><div style='position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;'><svg viewBox='0 0 120 120' width='110%' height='110%' style='position: absolute; animation: vttCondPulse 2s ease-in-out infinite, vttCondRotate 8s linear infinite;'>...</svg></div>",
+  "effectSvg": "<style>@keyframes vttCondCustom1 { ... } @keyframes vttCondCustom2 { ... }</style><div style='position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;'><svg viewBox='0 0 120 120' width='115%' height='115%' style='position: absolute; animation: vttCondCustom1 2s ease-in-out infinite;'>...</svg></div>",
   "particles": {
-    "count": 20,
-    "colors": ["#38bdf8", "#e0f2fe", "#7dd3fc"],
-    "speedRange": [15, 45],
-    "sizeRangePx": [2, 5],
-    "gravity": -15,
-    "shape": "circle",
-    "lifeMs": 1500
+    "count": 25,
+    "colors": ["#ff4500", "#ff8c00", "#ffd700"],
+    "speedRange": [20, 60],
+    "sizeRangePx": [3, 7],
+    "gravity": -30,
+    "shape": "ember",
+    "lifeMs": 1400
   },
   "isCondition": true
 }
 
 CRITICAL RULES FOR CONDITIONS:
-1. "id" must be a clean, unique snake_case string.
+1. "id": Clean, unique snake_case string.
 2. "isCondition": MUST be true.
-3. "iconSvg": Must be a high-quality 64x64 SVG status badge or symbol fitting the condition. Must contain data-vtt-icon="unique_snake_case_condition_id".
-4. "effectSvg": Must be a CONTINUOUSLY LOOPING status aura/overlay that surrounds or emanates from a token (using CSS infinite animations like pulse, orbit, glow, or floating runes). Unlike one-shot explosions, it should loop continuously!
-5. "durationMs": Set to between 1800 and 2500 for smooth looping.
-6. "particles": Optional looping ambient particles drifting around the token.
-7. User Condition Description: "${iconDesc || animDesc}"
+3. "iconSvg": High-quality 64x64 SVG status badge or clean symbol fitting the condition. Must contain data-vtt-icon="unique_snake_case_condition_id".
+4. "particles.colors": MUST contain 2 to 4 distinct, vibrant hex color codes strictly matching the requested condition theme (e.g. fire/flame = ["#ff3300", "#ff9900", "#ffcc00"]; ice/frost = ["#00f2fe", "#4facfe", "#ffffff"]; void/shadow = ["#bf5af2", "#7e22ce", "#3b0764"]; poison/acid/nature = ["#30d158", "#34c759", "#a3e635"]; lightning/electric = ["#ffd60a", "#ff9f0a", "#e0f2fe"]).
+5. "particles.shape": Choose the shape fitting the condition: "ember" (fire/flames), "sparkle" (magic/holy/stars), "splinter" (ice/spikes/vines/void), "circle" (mist/bubbles/aura), or "note" (charm/music/love).
+6. "particles.gravity": Use negative values (-40 to -10) for rising embers/bubbles, positive values (+10 to +30) for falling snow/frost/acid, or 0 for orbiting sparkles.
+7. "effectSvg": MUST be a CONTINUOUSLY LOOPING bespoke status aura overlay with unique CSS @keyframes (prefixed with vttCond, e.g. vttCondFlame, vttCondFrost, vttCondVoid) featuring custom elements like elemental runes, orbiting shards, glowing tendrils, or pulsing rings.
+8. User Condition Description: "${iconDesc || animDesc}"
 
 Return ONLY valid JSON without any markdown formatting or commentary.`;
 
