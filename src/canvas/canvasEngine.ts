@@ -1053,6 +1053,11 @@ export class CanvasEngine {
     const sortedTokens = [...tokens].sort((a, b) => a.zIndex - b.zIndex);
     for (const ent of sortedTokens) {
       const tok = ent as TokenEntity;
+      if (tok.secret) {
+        const myPeerId = sessionManager.myPeerId || "local";
+        const isMySecret = tok.secretPeerId === myPeerId || tok.secretPeerId === "local";
+        if (!isMySecret) continue;
+      }
       const gx = Math.floor(tok.position.x / gridSizePx);
       const gy = Math.floor(tok.position.y / gridSizePx);
       const cellKey = `${gx},${gy}`;
@@ -1521,6 +1526,11 @@ export class CanvasEngine {
     for (const ent of Object.values(doc.entities)) {
       if (ent.type !== "token") continue;
       const tok = ent as TokenEntity;
+      if (tok.secret) {
+        const myPeerId = sessionManager.myPeerId || "local";
+        const isMySecret = tok.secretPeerId === myPeerId || tok.secretPeerId === "local";
+        if (!isMySecret) continue;
+      }
 
       let targetScale = 1.0;
       if (!this.isTouchInput && this.selectedEntityId !== tok.id && curGx !== null && curGy !== null) {
@@ -1644,7 +1654,18 @@ export class CanvasEngine {
       let baseRot = imgEnt.rotation || 0;
       let baseAlpha = imgEnt.opacity ?? 1.0;
       if (ent.type === "token") {
-        const effects = (ent as TokenEntity).statusEffects || [];
+        const tok = ent as TokenEntity;
+        if (tok.secret) {
+          const myPeerId = sessionManager.myPeerId || "local";
+          const isMySecret = tok.secretPeerId === myPeerId || tok.secretPeerId === "local";
+          if (!isMySecret) {
+            ctx.restore();
+            return;
+          }
+          baseAlpha *= 0.45;
+        }
+
+        const effects = tok.statusEffects || [];
         if (effects.includes("invisible")) baseAlpha *= 0.35;
         if (effects.includes("hidden")) baseAlpha *= 0.6;
         if (effects.includes("frightened")) {
@@ -2226,6 +2247,16 @@ export class CanvasEngine {
           ctx.fillText(condText, 0, badgeY + badgeH / 2);
           ctx.restore();
         }
+      }
+
+      // Draw secret indicator badge for the owner who set it secret
+      if (ent.type === "token" && (ent as TokenEntity).secret) {
+        ctx.font = `${Math.max(8, 10 / this.zoom)}px Outfit, sans-serif`;
+        ctx.fillStyle = "rgba(15, 23, 42, 0.9)";
+        ctx.fillRect(-halfW, -halfH, 16 / this.zoom, 16 / this.zoom);
+        ctx.fillStyle = "#c084fc";
+        ctx.textAlign = "center";
+        ctx.fillText("🤫", -halfW + 8 / this.zoom, -halfH + 12 / this.zoom);
       }
 
       // Draw lock indicator badge (hidden for locked images user cannot select, and hidden in Simple Mode)

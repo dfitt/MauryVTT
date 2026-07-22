@@ -136,6 +136,8 @@ export interface TokenEntity extends BaseEntity {
   maxHp?: string | number;
   hpHistory?: (string | number | { val: string | number; timestamp?: number })[];
   description?: string;
+  secret?: boolean;
+  secretPeerId?: string;
 }
 
 export interface LineEntity extends BaseEntity {

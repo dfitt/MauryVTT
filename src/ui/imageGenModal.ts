@@ -82,10 +82,16 @@ export async function openImageGenDescriptionModal(
 
   for (const ent of Object.values(doc.entities)) {
     if (ent.type === "token" && ent.label && ent.label.trim() !== "") {
+      const tok = ent as TokenEntity;
+      if (tok.secret) {
+        const myPeerId = sessionManager.myPeerId || "local";
+        const isMySecret = tok.secretPeerId === myPeerId || tok.secretPeerId === "local";
+        if (!isMySecret) continue;
+      }
       const labelClean = ent.label.trim();
       if (!seenNames.has(labelClean.toLowerCase())) {
         seenNames.add(labelClean.toLowerCase());
-        tokenCandidates.push(ent as TokenEntity);
+        tokenCandidates.push(tok);
       }
     }
   }

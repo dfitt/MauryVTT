@@ -84,6 +84,8 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
   let activeMaxHpInput: HTMLInputElement | null = null;
   let activeMineCheckbox: HTMLInputElement | null = null;
   let activeMineSpan: HTMLSpanElement | null = null;
+  let activeSecretCheckbox: HTMLInputElement | null = null;
+  let activeSecretSpan: HTMLSpanElement | null = null;
   let lastSelectedId: string | null = null;
   const conditionCheckboxesMap = new Map<string, HTMLInputElement>();
 
@@ -168,6 +170,9 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
       const isMine = token.primaryOwnerUsername === myUsername || (doc.primaryTokens?.[myUsername] === token.id);
       if (activeMineCheckbox) activeMineCheckbox.checked = isMine;
       if (activeMineSpan) activeMineSpan.textContent = isMine ? "Mine ✓" : "Mine";
+      const isSecret = Boolean(token.secret);
+      if (activeSecretCheckbox) activeSecretCheckbox.checked = isSecret;
+      if (activeSecretSpan) activeSecretSpan.textContent = isSecret ? "Secret 🤫 ✓" : "Secret 🤫";
 
       const activeCondCount = (token.statusEffects || []).length;
       if (activeCondBtn) {
@@ -427,6 +432,41 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
       });
 
       bar.appendChild(mineBtn);
+
+      // Secret Checkbox Button
+      const secretBtn = document.createElement("button");
+      secretBtn.className = "btn-glass btn-sm";
+      secretBtn.setAttribute("data-tooltip", "Toggle Secret token (Visible only to you as semi-transparent)");
+      secretBtn.style.cssText = "margin: 0 4px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;";
+
+      const secretCheckbox = document.createElement("input");
+      activeSecretCheckbox = secretCheckbox;
+      secretCheckbox.type = "checkbox";
+      const isSecret = Boolean(token.secret);
+      secretCheckbox.checked = isSecret;
+      secretCheckbox.style.cssText = "cursor: pointer; accent-color: #c084fc;";
+
+      secretBtn.appendChild(secretCheckbox);
+      const secretSpan = document.createElement("span");
+      activeSecretSpan = secretSpan;
+      secretSpan.textContent = isSecret ? "Secret 🤫 ✓" : "Secret 🤫";
+      secretBtn.appendChild(secretSpan);
+
+      secretBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        secretCheckbox.checked = !secretCheckbox.checked;
+        const newSecret = secretCheckbox.checked;
+        sessionManager.dispatchOperation({
+          opType: "UPDATE_ENTITY",
+          id: token.id,
+          patch: {
+            secret: newSecret,
+            secretPeerId: newSecret ? myPeerId : undefined
+          } as any
+        });
+      });
+
+      bar.appendChild(secretBtn);
 
       // Description Popover & Button
       const descContainer = document.createElement("div");

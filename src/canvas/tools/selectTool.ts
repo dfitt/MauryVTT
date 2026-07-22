@@ -117,6 +117,14 @@ export function bindSelectTool(engine: CanvasEngine): void {
       if (ent.type === "image" && ent.locked && !canSelectLockedImage(ent)) {
         continue;
       }
+      if (ent.type === "token") {
+        const tok = ent as TokenEntity;
+        if (tok.secret) {
+          const myPeerId = sessionManager.myPeerId || "local";
+          const isMySecret = tok.secretPeerId === myPeerId || tok.secretPeerId === "local";
+          if (!isMySecret) continue;
+        }
+      }
       if (ent.type === "image" || ent.type === "token") {
         const img = ent as ImageEntity | TokenEntity;
         const halfW = img.size.width / 2;
