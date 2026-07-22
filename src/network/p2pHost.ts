@@ -174,7 +174,7 @@ export class P2PHost {
     this.lastSeenMap.set(conn.peer, Date.now());
     if (data && typeof data === "object" && "type" in data) {
       const type = data.type;
-      if (type === "HEARTBEAT" || type === "CURSOR" || type === "PING" || type === "MEASURE_LINE" || type === "LASER_LINE" || type === "REPLAY_ANIMATION" || (typeof type === "string" && (type.startsWith("ENHANCE_") || type.startsWith("VTTFX_") || type.startsWith("REPLAY_")))) {
+      if (type === "HEARTBEAT" || type === "CURSOR" || type === "PING" || type === "MEASURE_LINE" || type === "LASER_LINE" || type === "REPLAY_ANIMATION" || (typeof type === "string" && (type.startsWith("ENHANCE_") || type.startsWith("VTTFX_") || type.startsWith("REPLAY_") || type.startsWith("IMAGE_GEN_") || type.startsWith("TOKEN_")))) {
         const payload = data as EphemeralPayload;
         for (const l of this.ephemeralListeners) {
           l(payload);
