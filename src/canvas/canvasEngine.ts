@@ -129,6 +129,10 @@ export class CanvasEngine {
   private svgImageCache: Map<string, HTMLImageElement> = new Map();
   private loadingAssets: Set<string> = new Set();
 
+  // Custom Condition DOM overlays
+  private conditionOverlays: Map<string, HTMLElement> = new Map();
+  private activeConditionKeys: Set<string> = new Set();
+
   // Interaction handlers
   private onMouseDownListeners: ((e: MouseEvent, worldX: number, worldY: number) => void)[] = [];
   private onMouseMoveListeners: ((e: MouseEvent, worldX: number, worldY: number) => void)[] = [];
@@ -956,6 +960,7 @@ export class CanvasEngine {
   }
 
   private renderFrame(): void {
+    this.activeConditionKeys.clear();
     const curW = Math.max(this.canvas.parentElement?.clientWidth || 0, window.innerWidth);
     const curH = Math.max(this.canvas.parentElement?.clientHeight || 0, window.innerHeight);
     if (curW > 0 && curH > 0 && (this.canvas.width !== curW || this.canvas.height !== curH)) {
@@ -1347,6 +1352,13 @@ export class CanvasEngine {
     }
 
     ctx.restore();
+
+    for (const [key, overlay] of this.conditionOverlays.entries()) {
+      if (!this.activeConditionKeys.has(key)) {
+        if (overlay.parentElement) overlay.parentElement.removeChild(overlay);
+        this.conditionOverlays.delete(key);
+      }
+    }
 
     this.drawRemoteCursors(ctx, now);
   }
@@ -2039,16 +2051,29 @@ export class CanvasEngine {
           // Draw bespoke condition SVG artwork overlay if present
           const animSvg = def.conditionData?.animation?.effectSvg || (def.renderSvg ? def.renderSvg() : "");
           if (animSvg && animSvg.includes("<svg")) {
-            const cachedAnim = this.getOrCacheSvgImage(`cond_anim_${effId}`, animSvg);
-            if (cachedAnim && cachedAnim.complete && cachedAnim.naturalWidth > 0) {
-              ctx.save();
-              const animSize = auraRadius * 2.2;
-              const animRot = (now / 2500) * (customIdx % 2 === 0 ? 1 : -1);
-              ctx.rotate(animRot);
-              ctx.globalAlpha = 0.85 + 0.15 * Math.sin(now / 350 + customIdx);
-              ctx.drawImage(cachedAnim, -animSize / 2, -animSize / 2, animSize, animSize);
-              ctx.restore();
+            const key = `${ent.id}_${effId}`;
+            this.activeConditionKeys.add(key);
+            let overlay = this.conditionOverlays.get(key);
+            if (!overlay) {
+              overlay = document.createElement("div");
+              overlay.className = "vtt-condition-overlay";
+              overlay.style.position = "fixed";
+              overlay.style.pointerEvents = "none";
+              overlay.style.zIndex = "10";
+              overlay.style.display = "flex";
+              overlay.style.alignItems = "center";
+              overlay.style.justifyContent = "center";
+              overlay.innerHTML = animSvg;
+              document.body.appendChild(overlay);
+              this.conditionOverlays.set(key, overlay);
             }
+
+            const screenPos = this.worldToScreen(renderX, renderY);
+            const animSize = auraRadius * 2.2 * this.zoom;
+            overlay.style.width = `${animSize}px`;
+            overlay.style.height = `${animSize}px`;
+            overlay.style.left = `${screenPos.x - animSize / 2}px`;
+            overlay.style.top = `${screenPos.y - animSize / 2}px`;
           }
 
           // Draw bespoke orbiting symbols/particles matching condition shape & theme
