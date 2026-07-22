@@ -8,6 +8,7 @@ import {
 } from "../types/vtt.js";
 import { assetStore } from "./idbAssetStore.js";
 import { loadVttfxBundleFromBundle } from "../effects/vttfxLoader.js";
+import { registerCondition } from "../effects/effectDefs.js";
 
 
 const LOCAL_STORAGE_KEY = "vtt_active_document_snapshot";
@@ -48,6 +49,7 @@ export class DocumentStore {
       chatHistory: [],
       quickRolls: {},
       customVttfxBundles: {},
+      customConditions: {},
       primaryTokens: {},
       characterSheets: {}
     };
@@ -125,6 +127,13 @@ export class DocumentStore {
     } else {
       for (const bundle of Object.values(this.doc.customVttfxBundles)) {
         if (bundle) loadVttfxBundleFromBundle(bundle);
+      }
+    }
+    if (!this.doc.customConditions) {
+      this.doc.customConditions = {};
+    } else {
+      for (const cond of Object.values(this.doc.customConditions)) {
+        if (cond) registerCondition(cond);
       }
     }
     if (!this.doc.primaryTokens) {
@@ -454,6 +463,14 @@ export class DocumentStore {
         const key = op.bundle.bundleName || "bundle_" + Date.now();
         this.doc.customVttfxBundles[key] = op.bundle;
         loadVttfxBundleFromBundle(op.bundle);
+        break;
+      }
+      case "REGISTER_CONDITION": {
+        if (!this.doc.customConditions) {
+          this.doc.customConditions = {};
+        }
+        this.doc.customConditions[op.condition.id] = op.condition;
+        registerCondition(op.condition);
         break;
       }
     }

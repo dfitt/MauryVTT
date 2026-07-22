@@ -23,6 +23,28 @@ export interface CharacterSheetData {
   hpHistory?: (string | number | { val: string | number; timestamp?: number })[];
 }
 
+export interface ConditionAnimation {
+  effectSvg: string;       // Looping CSS + SVG animation overlay string
+  keyframes?: string;      // Optional separate CSS keyframes block
+  colors: string[];        // Color palette for aura ring & particles (2-4 colors)
+  shape: "circle" | "sparkle" | "ember" | "splinter" | "note"; // Orbiting particle shape
+  count: number;           // Number of aura particles
+  speedRange: [number, number]; // Velocity range [min, max]
+  sizeRangePx: [number, number]; // Size range [min, max]
+  gravity: number;         // Gravity (-40 to +30)
+  lifeMs: number;          // Particle lifetime in ms
+}
+
+export interface ConditionData {
+  id: string;              // Unique snake_case condition ID
+  name: string;            // Display name
+  description?: string;    // Prompt / description
+  iconSvg: string;         // 64x64 SVG status badge icon (or emoji)
+  durationMs: number;      // Loop duration (typically 2000ms)
+  animation: ConditionAnimation; // Dedicated animation structure holding visual effects and particles
+  isCondition: true;       // Discriminator flag
+}
+
 export interface VTTDocument {
   version: "1.0.0";
   documentId: string;
@@ -37,6 +59,7 @@ export interface VTTDocument {
   chatHistory: ChatMessage[];
   quickRolls: Record<string, QuickRoll[]>; // Keyed by username
   customVttfxBundles?: Record<string, any>;
+  customConditions?: Record<string, ConditionData>; // Keyed by condition id -> ConditionData
   primaryTokens?: Record<string, string>; // Keyed by username -> tokenId
   characterSheets?: Record<string, CharacterSheetData>; // Keyed by username
 }
@@ -187,6 +210,7 @@ export type DocumentOperation =
   | { opType: "UPDATE_CHARACTER_SHEET"; username: string; sheet: CharacterSheetData }
   | { opType: "CLEAR_CHAT_HISTORY" }
   | { opType: "REGISTER_VTTFX_BUNDLE"; bundle: any }
+  | { opType: "REGISTER_CONDITION"; condition: ConditionData }
   | { opType: "BATCH"; ops: DocumentOperation[] };
 
 // ==========================================
@@ -307,6 +331,7 @@ export type EphemeralPayload =
       proxyPeerId: string;
       status: "success" | "error";
       vttfxItem?: any;
+      conditionItem?: ConditionData;
       iconDesc?: string;
       animDesc?: string;
       isCondition?: boolean;

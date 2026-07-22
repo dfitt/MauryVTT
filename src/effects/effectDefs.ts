@@ -1,3 +1,5 @@
+import { ConditionData } from "../types/vtt.js";
+
 export interface ParticleConfig {
   count: number;
   colors: string[];
@@ -17,12 +19,36 @@ export interface VttEffectDefinition {
   name?: string;
   iconSvg?: string;
   isCondition?: boolean;
+  conditionData?: ConditionData;
 }
 
 export const EFFECT_REGISTRY: Record<string, VttEffectDefinition> = {};
 
 export function registerEffect(def: VttEffectDefinition): void {
   EFFECT_REGISTRY[def.id] = def;
+}
+
+export function registerCondition(data: ConditionData): void {
+  const particles: ParticleConfig = {
+    count: data.animation?.count || 25,
+    colors: data.animation?.colors || ["#38bdf8", "#c084fc"],
+    speedRange: data.animation?.speedRange || [20, 60],
+    sizeRangePx: data.animation?.sizeRangePx || [3, 7],
+    gravity: data.animation?.gravity || 0,
+    shape: data.animation?.shape || "sparkle",
+    lifeMs: data.animation?.lifeMs || 1400
+  };
+
+  registerEffect({
+    id: data.id,
+    durationMs: data.durationMs || 2000,
+    renderSvg: () => data.animation?.effectSvg || (data as any).effectSvg || "",
+    particles,
+    name: data.name,
+    iconSvg: data.iconSvg,
+    isCondition: true,
+    conditionData: data
+  });
 }
 
 export function getEffectIdForIcon(icon?: string): string | null {

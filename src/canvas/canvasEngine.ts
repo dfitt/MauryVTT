@@ -2016,8 +2016,9 @@ export class CanvasEngine {
           ctx.save();
 
           // Extract bespoke condition colors from particles or def
-          const particleColors = def.particles?.colors && def.particles.colors.length > 0
-            ? def.particles.colors
+          const pConfig = def.conditionData?.animation || def.particles;
+          const particleColors = pConfig?.colors && pConfig.colors.length > 0
+            ? pConfig.colors
             : ["#38bdf8", "#c084fc"];
           const primaryColor = particleColors[0] || "#38bdf8";
           const accentColor = particleColors[1] || particleColors[0] || "#c084fc";
@@ -2038,8 +2039,7 @@ export class CanvasEngine {
           // Draw bespoke orbiting symbols/particles matching condition shape & theme
           ctx.shadowColor = accentColor;
           ctx.shadowBlur = 8 / this.zoom;
-          const pConfig = def.particles;
-          const particleCount = pConfig ? Math.min(Math.max(pConfig.count / 4, 3), 6) : 4;
+          const particleCount = pConfig ? Math.min(Math.max((pConfig.count || 25) / 4, 3), 6) : 4;
           const pShape = pConfig?.shape || "sparkle";
           const gravity = pConfig?.gravity || 0;
 

@@ -2,7 +2,7 @@ import { sessionManager } from "../network/sessionManager.js";
 import { VttfxEffectItem, VttfxBundle, registerEffectFromVttfxItem } from "../effects/vttfxLoader.js";
 import { openGeminiApiKeyModal, checkOrFindProxyPeer, showEnhanceToast, getPeerUsername } from "./enhanceModal.js";
 import { openConditionPreviewModal } from "./conditionAiModal.js";
-import { ChatMessage } from "../types/vtt.js";
+import { ChatMessage, ConditionData } from "../types/vtt.js";
 import { CanvasEngine } from "../canvas/canvasEngine.js";
 
 export async function openVttfxGenerateModal(): Promise<void> {
@@ -302,11 +302,12 @@ export function setupVttfxProxyListeners(): void {
 
         console.log(`[VttfxProxy] Local machine is processing VTTFX proxy generation via API... (isCondition: ${payload.isCondition})`);
         try {
-          const item = payload.isCondition
-            ? await callGeminiConditionGeneration(apiKey, payload.iconDesc, payload.animDesc)
-            : await callGeminiVttfxGeneration(apiKey, payload.iconDesc, payload.animDesc);
+          let item: any;
           if (payload.isCondition) {
+            item = await callGeminiConditionGeneration(apiKey, payload.iconDesc, payload.animDesc);
             item.isCondition = true;
+          } else {
+            item = await callGeminiVttfxGeneration(apiKey, payload.iconDesc, payload.animDesc);
           }
           console.log(`[VttfxProxy] Proxy generation succeeded. Dispatching VTTFX_PROXY_RES for ID: ${payload.reqId}`);
           sessionManager.sendEphemeral({
@@ -316,6 +317,7 @@ export function setupVttfxProxyListeners(): void {
             proxyPeerId: myId,
             status: "success",
             vttfxItem: item,
+            conditionItem: payload.isCondition ? item : undefined,
             iconDesc: payload.iconDesc,
             animDesc: payload.animDesc,
             isCondition: payload.isCondition
@@ -340,13 +342,14 @@ export function setupVttfxProxyListeners(): void {
           console.error(`[VttfxProxy] Proxy reported error: ${payload.error}`);
           const friendName = getPeerUsername(payload.proxyPeerId);
           showEnhanceToast(`❌ VTTFX generation via ${friendName}'s API key failed: ${payload.error}`, 10000);
-        } else if (payload.status === "success" && payload.vttfxItem) {
+        } else if (payload.status === "success" && (payload.vttfxItem || payload.conditionItem)) {
+          const itemToOpen = payload.conditionItem || payload.vttfxItem;
           if (payload.isCondition) {
-            payload.vttfxItem.isCondition = true;
-            openConditionPreviewModal(payload.vttfxItem, payload.iconDesc || "", payload.proxyPeerId);
+            itemToOpen.isCondition = true;
+            openConditionPreviewModal(itemToOpen, payload.iconDesc || "", payload.proxyPeerId);
           } else {
-            console.log(`[VttfxProxy] Proxy reported success. Opening preview modal for generated VTTFX: ${payload.vttfxItem.name}`);
-            openVttfxPreviewModal(payload.vttfxItem, payload.iconDesc || "", payload.animDesc || "", payload.proxyPeerId);
+            console.log(`[VttfxProxy] Proxy reported success. Opening preview modal for generated VTTFX: ${itemToOpen.name}`);
+            openVttfxPreviewModal(itemToOpen, payload.iconDesc || "", payload.animDesc || "", payload.proxyPeerId);
           }
         }
       }
@@ -449,7 +452,7 @@ Return ONLY valid JSON without any markdown formatting or commentary.`;
   throw new Error(`All models failed: ${errorsCollected.join("; ")}`);
 }
 
-export async function callGeminiConditionGeneration(apiKey: string, iconDesc: string, animDesc: string): Promise<VttfxEffectItem> {
+export async function callGeminiConditionGeneration(apiKey: string, iconDesc: string, animDesc: string): Promise<ConditionData> {
   const modelsToTry = [
     "gemini-3.5-flash",
     "gemini-3.0-flash",
@@ -458,22 +461,24 @@ export async function callGeminiConditionGeneration(apiKey: string, iconDesc: st
   ];
 
   const instructions = `You are a master SVG icon designer and CSS animation engineer for a dark-fantasy Virtual Tabletop (VTT).
-Your task is to generate exactly ONE single looping status condition effect (VttfxEffectItem) consisting of 1 clean SVG status badge icon and 1 rich, BESPOKE looping aura/status visual animation specifically customized for the requested condition description.
+Your task is to generate exactly ONE single looping status condition effect adhering to the dedicated ConditionData JSON datatype.
+The ConditionData datatype strictly separates the status badge icon ("iconSvg") from the bespoke token aura visual animation and particles ("animation").
 
 You MUST output a single valid JSON object strictly adhering to the following structure:
 {
   "id": "unique_snake_case_condition_id",
   "name": "Short Condition Name",
+  "description": "${iconDesc || animDesc || 'Token Condition'}",
   "iconSvg": "<svg viewBox='0 0 64 64' width='1.25em' height='1.25em' data-vtt-icon='unique_snake_case_condition_id' style='vertical-align:-0.25em; display:inline-block; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.85));'>...</svg>",
   "durationMs": 2000,
-  "effectSvg": "<style>@keyframes vttCondCustom1 { ... } @keyframes vttCondCustom2 { ... }</style><div style='position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;'><svg viewBox='0 0 120 120' width='115%' height='115%' style='position: absolute; animation: vttCondCustom1 2s ease-in-out infinite;'>...</svg></div>",
-  "particles": {
-    "count": 25,
+  "animation": {
+    "effectSvg": "<style>@keyframes vttCondCustom1 { ... } @keyframes vttCondCustom2 { ... }</style><div style='position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none;'><svg viewBox='0 0 120 120' width='115%' height='115%' style='position: absolute; animation: vttCondCustom1 2s ease-in-out infinite;'>...</svg></div>",
     "colors": ["#ff4500", "#ff8c00", "#ffd700"],
+    "shape": "ember",
+    "count": 25,
     "speedRange": [20, 60],
     "sizeRangePx": [3, 7],
     "gravity": -30,
-    "shape": "ember",
     "lifeMs": 1400
   },
   "isCondition": true
@@ -483,10 +488,10 @@ CRITICAL RULES FOR CONDITIONS:
 1. "id": Clean, unique snake_case string.
 2. "isCondition": MUST be true.
 3. "iconSvg": High-quality 64x64 SVG status badge or clean symbol fitting the condition. Must contain data-vtt-icon="unique_snake_case_condition_id".
-4. "particles.colors": MUST contain 2 to 4 distinct, vibrant hex color codes strictly matching the requested condition theme (e.g. fire/flame = ["#ff3300", "#ff9900", "#ffcc00"]; ice/frost = ["#00f2fe", "#4facfe", "#ffffff"]; void/shadow = ["#bf5af2", "#7e22ce", "#3b0764"]; poison/acid/nature = ["#30d158", "#34c759", "#a3e635"]; lightning/electric = ["#ffd60a", "#ff9f0a", "#e0f2fe"]).
-5. "particles.shape": Choose the shape fitting the condition: "ember" (fire/flames), "sparkle" (magic/holy/stars), "splinter" (ice/spikes/vines/void), "circle" (mist/bubbles/aura), or "note" (charm/music/love).
-6. "particles.gravity": Use negative values (-40 to -10) for rising embers/bubbles, positive values (+10 to +30) for falling snow/frost/acid, or 0 for orbiting sparkles.
-7. "effectSvg": MUST be a CONTINUOUSLY LOOPING bespoke status aura overlay with unique CSS @keyframes (prefixed with vttCond, e.g. vttCondFlame, vttCondFrost, vttCondVoid) featuring custom elements like elemental runes, orbiting shards, glowing tendrils, or pulsing rings.
+4. "animation.colors": MUST contain 2 to 4 distinct, vibrant hex color codes strictly matching the requested condition theme (e.g. fire/flame = ["#ff3300", "#ff9900", "#ffcc00"]; ice/frost = ["#00f2fe", "#4facfe", "#ffffff"]; void/shadow = ["#bf5af2", "#7e22ce", "#3b0764"]; poison/acid/nature = ["#30d158", "#34c759", "#a3e635"]; lightning/electric = ["#ffd60a", "#ff9f0a", "#e0f2fe"]).
+5. "animation.shape": Choose the shape fitting the condition: "ember" (fire/flames), "sparkle" (magic/holy/stars), "splinter" (ice/spikes/vines/void), "circle" (mist/bubbles/aura), or "note" (charm/music/love).
+6. "animation.gravity": Use negative values (-40 to -10) for rising embers/bubbles, positive values (+10 to +30) for falling snow/frost/acid, or 0 for orbiting sparkles.
+7. "animation.effectSvg": MUST be a CONTINUOUSLY LOOPING bespoke status aura overlay with unique CSS @keyframes (prefixed with vttCond, e.g. vttCondFlame, vttCondFrost, vttCondVoid) featuring custom elements like elemental runes, orbiting shards, glowing tendrils, or pulsing rings.
 8. User Condition Description: "${iconDesc || animDesc}"
 
 Return ONLY valid JSON without any markdown formatting or commentary.`;
@@ -530,15 +535,35 @@ Return ONLY valid JSON without any markdown formatting or commentary.`;
       }
       cleanJson = cleanJson.trim();
 
-      const item: VttfxEffectItem = JSON.parse(cleanJson);
-      if (!item.id || !item.name || !item.iconSvg || !item.effectSvg) {
-        errorsCollected.push(`[${model}] Missing required properties in generated item.`);
+      const parsed = JSON.parse(cleanJson);
+      if (!parsed.id || !parsed.name || !parsed.iconSvg) {
+        errorsCollected.push(`[${model}] Missing required properties in generated condition item.`);
         continue;
       }
-      if (!item.durationMs || typeof item.durationMs !== "number") {
-        item.durationMs = 2000;
-      }
-      item.isCondition = true;
+
+      const topEffectSvg = parsed.effectSvg || "";
+      const topParticles = parsed.particles || {};
+      const anim = parsed.animation || {};
+
+      const item: ConditionData = {
+        id: parsed.id,
+        name: parsed.name,
+        description: parsed.description || iconDesc || animDesc,
+        iconSvg: parsed.iconSvg,
+        durationMs: typeof parsed.durationMs === "number" ? parsed.durationMs : 2000,
+        animation: {
+          effectSvg: anim.effectSvg || topEffectSvg || "",
+          keyframes: anim.keyframes || "",
+          colors: Array.isArray(anim.colors) && anim.colors.length > 0 ? anim.colors : (Array.isArray(topParticles.colors) && topParticles.colors.length > 0 ? topParticles.colors : ["#38bdf8", "#c084fc"]),
+          shape: anim.shape || topParticles.shape || "sparkle",
+          count: typeof anim.count === "number" ? anim.count : (typeof topParticles.count === "number" ? topParticles.count : 25),
+          speedRange: Array.isArray(anim.speedRange) ? anim.speedRange : (Array.isArray(topParticles.speedRange) ? topParticles.speedRange : [20, 60]),
+          sizeRangePx: Array.isArray(anim.sizeRangePx) ? anim.sizeRangePx : (Array.isArray(topParticles.sizeRangePx) ? topParticles.sizeRangePx : [3, 7]),
+          gravity: typeof anim.gravity === "number" ? anim.gravity : (typeof topParticles.gravity === "number" ? topParticles.gravity : 0),
+          lifeMs: typeof anim.lifeMs === "number" ? anim.lifeMs : (typeof topParticles.lifeMs === "number" ? topParticles.lifeMs : 1400)
+        },
+        isCondition: true
+      };
       return item;
     } catch (err: any) {
       errorsCollected.push(`[${model}] Exception: ${err.message || err}`);

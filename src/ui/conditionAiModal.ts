@@ -3,7 +3,7 @@ import { docStore } from "../state/documentStore.js";
 import { VttfxEffectItem, VttfxBundle } from "../effects/vttfxLoader.js";
 import { openGeminiApiKeyModal, checkOrFindProxyPeer, showEnhanceToast, getPeerUsername } from "./enhanceModal.js";
 import { callGeminiConditionGeneration } from "./vttfxGenerateModal.js";
-import { ChatMessage, TokenEntity } from "../types/vtt.js";
+import { ChatMessage, TokenEntity, ConditionData } from "../types/vtt.js";
 import { CanvasEngine } from "../canvas/canvasEngine.js";
 
 export async function openConditionGenerateModal(): Promise<void> {
@@ -117,7 +117,7 @@ function openConditionGenerateDescriptionModal(hasProxy: boolean, proxyPeerId: s
   document.body.appendChild(modal);
 }
 
-export function openConditionPreviewModal(vttfxItem: VttfxEffectItem, origPrompt: string, proxyPeerId: string | null): void {
+export function openConditionPreviewModal(vttfxItem: ConditionData | any, origPrompt: string, proxyPeerId: string | null): void {
   vttfxItem.isCondition = true;
   CanvasEngine.activateSelectTool();
   let oldModal = document.getElementById("condition-preview-modal");
@@ -168,13 +168,13 @@ export function openConditionPreviewModal(vttfxItem: VttfxEffectItem, origPrompt
 
   let animationTimer: any = null;
   const triggerAnimationLoop = () => {
-    fxContainer.innerHTML = vttfxItem.effectSvg || "";
-    if (vttfxItem.particles) {
-      const p = vttfxItem.particles;
+    fxContainer.innerHTML = vttfxItem.animation?.effectSvg || vttfxItem.effectSvg || "";
+    const p = vttfxItem.animation || vttfxItem.particles;
+    if (p) {
       const count = Math.min(p.count || 12, 30);
       for (let i = 0; i < count; i++) {
         const pEl = document.createElement("div");
-        const color = p.colors?.[i % p.colors.length] || "#38bdf8";
+        const color = p.colors?.[i % (p.colors.length || 1)] || "#38bdf8";
         const size = (p.sizeRangePx?.[0] || 3) + Math.random() * ((p.sizeRangePx?.[1] || 6) - (p.sizeRangePx?.[0] || 3));
         const angle = Math.random() * Math.PI * 2;
         const dist = 10 + Math.random() * 80;
@@ -210,10 +210,15 @@ export function openConditionPreviewModal(vttfxItem: VttfxEffectItem, origPrompt
       version: "1.0",
       bundleName: `Condition: ${vttfxItem.name}`,
       isCondition: true,
-      effects: [vttfxItem]
+      effects: [vttfxItem],
+      conditions: [vttfxItem]
     };
 
-    // Save bundle in document store (synced across P2P and saved with .vttdoc)
+    // Save bundle and structured ConditionData in document store (synced across P2P and saved with .vttdoc)
+    sessionManager.dispatchOperation({
+      opType: "REGISTER_CONDITION",
+      condition: vttfxItem as ConditionData
+    } as any);
     sessionManager.dispatchOperation({
       opType: "REGISTER_VTTFX_BUNDLE",
       bundle: finalBundle

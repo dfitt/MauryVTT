@@ -8,14 +8,15 @@ export function openImportVttfxModal(bundle: VttfxBundle, defaultBundleName?: st
   const existing = document.getElementById("vttfx-import-modal");
   if (existing) existing.remove();
 
+  const effectsList = bundle.effects || [];
   const selectedIndices = new Set<number>();
-  for (let i = 0; i < bundle.effects.length; i++) {
+  for (let i = 0; i < effectsList.length; i++) {
     selectedIndices.add(i);
   }
 
   let currentPage = 0;
   const pageSize = 9;
-  const totalPages = Math.ceil(bundle.effects.length / pageSize);
+  const totalPages = Math.ceil(effectsList.length / pageSize);
 
   const activeTimers: number[] = [];
   const cleanupTimers = () => {
@@ -105,11 +106,11 @@ export function openImportVttfxModal(bundle: VttfxBundle, defaultBundleName?: st
   selectAllBtn.style.cssText = "padding: 4px 12px; font-size: 0.85em; cursor: pointer; border-radius: 6px; color: #cbd5e1;";
   selectAllBtn.textContent = "Select All";
   selectAllBtn.addEventListener("click", () => {
-    if (selectedIndices.size === bundle.effects.length) {
+    if (selectedIndices.size === effectsList.length) {
       selectedIndices.clear();
       selectAllBtn.textContent = "Select All";
     } else {
-      for (let i = 0; i < bundle.effects.length; i++) {
+      for (let i = 0; i < effectsList.length; i++) {
         selectedIndices.add(i);
       }
       selectAllBtn.textContent = "Deselect All";
@@ -165,7 +166,7 @@ export function openImportVttfxModal(bundle: VttfxBundle, defaultBundleName?: st
   importBtn.style.cssText = "padding: 8px 20px; cursor: pointer; border-radius: 8px; background: rgba(56, 189, 248, 0.25); border-color: #38bdf8; color: #38bdf8; font-weight: 700;";
   importBtn.textContent = `Import Selected (${selectedIndices.size})`;
   importBtn.addEventListener("click", () => {
-    const selectedEffects = bundle.effects.filter((_, i) => selectedIndices.has(i));
+    const selectedEffects = effectsList.filter((_, i) => selectedIndices.has(i));
     if (selectedEffects.length === 0) {
       alert("Please select at least one VFX effect to import.");
       return;
@@ -205,10 +206,10 @@ export function openImportVttfxModal(bundle: VttfxBundle, defaultBundleName?: st
     importBtn.textContent = `Import Selected (${selectedIndices.size})`;
 
     const startIdx = currentPage * pageSize;
-    const endIdx = Math.min(bundle.effects.length, startIdx + pageSize);
+    const endIdx = Math.min(effectsList.length, startIdx + pageSize);
 
     for (let i = startIdx; i < endIdx; i++) {
-      const item: VttfxEffectItem = bundle.effects[i];
+      const item: any = effectsList[i];
       const isSelected = selectedIndices.has(i);
 
       const card = document.createElement("div");
@@ -297,9 +298,10 @@ export function openImportVttfxModal(bundle: VttfxBundle, defaultBundleName?: st
 
       // Animation loop runner
       const runAnimLoop = () => {
-        loopBg.innerHTML = item.effectSvg || "";
-        if (item.particles && pCanvas) {
-          EffectEngine.runParticleSystem(pCanvas, item.particles, item.durationMs || 1000);
+        loopBg.innerHTML = item.effectSvg || item.animation?.effectSvg || "";
+        const p = item.particles || item.animation;
+        if (p && pCanvas) {
+          EffectEngine.runParticleSystem(pCanvas, p, item.durationMs || 1000);
         }
       };
 

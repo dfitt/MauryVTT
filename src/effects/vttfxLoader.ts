@@ -1,4 +1,5 @@
-import { registerEffect, ParticleConfig } from "./effectDefs.js";
+import { registerEffect, registerCondition, ParticleConfig } from "./effectDefs.js";
+import { ConditionData } from "../types/vtt.js";
 import { registerCustomRollIcon } from "../ui/rollIcons.js";
 
 export interface VttfxEffectItem {
@@ -6,24 +7,38 @@ export interface VttfxEffectItem {
   name: string;
   iconSvg?: string;
   durationMs: number;
-  effectSvg: string;
+  effectSvg?: string;
   particles?: ParticleConfig;
   isCondition?: boolean;
+  animation?: any;
 }
 
 export interface VttfxBundle {
   version: string;
   bundleName: string;
-  effects: VttfxEffectItem[];
+  effects: (VttfxEffectItem | ConditionData | any)[];
+  conditions?: ConditionData[];
   isCondition?: boolean;
 }
 
-export function registerEffectFromVttfxItem(item: VttfxEffectItem): void {
+export function registerEffectFromVttfxItem(item: VttfxEffectItem | ConditionData | any): void {
+  if (item.isCondition && item.animation) {
+    registerCondition(item as ConditionData);
+    return;
+  }
   registerEffect({
     id: item.id,
     durationMs: item.durationMs,
-    renderSvg: () => item.effectSvg,
-    particles: item.particles,
+    renderSvg: () => item.effectSvg || item.animation?.effectSvg || "",
+    particles: item.particles || (item.animation ? {
+      count: item.animation.count || 25,
+      colors: item.animation.colors || ["#38bdf8", "#c084fc"],
+      speedRange: item.animation.speedRange || [20, 60],
+      sizeRangePx: item.animation.sizeRangePx || [3, 7],
+      gravity: item.animation.gravity || 0,
+      shape: item.animation.shape || "sparkle",
+      lifeMs: item.animation.lifeMs || 1400
+    } : undefined),
     name: item.name,
     iconSvg: item.iconSvg,
     isCondition: item.isCondition
@@ -34,18 +49,26 @@ export function registerEffectFromVttfxItem(item: VttfxEffectItem): void {
 }
 
 export function loadVttfxBundleFromBundle(bundle: VttfxBundle): void {
-  if (!bundle || !Array.isArray(bundle.effects)) {
+  if (!bundle) {
     console.warn("Invalid VttfxBundle provided.");
     return;
   }
   const isBundleCondition = bundle.isCondition || (bundle.bundleName && bundle.bundleName.startsWith("Condition:"));
-  for (const item of bundle.effects) {
-    if (isBundleCondition) {
-      item.isCondition = true;
+  if (Array.isArray(bundle.effects)) {
+    for (const item of bundle.effects) {
+      if (isBundleCondition) {
+        item.isCondition = true;
+      }
+      registerEffectFromVttfxItem(item);
     }
-    registerEffectFromVttfxItem(item);
   }
-  console.log(`Loaded VTTFX Bundle '${bundle.bundleName}' (${bundle.effects.length} effects).`);
+  if (Array.isArray(bundle.conditions)) {
+    for (const cond of bundle.conditions) {
+      cond.isCondition = true;
+      registerCondition(cond);
+    }
+  }
+  console.log(`Loaded VTTFX Bundle '${bundle.bundleName}'.`);
 }
 
 export async function loadVttfxBundleFromUrl(url: string): Promise<boolean> {
