@@ -2123,36 +2123,8 @@ export class CanvasEngine {
           overlay.style.left = `${screenPos.x - animSize / 2}px`;
           overlay.style.top = `${screenPos.y - animSize / 2}px`;
 
-          // Draw status badge / icon on canvas
-          ctx.shadowBlur = 0;
-          ctx.globalAlpha = 1.0;
-          if (def.iconSvg) {
-            if (def.iconSvg.includes("<svg")) {
-              const cachedImg = this.getOrCacheSvgImage(`cond_icon_${effId}`, def.iconSvg);
-              if (cachedImg && cachedImg.complete && cachedImg.naturalWidth > 0) {
-                const iconSize = Math.max(18, 26 / this.zoom);
-                const ox = (customIdx % 2 === 0 ? 1 : -1) * (halfW * 0.55);
-                const oy = -halfH * 0.65 - Math.floor(customIdx / 2) * (iconSize + 4 / this.zoom);
-                ctx.drawImage(cachedImg, ox - iconSize / 2, oy - iconSize / 2, iconSize, iconSize);
-              } else {
-                ctx.font = `${Math.max(13, 16 / this.zoom)}px sans-serif`;
-                ctx.textAlign = "center";
-                ctx.fillText("✨", 0, -halfH * 0.75);
-              }
-            } else {
-              // Emoji or short text
-              ctx.font = `${Math.max(14, 18 / this.zoom)}px sans-serif`;
-              ctx.textAlign = "center";
-              const ox = (customIdx % 2 === 0 ? 1 : -1) * (halfW * 0.5);
-              const oy = -halfH * 0.65;
-              ctx.fillText(def.iconSvg, ox, oy);
-            }
-          } else {
-            ctx.font = `${Math.max(13, 16 / this.zoom)}px Outfit, sans-serif`;
-            ctx.fillStyle = primaryColor;
-            ctx.textAlign = "center";
-            ctx.fillText(`✨ ${def.name || effId}`, 0, -halfH * 0.75);
-          }
+
+
           ctx.restore();
           customIdx++;
         }
