@@ -50,6 +50,8 @@ export class DocumentStore {
       quickRolls: {},
       customVttfxBundles: {},
       customConditions: {},
+      conditionUsage: {},
+      vttfxUsage: {},
       primaryTokens: {},
       characterSheets: {}
     };
@@ -135,6 +137,12 @@ export class DocumentStore {
       for (const cond of Object.values(this.doc.customConditions)) {
         if (cond) registerCondition(cond);
       }
+    }
+    if (!this.doc.conditionUsage) {
+      this.doc.conditionUsage = {};
+    }
+    if (!this.doc.vttfxUsage) {
+      this.doc.vttfxUsage = {};
     }
     if (!this.doc.primaryTokens) {
       this.doc.primaryTokens = {};
@@ -234,6 +242,10 @@ export class DocumentStore {
           tok.label = nameToSync;
           tok.updatedAt = Date.now();
         }
+        if (sheet.description !== undefined && tok.description !== sheet.description) {
+          tok.description = sheet.description;
+          tok.updatedAt = Date.now();
+        }
         if (sheet.hp !== undefined && tok.hp !== sheet.hp) {
           tok.hp = sheet.hp;
           tok.updatedAt = Date.now();
@@ -258,6 +270,10 @@ export class DocumentStore {
         const updatedSheet = { ...sheet, username };
         if (nameToSync !== undefined && sheet.characterName !== nameToSync) {
           updatedSheet.characterName = nameToSync;
+          sheetUpdated = true;
+        }
+        if (tok.description !== undefined && sheet.description !== tok.description) {
+          updatedSheet.description = tok.description;
           sheetUpdated = true;
         }
         if (tok.hp !== undefined && sheet.hp !== tok.hp) {
@@ -290,6 +306,24 @@ export class DocumentStore {
           const tok = op.entity as any;
           this.applyAutoHpConditions(tok);
           if (tok.primaryOwnerUsername) {
+            const uname = tok.primaryOwnerUsername;
+            if (!this.doc.characterSheets) this.doc.characterSheets = {};
+            const sheet = this.doc.characterSheets[uname] || { username: uname };
+            const tokDesc = (tok.description || "").trim();
+            const sheetDesc = (sheet.description || "").trim();
+            if (tokDesc !== sheetDesc) {
+              if (tokDesc.length >= sheetDesc.length) {
+                this.doc.characterSheets[uname] = {
+                  ...sheet,
+                  username: uname,
+                  description: tok.description
+                };
+              } else {
+                tok.description = sheet.description;
+                tok.updatedAt = Date.now();
+              }
+            }
+
             this.doc.primaryTokens[tok.primaryOwnerUsername] = tok.id;
             for (const ent of Object.values(this.doc.entities)) {
               if (ent.type === "token" && ent.id !== tok.id && (ent as any).primaryOwnerUsername === tok.primaryOwnerUsername) {
@@ -326,6 +360,25 @@ export class DocumentStore {
               delete this.doc.primaryTokens[oldOwner];
             }
             if (newOwner) {
+              if (oldOwner !== newOwner) {
+                if (!this.doc.characterSheets) this.doc.characterSheets = {};
+                const sheet = this.doc.characterSheets[newOwner] || { username: newOwner };
+                const tokDesc = (updatedTok.description || "").trim();
+                const sheetDesc = (sheet.description || "").trim();
+                if (tokDesc !== sheetDesc) {
+                  if (tokDesc.length >= sheetDesc.length) {
+                    this.doc.characterSheets[newOwner] = {
+                      ...sheet,
+                      username: newOwner,
+                      description: updatedTok.description
+                    };
+                  } else {
+                    updatedTok.description = sheet.description;
+                    updatedTok.updatedAt = Date.now();
+                  }
+                }
+              }
+
               this.doc.primaryTokens[newOwner] = updatedTok.id;
               for (const ent of Object.values(this.doc.entities)) {
                 if (ent.type === "token" && ent.id !== updatedTok.id && (ent as any).primaryOwnerUsername === newOwner) {
@@ -341,11 +394,21 @@ export class DocumentStore {
             }
 
             const patchToken = op.patch as Partial<TokenEntity>;
+            if (patchToken.statusEffects && Array.isArray(patchToken.statusEffects)) {
+              if (!this.doc.conditionUsage) this.doc.conditionUsage = {};
+              const now = Date.now();
+              for (const condId of patchToken.statusEffects) {
+                this.doc.conditionUsage[condId] = now;
+              }
+            }
             if (patchToken.hp !== undefined || patchToken.maxHp !== undefined) {
               if (patchToken.hp !== undefined) {
                 this.recordHpAndCheckMax(updatedTok, patchToken.hp);
               }
               this.applyAutoHpConditions(updatedTok);
+            }
+            if (patchToken.description !== undefined && newOwner) {
+              this.syncNameBetweenSheetAndClaimedToken(newOwner, updatedTok.label, "token");
             }
             if (patchToken.label !== undefined && newOwner) {
               this.syncNameBetweenSheetAndClaimedToken(newOwner, patchToken.label, "token");
@@ -462,6 +525,17 @@ export class DocumentStore {
         }
         const key = op.bundle.bundleName || "bundle_" + Date.now();
         this.doc.customVttfxBundles[key] = op.bundle;
+        if (!this.doc.vttfxUsage) {
+          this.doc.vttfxUsage = {};
+        }
+        const now = Date.now();
+        if (Array.isArray(op.bundle.effects)) {
+          for (const eff of op.bundle.effects) {
+            if (eff && eff.id) {
+              this.doc.vttfxUsage[eff.id] = now;
+            }
+          }
+        }
         loadVttfxBundleFromBundle(op.bundle);
         break;
       }
@@ -470,7 +544,25 @@ export class DocumentStore {
           this.doc.customConditions = {};
         }
         this.doc.customConditions[op.condition.id] = op.condition;
+        if (!this.doc.conditionUsage) {
+          this.doc.conditionUsage = {};
+        }
+        this.doc.conditionUsage[op.condition.id] = Date.now();
         registerCondition(op.condition);
+        break;
+      }
+      case "RECORD_CONDITION_USAGE": {
+        if (!this.doc.conditionUsage) {
+          this.doc.conditionUsage = {};
+        }
+        this.doc.conditionUsage[op.conditionId] = op.timestamp || Date.now();
+        break;
+      }
+      case "RECORD_VTTFX_USAGE": {
+        if (!this.doc.vttfxUsage) {
+          this.doc.vttfxUsage = {};
+        }
+        this.doc.vttfxUsage[op.effectId] = op.timestamp || Date.now();
         break;
       }
     }

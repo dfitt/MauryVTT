@@ -60,6 +60,8 @@ export interface VTTDocument {
   quickRolls: Record<string, QuickRoll[]>; // Keyed by username
   customVttfxBundles?: Record<string, any>;
   customConditions?: Record<string, ConditionData>; // Keyed by condition id -> ConditionData
+  conditionUsage?: Record<string, number>; // Keyed by condition id -> timestamp of last usage
+  vttfxUsage?: Record<string, number>; // Keyed by effect id/icon -> timestamp of last usage
   primaryTokens?: Record<string, string>; // Keyed by username -> tokenId
   characterSheets?: Record<string, CharacterSheetData>; // Keyed by username
 }
@@ -133,6 +135,7 @@ export interface TokenEntity extends BaseEntity {
   hp?: string | number;
   maxHp?: string | number;
   hpHistory?: (string | number | { val: string | number; timestamp?: number })[];
+  description?: string;
 }
 
 export interface LineEntity extends BaseEntity {
@@ -211,6 +214,8 @@ export type DocumentOperation =
   | { opType: "CLEAR_CHAT_HISTORY" }
   | { opType: "REGISTER_VTTFX_BUNDLE"; bundle: any }
   | { opType: "REGISTER_CONDITION"; condition: ConditionData }
+  | { opType: "RECORD_CONDITION_USAGE"; conditionId: string; timestamp?: number }
+  | { opType: "RECORD_VTTFX_USAGE"; effectId: string; timestamp?: number }
   | { opType: "BATCH"; ops: DocumentOperation[] };
 
 // ==========================================

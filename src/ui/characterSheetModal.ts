@@ -319,6 +319,9 @@ export function openCharacterSheetModal(engine?: CanvasEngine): void {
         if (patch.characterName !== undefined && patch.characterName.trim() !== "" && tokenEnt.label !== patch.characterName.trim()) {
           tokenPatch.label = patch.characterName.trim();
         }
+        if (patch.description !== undefined && patch.description !== (tokenEnt.description || "")) {
+          tokenPatch.description = patch.description;
+        }
         if (patch.hp !== undefined && String(patch.hp || "") !== String(tokenEnt.hp || "")) {
           tokenPatch.hp = patch.hp;
         }

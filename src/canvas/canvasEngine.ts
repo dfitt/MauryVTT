@@ -2139,6 +2139,48 @@ export class CanvasEngine {
           ctx.textAlign = "center";
           ctx.fillText(token.label, 0, halfH + 19);
         }
+
+        const isTokenHovered = hoverScale > 1.05;
+        if (isTokenHovered && effects.length > 0) {
+          const doc = docStore.getDocument();
+          const condLabels = effects.map((effId) => {
+            const bc = BASE_CONDITIONS.find((c) => c.id === effId);
+            if (bc) return bc.label;
+            if (doc.customConditions?.[effId]?.name) return doc.customConditions[effId].name;
+            const def = EFFECT_REGISTRY[effId];
+            if (def?.name) return def.name;
+            return effId.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+          });
+
+          const condText = condLabels.join(" • ");
+          ctx.save();
+          ctx.font = `600 ${Math.max(11, 13 / this.zoom)}px Outfit, sans-serif`;
+          const condTextWidth = ctx.measureText(condText).width;
+          const paddingX = 8 / this.zoom;
+          const badgeH = Math.max(20, 24 / this.zoom);
+          const badgeY = -halfH - badgeH - (8 / this.zoom);
+
+          ctx.fillStyle = "rgba(15, 23, 42, 0.94)";
+          ctx.strokeStyle = "rgba(56, 189, 248, 0.65)";
+          ctx.lineWidth = 1.5 / this.zoom;
+
+          const rx = -condTextWidth / 2 - paddingX;
+          const rw = condTextWidth + paddingX * 2;
+          ctx.beginPath();
+          if (typeof (ctx as any).roundRect === "function") {
+            (ctx as any).roundRect(rx, badgeY, rw, badgeH, 6 / this.zoom);
+          } else {
+            ctx.rect(rx, badgeY, rw, badgeH);
+          }
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = "#f8fafc";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(condText, 0, badgeY + badgeH / 2);
+          ctx.restore();
+        }
       }
 
       // Draw lock indicator badge (hidden for locked images user cannot select, and hidden in Simple Mode)

@@ -33,6 +33,33 @@ export const BASE_CONDITIONS: { id: string; label: string }[] = [
   { id: "confused", label: "❓ Confused" }
 ];
 
+export function arrangeItemsForBottomUpGrid<T>(pageItems: T[]): T[] {
+  const M = pageItems.length;
+  if (M <= 1) return [...pageItems];
+
+  const R = Math.ceil(M / 2);
+  const domArray: T[] = new Array(M);
+
+  for (let k = 0; k < M; k++) {
+    const bRow = Math.floor(k / 2); // 0-indexed row from bottom
+    const row = (R - 1) - bRow;     // 0-indexed row from top
+    const col = k % 2;              // 0 = left, 1 = right
+
+    let domIndex: number;
+    if (M % 2 === 0) {
+      domIndex = row * 2 + col;
+    } else {
+      if (row === 0) {
+        domIndex = 0;
+      } else {
+        domIndex = row * 2 + col - 1;
+      }
+    }
+    domArray[domIndex] = pageItems[k];
+  }
+  return domArray;
+}
+
 export function setupSelectionBarUI(engine: CanvasEngine): void {
   const bar = document.createElement("div");
   bar.id = "selection-toolbar";
@@ -45,6 +72,13 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
   let activeCondContainer: HTMLElement | null = null;
   let activeCondPopover: HTMLElement | null = null;
   let activeCondBtn: HTMLButtonElement | null = null;
+
+  let isDescPopoverOpen = false;
+  let activeDescContainer: HTMLElement | null = null;
+  let activeDescPopover: HTMLElement | null = null;
+  let activeDescBtn: HTMLButtonElement | null = null;
+  let activeDescTextarea: HTMLTextAreaElement | null = null;
+
   let activeNameInput: HTMLInputElement | null = null;
   let activeHpInput: HTMLInputElement | null = null;
   let activeMaxHpInput: HTMLInputElement | null = null;
@@ -60,6 +94,12 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
         activeCondPopover.style.display = "none";
       }
     }
+    if (isDescPopoverOpen && activeDescContainer && activeDescPopover) {
+      if (!activeDescContainer.contains(e.target as Node) && !activeDescPopover.contains(e.target as Node)) {
+        isDescPopoverOpen = false;
+        activeDescPopover.style.display = "none";
+      }
+    }
   }, true);
 
   const updateBar = (selectedId: string | null) => {
@@ -71,8 +111,12 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
       if (activeCondPopover && activeCondPopover.parentNode) {
         activeCondPopover.parentNode.removeChild(activeCondPopover);
       }
+      if (activeDescPopover && activeDescPopover.parentNode) {
+        activeDescPopover.parentNode.removeChild(activeDescPopover);
+      }
       lastSelectedId = null;
       isCondPopoverOpen = false;
+      isDescPopoverOpen = false;
       document.body.classList.remove("token-selected-in-simple");
       return;
     }
@@ -82,8 +126,12 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
       if (activeCondPopover && activeCondPopover.parentNode) {
         activeCondPopover.parentNode.removeChild(activeCondPopover);
       }
+      if (activeDescPopover && activeDescPopover.parentNode) {
+        activeDescPopover.parentNode.removeChild(activeDescPopover);
+      }
       lastSelectedId = null;
       isCondPopoverOpen = false;
+      isDescPopoverOpen = false;
       document.body.classList.remove("token-selected-in-simple");
       return;
     }
@@ -127,6 +175,15 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
         activeCondBtn.innerHTML = activeCondCount > 0 ? `🏷️ Conditions (${activeCondCount})` : "🏷️ Conditions";
       }
 
+      const hasDesc = Boolean(token.description && token.description.trim());
+      if (activeDescBtn) {
+        activeDescBtn.className = `btn-glass btn-sm ${hasDesc ? "btn-active" : ""}`;
+        activeDescBtn.innerHTML = hasDesc ? "📝 Description ✓" : "📝 Description";
+      }
+      if (activeDescTextarea && document.activeElement !== activeDescTextarea) {
+        activeDescTextarea.value = token.description || "";
+      }
+
       for (const [condId, cb] of conditionCheckboxesMap.entries()) {
         cb.checked = (token.statusEffects || []).includes(condId);
       }
@@ -135,9 +192,13 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
 
     lastSelectedId = selectedId;
     isCondPopoverOpen = false;
+    isDescPopoverOpen = false;
     conditionCheckboxesMap.clear();
     if (activeCondPopover && activeCondPopover.parentNode) {
       activeCondPopover.parentNode.removeChild(activeCondPopover);
+    }
+    if (activeDescPopover && activeDescPopover.parentNode) {
+      activeDescPopover.parentNode.removeChild(activeDescPopover);
     }
     bar.innerHTML = "";
 
@@ -367,6 +428,97 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
 
       bar.appendChild(mineBtn);
 
+      // Description Popover & Button
+      const descContainer = document.createElement("div");
+      activeDescContainer = descContainer;
+      descContainer.style.cssText = "position: relative; display: inline-flex; align-items: center; margin: 0 4px;";
+
+      const descBtn = document.createElement("button");
+      activeDescBtn = descBtn;
+      const initialDesc = token.description || "";
+      const hasInitialDesc = Boolean(initialDesc.trim());
+      descBtn.className = `btn-glass btn-sm ${hasInitialDesc ? "btn-active" : ""}`;
+      descBtn.setAttribute("data-tooltip", "Edit token physical description / background");
+      descBtn.innerHTML = hasInitialDesc ? "📝 Description ✓" : "📝 Description";
+      descContainer.appendChild(descBtn);
+
+      const descPopover = document.createElement("div");
+      activeDescPopover = descPopover;
+      descPopover.className = "token-description-popover";
+      descPopover.style.cssText = `
+        position: fixed;
+        left: 50%;
+        transform: translateX(-50%);
+        bottom: 140px;
+        background: rgba(15, 23, 42, 0.96);
+        backdrop-filter: blur(16px);
+        border: 1px solid rgba(56, 189, 248, 0.45);
+        border-radius: 12px;
+        padding: 12px;
+        display: none;
+        flex-direction: column;
+        gap: 8px;
+        width: calc(100vw - 28px);
+        max-width: 380px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+        z-index: 3500;
+      `;
+
+      const descHeader = document.createElement("div");
+      descHeader.style.cssText = "display: flex; align-items: center; justify-content: space-between;";
+      descHeader.innerHTML = `
+        <span style="font-size: 12px; font-weight: 700; color: #38bdf8;">📝 Token Description</span>
+        <span style="font-size: 10px; color: #94a3b8;">Auto-syncs with Sheet if claimed</span>
+      `;
+      descPopover.appendChild(descHeader);
+
+      const descTextarea = document.createElement("textarea");
+      activeDescTextarea = descTextarea;
+      descTextarea.rows = 4;
+      descTextarea.placeholder = "Enter token physical description, background, or visual details...";
+      descTextarea.value = initialDesc;
+      descTextarea.style.cssText = "width: 100%; background: rgba(30, 41, 59, 0.85); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 8px; color: #f8fafc; padding: 8px; font-size: 13px; font-family: inherit; resize: vertical; outline: none; box-sizing: border-box;";
+
+      const commitDescription = () => {
+        const newDesc = descTextarea.value;
+        const currentDoc = docStore.getDocument();
+        const latestToken = currentDoc.entities[token.id] as TokenEntity || token;
+        if (newDesc !== (latestToken.description || "")) {
+          sessionManager.dispatchOperation({
+            opType: "UPDATE_ENTITY",
+            id: token.id,
+            patch: { description: newDesc } as any
+          });
+        }
+      };
+
+      descTextarea.addEventListener("input", commitDescription);
+      descTextarea.addEventListener("change", commitDescription);
+      descTextarea.addEventListener("blur", commitDescription);
+
+      descPopover.appendChild(descTextarea);
+
+      descBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (isDescPopoverOpen) {
+          isDescPopoverOpen = false;
+          descPopover.style.display = "none";
+        } else {
+          isDescPopoverOpen = true;
+          if (isCondPopoverOpen && activeCondPopover) {
+            isCondPopoverOpen = false;
+            activeCondPopover.style.display = "none";
+          }
+          const barRect = bar.getBoundingClientRect();
+          descPopover.style.bottom = (window.innerHeight - barRect.top + 10) + "px";
+          descPopover.style.display = "flex";
+          descTextarea.focus();
+        }
+      });
+
+      document.body.appendChild(descPopover);
+      bar.appendChild(descContainer);
+
       // Conditions Selector
       // Add custom conditions saved in session vttdoc
       const currentDoc = docStore.getDocument();
@@ -469,47 +621,139 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
       });
       condPopover.appendChild(aiGenBtn);
 
-      AVAILABLE_CONDITIONS.forEach((c) => {
-        const hasCond = (token.statusEffects || []).includes(c.id);
-        const itemLabel = document.createElement("label");
-        itemLabel.style.cssText = "display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; font-size: 13px; color: #f8fafc; padding: 4px 6px; border-radius: 6px; transition: background 0.15s;";
-        itemLabel.addEventListener("mouseenter", () => itemLabel.style.background = "rgba(56, 189, 248, 0.15)");
-        itemLabel.addEventListener("mouseleave", () => itemLabel.style.background = "transparent");
+      // Items container inside popover
+      const itemsContainer = document.createElement("div");
+      itemsContainer.style.cssText = "grid-column: span 2; display: grid; grid-template-columns: 1fr 1fr; gap: 6px;";
+      condPopover.appendChild(itemsContainer);
 
-        const cb = document.createElement("input");
-        cb.type = "checkbox";
-        cb.checked = hasCond;
-        cb.style.cssText = "cursor: pointer; width: 14px; height: 14px; accent-color: #38bdf8;";
-        conditionCheckboxesMap.set(c.id, cb);
+      // Pagination controls container
+      const paginationContainer = document.createElement("div");
+      paginationContainer.style.cssText = "grid-column: span 2; display: flex; align-items: center; justify-content: space-between; margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(56, 189, 248, 0.3); user-select: none;";
 
-        cb.addEventListener("change", (e) => {
-          e.stopPropagation();
-          const currentStatus = new Set(docStore.getDocument().entities[token.id] && (docStore.getDocument().entities[token.id] as TokenEntity).statusEffects || []);
-          if (cb.checked) {
-            currentStatus.add(c.id);
-          } else {
-            currentStatus.delete(c.id);
+      const prevBtn = document.createElement("button");
+      prevBtn.className = "btn-glass btn-sm";
+      prevBtn.style.cssText = "padding: 2px 8px; font-size: 11px; cursor: pointer;";
+      prevBtn.textContent = "◀ Prev";
+
+      const pageInfoSpan = document.createElement("span");
+      pageInfoSpan.style.cssText = "color: #94a3b8; font-size: 11px; font-weight: 600;";
+
+      const nextBtn = document.createElement("button");
+      nextBtn.className = "btn-glass btn-sm";
+      nextBtn.style.cssText = "padding: 2px 8px; font-size: 11px; cursor: pointer;";
+      nextBtn.textContent = "Next ▶";
+
+      paginationContainer.appendChild(prevBtn);
+      paginationContainer.appendChild(pageInfoSpan);
+      paginationContainer.appendChild(nextBtn);
+      condPopover.appendChild(paginationContainer);
+
+      const ITEMS_PER_PAGE = 30;
+      let currentCondPage = 1;
+      let totalCondPages = 1;
+
+      const renderCondPage = (page: number) => {
+        const latestDoc = docStore.getDocument();
+        const usage = latestDoc.conditionUsage || {};
+        const initialIndexMap = new Map<string, number>(AVAILABLE_CONDITIONS.map((c, i) => [c.id, i]));
+
+        const sortedConditions = [...AVAILABLE_CONDITIONS].sort((a, b) => {
+          const timeA = usage[a.id] || 0;
+          const timeB = usage[b.id] || 0;
+          if (timeB !== timeA) {
+            return timeB - timeA;
           }
-          const nextEffects = Array.from(currentStatus);
-          sessionManager.dispatchOperation({
-            opType: "UPDATE_ENTITY",
-            id: token.id,
-            patch: { statusEffects: nextEffects } as any
-          });
+          return (initialIndexMap.get(a.id) ?? 0) - (initialIndexMap.get(b.id) ?? 0);
         });
 
-        itemLabel.appendChild(cb);
-        if ((c as any).iconSvg) {
-          const iconSpan = document.createElement("span");
-          iconSpan.style.cssText = "display: inline-flex; align-items: center; justify-content: center; width: 1.3em; height: 1.3em; flex-shrink: 0; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.6));";
-          iconSpan.innerHTML = (c as any).iconSvg;
-          itemLabel.appendChild(iconSpan);
+        totalCondPages = Math.max(1, Math.ceil(sortedConditions.length / ITEMS_PER_PAGE));
+        currentCondPage = Math.min(Math.max(1, page), totalCondPages);
+        itemsContainer.innerHTML = "";
+        conditionCheckboxesMap.clear();
+
+        const startIdx = (currentCondPage - 1) * ITEMS_PER_PAGE;
+        const endIdx = startIdx + ITEMS_PER_PAGE;
+        const pageItems = sortedConditions.slice(startIdx, endIdx);
+        const gridOrderedItems = arrangeItemsForBottomUpGrid(pageItems);
+
+        gridOrderedItems.forEach((c) => {
+          const currentToken = (docStore.getDocument().entities[token.id] as TokenEntity) || token;
+          const hasCond = (currentToken.statusEffects || []).includes(c.id);
+          const itemLabel = document.createElement("label");
+          itemLabel.style.cssText = "display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; font-size: 13px; color: #f8fafc; padding: 4px 6px; border-radius: 6px; transition: background 0.15s;";
+          itemLabel.addEventListener("mouseenter", () => (itemLabel.style.background = "rgba(56, 189, 248, 0.15)"));
+          itemLabel.addEventListener("mouseleave", () => (itemLabel.style.background = "transparent"));
+
+          const cb = document.createElement("input");
+          cb.type = "checkbox";
+          cb.checked = hasCond;
+          cb.style.cssText = "cursor: pointer; width: 14px; height: 14px; accent-color: #38bdf8;";
+          conditionCheckboxesMap.set(c.id, cb);
+
+          cb.addEventListener("change", (e) => {
+            e.stopPropagation();
+            const currentStatus = new Set((docStore.getDocument().entities[token.id] as TokenEntity)?.statusEffects || []);
+            if (cb.checked) {
+              currentStatus.add(c.id);
+              sessionManager.dispatchOperation({
+                opType: "RECORD_CONDITION_USAGE",
+                conditionId: c.id,
+                timestamp: Date.now()
+              });
+            } else {
+              currentStatus.delete(c.id);
+            }
+            const nextEffects = Array.from(currentStatus);
+            sessionManager.dispatchOperation({
+              opType: "UPDATE_ENTITY",
+              id: token.id,
+              patch: { statusEffects: nextEffects } as any
+            });
+          });
+
+          itemLabel.appendChild(cb);
+          if ((c as any).iconSvg) {
+            const iconSpan = document.createElement("span");
+            iconSpan.style.cssText = "display: inline-flex; align-items: center; justify-content: center; width: 1.3em; height: 1.3em; flex-shrink: 0; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.6));";
+            iconSpan.innerHTML = (c as any).iconSvg;
+            itemLabel.appendChild(iconSpan);
+          }
+          const textSpan = document.createElement("span");
+          textSpan.textContent = c.label;
+          itemLabel.appendChild(textSpan);
+          itemsContainer.appendChild(itemLabel);
+        });
+
+        if (totalCondPages > 1) {
+          paginationContainer.style.display = "flex";
+          pageInfoSpan.textContent = `Page ${currentCondPage} of ${totalCondPages}`;
+          prevBtn.disabled = currentCondPage <= 1;
+          prevBtn.style.opacity = currentCondPage <= 1 ? "0.4" : "1";
+          prevBtn.style.cursor = currentCondPage <= 1 ? "not-allowed" : "pointer";
+
+          nextBtn.disabled = currentCondPage >= totalCondPages;
+          nextBtn.style.opacity = currentCondPage >= totalCondPages ? "0.4" : "1";
+          nextBtn.style.cursor = currentCondPage >= totalCondPages ? "not-allowed" : "pointer";
+        } else {
+          paginationContainer.style.display = "none";
         }
-        const textSpan = document.createElement("span");
-        textSpan.textContent = c.label;
-        itemLabel.appendChild(textSpan);
-        condPopover.appendChild(itemLabel);
+      };
+
+      prevBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (currentCondPage > 1) {
+          renderCondPage(currentCondPage - 1);
+        }
       });
+
+      nextBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (currentCondPage < totalCondPages) {
+          renderCondPage(currentCondPage + 1);
+        }
+      });
+
+      renderCondPage(1);
 
       condBtn.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -518,6 +762,7 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
           condPopover.style.display = "none";
         } else {
           isCondPopoverOpen = true;
+          renderCondPage(currentCondPage);
           const barRect = bar.getBoundingClientRect();
           condPopover.style.bottom = (window.innerHeight - barRect.top + 10) + "px";
           condPopover.style.display = "grid";

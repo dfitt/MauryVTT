@@ -485,7 +485,25 @@ export function setupChatPanel(engine?: CanvasEngine): void {
     const pageTxt = iconPopoverEl.querySelector<HTMLElement>("#popover-page-txt");
     if (!gridEl || !prevBtn || !nextBtn || !pageTxt) return;
 
-    const totalPages = Math.ceil(ALL_ROLL_ICONS.length / ICONS_PER_PAGE);
+    const latestDoc = docStore.getDocument();
+    const usage = latestDoc.vttfxUsage || {};
+    const initialIndexMap = new Map<string, number>(ALL_ROLL_ICONS.map((icon, i) => [icon, i]));
+
+    const getIconUsageTime = (iconHtml: string): number => {
+      const effId = getEffectIdForIcon(iconHtml) || iconHtml;
+      return usage[effId] || usage[iconHtml] || 0;
+    };
+
+    const sortedRollIcons = [...ALL_ROLL_ICONS].sort((a, b) => {
+      const timeA = getIconUsageTime(a);
+      const timeB = getIconUsageTime(b);
+      if (timeB !== timeA) {
+        return timeB - timeA; // Most recently used first (top-left)
+      }
+      return (initialIndexMap.get(a) ?? 0) - (initialIndexMap.get(b) ?? 0);
+    });
+
+    const totalPages = Math.max(1, Math.ceil(sortedRollIcons.length / ICONS_PER_PAGE));
     if (currentIconPage < 0) currentIconPage = 0;
     if (currentIconPage >= totalPages) currentIconPage = Math.max(0, totalPages - 1);
 
@@ -496,7 +514,7 @@ export function setupChatPanel(engine?: CanvasEngine): void {
     nextBtn.style.opacity = currentIconPage === totalPages - 1 ? "0.4" : "1";
 
     const startIdx = currentIconPage * ICONS_PER_PAGE;
-    const pageIcons = ALL_ROLL_ICONS.slice(startIdx, startIdx + ICONS_PER_PAGE);
+    const pageIcons = sortedRollIcons.slice(startIdx, startIdx + ICONS_PER_PAGE);
 
     gridEl.innerHTML = pageIcons.map((iconHtml) => {
       const isActive = selectedRollIcon === iconHtml;
@@ -511,6 +529,14 @@ export function setupChatPanel(engine?: CanvasEngine): void {
         selectedRollIcon = chosen;
         iconBtnEl.innerHTML = chosen;
         iconPopoverEl.style.display = "none";
+
+        const effId = getEffectIdForIcon(chosen) || chosen;
+        sessionManager.dispatchOperation({
+          opType: "RECORD_VTTFX_USAGE",
+          effectId: effId,
+          timestamp: Date.now()
+        });
+
         renderPopoverPage();
       });
 
@@ -946,6 +972,15 @@ export function setupChatPanel(engine?: CanvasEngine): void {
 
     if (isDamage && targetTokenIds && targetTokenIds.length > 0) {
       applyDamageToTargets(targetTokenIds, rollTotal);
+    }
+
+    if (selectedRollIcon) {
+      const effId = getEffectIdForIcon(selectedRollIcon) || selectedRollIcon;
+      sessionManager.dispatchOperation({
+        opType: "RECORD_VTTFX_USAGE",
+        effectId: effId,
+        timestamp: Date.now()
+      });
     }
 
     const newMsg: ChatMessage = {

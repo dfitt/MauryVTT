@@ -213,34 +213,36 @@ export async function openImageGenDescriptionModal(
             reader.readAsDataURL(blob);
           });
 
-          // Check if token is claimed and has a character sheet description
-          let description: string | undefined = undefined;
-          let claimingUsername = tok.primaryOwnerUsername;
-          if (!claimingUsername && doc.primaryTokens) {
-            for (const [uname, tid] of Object.entries(doc.primaryTokens)) {
-              if (tid === tok.id) {
-                claimingUsername = uname;
-                break;
+          // Send token description for both claimed & unclaimed tokens
+          let description: string | undefined = (tok.description && tok.description.trim()) ? tok.description.trim() : undefined;
+          if (!description) {
+            let claimingUsername = tok.primaryOwnerUsername;
+            if (!claimingUsername && doc.primaryTokens) {
+              for (const [uname, tid] of Object.entries(doc.primaryTokens)) {
+                if (tid === tok.id) {
+                  claimingUsername = uname;
+                  break;
+                }
               }
             }
-          }
-          if (!claimingUsername && doc.characterSheets) {
-            const tokLabelLower = tok.label.trim().toLowerCase();
-            for (const [uname, sheet] of Object.entries(doc.characterSheets)) {
-              if (
-                uname.toLowerCase() === tokLabelLower ||
-                (sheet.characterName && sheet.characterName.trim().toLowerCase() === tokLabelLower)
-              ) {
-                claimingUsername = uname;
-                break;
+            if (!claimingUsername && doc.characterSheets) {
+              const tokLabelLower = tok.label.trim().toLowerCase();
+              for (const [uname, sheet] of Object.entries(doc.characterSheets)) {
+                if (
+                  uname.toLowerCase() === tokLabelLower ||
+                  (sheet.characterName && sheet.characterName.trim().toLowerCase() === tokLabelLower)
+                ) {
+                  claimingUsername = uname;
+                  break;
+                }
               }
             }
-          }
 
-          if (claimingUsername && doc.characterSheets?.[claimingUsername]) {
-            const sheetDesc = doc.characterSheets[claimingUsername].description;
-            if (sheetDesc && sheetDesc.trim()) {
-              description = sheetDesc.trim();
+            if (claimingUsername && doc.characterSheets?.[claimingUsername]) {
+              const sheetDesc = doc.characterSheets[claimingUsername].description;
+              if (sheetDesc && sheetDesc.trim()) {
+                description = sheetDesc.trim();
+              }
             }
           }
 
