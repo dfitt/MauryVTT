@@ -2036,6 +2036,21 @@ export class CanvasEngine {
           ctx.arc(0, 0, auraRadius, 0, Math.PI * 2);
           ctx.stroke();
 
+          // Draw bespoke condition SVG artwork overlay if present
+          const animSvg = def.conditionData?.animation?.effectSvg || (def.renderSvg ? def.renderSvg() : "");
+          if (animSvg && animSvg.includes("<svg")) {
+            const cachedAnim = this.getOrCacheSvgImage(`cond_anim_${effId}`, animSvg);
+            if (cachedAnim && cachedAnim.complete && cachedAnim.naturalWidth > 0) {
+              ctx.save();
+              const animSize = auraRadius * 2.2;
+              const animRot = (now / 2500) * (customIdx % 2 === 0 ? 1 : -1);
+              ctx.rotate(animRot);
+              ctx.globalAlpha = 0.85 + 0.15 * Math.sin(now / 350 + customIdx);
+              ctx.drawImage(cachedAnim, -animSize / 2, -animSize / 2, animSize, animSize);
+              ctx.restore();
+            }
+          }
+
           // Draw bespoke orbiting symbols/particles matching condition shape & theme
           ctx.shadowColor = accentColor;
           ctx.shadowBlur = 8 / this.zoom;
