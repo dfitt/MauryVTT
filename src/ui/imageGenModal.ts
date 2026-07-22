@@ -316,6 +316,7 @@ export async function runAiImageGeneration(
 }
 
 export function openImageGenPreviewModal(engine: CanvasEngine, base64Image: string, prompt: string): void {
+  engine.setTool("select");
   let oldModal = document.getElementById("vtt-image-preview-modal");
   if (oldModal) oldModal.remove();
 

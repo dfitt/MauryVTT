@@ -4,6 +4,7 @@ import { VttfxEffectItem, VttfxBundle } from "../effects/vttfxLoader.js";
 import { openGeminiApiKeyModal, checkOrFindProxyPeer, showEnhanceToast, getPeerUsername } from "./enhanceModal.js";
 import { callGeminiConditionGeneration } from "./vttfxGenerateModal.js";
 import { ChatMessage, TokenEntity } from "../types/vtt.js";
+import { CanvasEngine } from "../canvas/canvasEngine.js";
 
 export async function openConditionGenerateModal(): Promise<void> {
   const apiKey = localStorage.getItem("gemini_api_key");
@@ -118,6 +119,7 @@ function openConditionGenerateDescriptionModal(hasProxy: boolean, proxyPeerId: s
 
 export function openConditionPreviewModal(vttfxItem: VttfxEffectItem, origPrompt: string, proxyPeerId: string | null): void {
   vttfxItem.isCondition = true;
+  CanvasEngine.activateSelectTool();
   let oldModal = document.getElementById("condition-preview-modal");
   if (oldModal) oldModal.remove();
 

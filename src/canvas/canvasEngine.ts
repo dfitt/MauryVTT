@@ -162,9 +162,16 @@ export class CanvasEngine {
       setTimeout(() => this.resizeCanvas(), 300);
     });
 
+    (window as any).vttCanvasEngine = this;
     this.startRenderLoop();
 
     sessionManager.onEphemeral((payload) => this.handleEphemeralPayload(payload));
+  }
+
+  public static activateSelectTool(): void {
+    if ((window as any).vttCanvasEngine && typeof (window as any).vttCanvasEngine.setTool === "function") {
+      (window as any).vttCanvasEngine.setTool("select");
+    }
   }
 
   public get selectedEntityId(): string | null {

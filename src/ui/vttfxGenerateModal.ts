@@ -3,6 +3,7 @@ import { VttfxEffectItem, VttfxBundle, registerEffectFromVttfxItem } from "../ef
 import { openGeminiApiKeyModal, checkOrFindProxyPeer, showEnhanceToast, getPeerUsername } from "./enhanceModal.js";
 import { openConditionPreviewModal } from "./conditionAiModal.js";
 import { ChatMessage } from "../types/vtt.js";
+import { CanvasEngine } from "../canvas/canvasEngine.js";
 
 export async function openVttfxGenerateModal(): Promise<void> {
   const apiKey = localStorage.getItem("gemini_api_key");
@@ -111,6 +112,7 @@ function openVttfxGenerateDescriptionModal(hasProxy: boolean, proxyPeerId: strin
 }
 
 export function openVttfxPreviewModal(vttfxItem: VttfxEffectItem, iconDesc: string, animDesc: string, proxyPeerId: string | null): void {
+  CanvasEngine.activateSelectTool();
   let oldModal = document.getElementById("vttfx-preview-modal");
   if (oldModal) oldModal.remove();
 

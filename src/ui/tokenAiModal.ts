@@ -140,6 +140,7 @@ export async function runAiTokenGeneration(
 
     const processed = await processTokenImageFile(file, ringColor || engine.drawColor);
     await createAndDispatchToken(processed);
+    engine.setTool("select");
 
     showEnhanceToast("✅ AI Token generated and added to canvas!", 5000);
   } catch (err: any) {
@@ -361,6 +362,7 @@ export function setupTokenProxyListeners(
                   heightPx: payload.assetManifestEntry.heightPx
                 };
                 await createAndDispatchToken(processed);
+                engine.setTool("select");
                 showEnhanceToast("✅ AI Token generated via proxy and added to canvas!", 5000);
               }
             } else if (attempts > 80) {

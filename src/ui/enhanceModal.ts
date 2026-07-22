@@ -460,8 +460,10 @@ function showEnhanceConfirmationBar(
   const retryBtn = bar.querySelector<HTMLButtonElement>("#btn-enhance-retry")!;
   const abortBtn = bar.querySelector<HTMLButtonElement>("#btn-enhance-abort")!;
 
+  engine.setTool("select");
   acceptBtn.addEventListener("click", () => {
     bar.remove();
+    engine.setTool("select");
     const currentEnt = (docStore.getDocument().entities[newMapImage.id] as ImageEntity) || newMapImage;
     const lockedMapEntity: ImageEntity = {
       ...currentEnt,

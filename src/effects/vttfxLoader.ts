@@ -28,7 +28,7 @@ export function registerEffectFromVttfxItem(item: VttfxEffectItem): void {
     iconSvg: item.iconSvg,
     isCondition: item.isCondition
   });
-  if (item.iconSvg) {
+  if (item.iconSvg && !item.isCondition) {
     registerCustomRollIcon(item.id, item.name, item.iconSvg);
   }
 }
