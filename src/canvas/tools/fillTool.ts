@@ -37,7 +37,7 @@ export function bindFillTool(engine: CanvasEngine): void {
           cellKey: currKey,
           patch: {
             fillColor: engine.drawColor,
-            fillCreator: sessionManager.myPeerId || "local"
+            fillCreator: sessionManager.myUsername || sessionManager.myPeerId || "local"
           }
         });
 
@@ -67,7 +67,7 @@ export function bindFillTool(engine: CanvasEngine): void {
           cellKey,
           patch: {
             fillColor: engine.drawColor,
-            fillCreator: sessionManager.myPeerId || "local"
+            fillCreator: sessionManager.myUsername || sessionManager.myPeerId || "local"
           }
         });
       }

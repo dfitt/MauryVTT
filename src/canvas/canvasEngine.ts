@@ -28,6 +28,19 @@ export function isMySecretToken(tok: TokenEntity): boolean {
   return false;
 }
 
+export function isMineEntity(creatorOrLocker: string | undefined): boolean {
+  if (!creatorOrLocker) return false;
+  const myPeerId = sessionManager.myPeerId || "local";
+  const myUsername = (sessionManager.myUsername || localStorage.getItem("maury_vtt_username") || "Me").trim().toLowerCase();
+  const clean = creatorOrLocker.trim().toLowerCase();
+
+  return (
+    clean === myPeerId.toLowerCase() ||
+    clean === "local" ||
+    clean === myUsername
+  );
+}
+
 export type ToolType = "select" | "pan" | "draw" | "line" | "fill" | "erase" | "hide" | "unhide" | "measure" | "ping" | "token" | "ephemeral" | "laser" | "enhance" | "map" | "image" | "ai";
 
 export interface ActiveLaser {
@@ -1433,7 +1446,7 @@ export class CanvasEngine {
         }
 
         if (cell.fillColor === "invisible_ink") {
-          const isMine = cell.fillCreator && (cell.fillCreator === sessionManager.myPeerId || cell.fillCreator === "local");
+          const isMine = isMineEntity(cell.fillCreator);
           if (!isMine) continue;
           ctx.fillStyle = "#000000";
           ctx.fillRect(gx, gy, size, size);
@@ -1474,11 +1487,11 @@ export class CanvasEngine {
 
       if (cell.fillColor === "fog" || cell.fogHidden) {
         const creator = cell.fillColor === "fog" ? cell.fillCreator : cell.fogCreator;
-        const isMine = creator && (creator === sessionManager.myPeerId || creator === "local");
+        const isMine = isMineEntity(creator);
         ctx.fillStyle = isMine ? "rgba(0, 0, 0, 0.45)" : "#000000";
         ctx.fillRect(gx, gy, size, size);
       } else if (cell.fillColor === "invisible_ink") {
-        const isMine = cell.fillCreator && (cell.fillCreator === sessionManager.myPeerId || cell.fillCreator === "local");
+        const isMine = isMineEntity(cell.fillCreator);
         if (isMine) {
           ctx.fillStyle = "#000000";
           ctx.fillRect(gx, gy, size, size);
@@ -1582,11 +1595,11 @@ export class CanvasEngine {
       if (l.isClosed && l.fillColor) {
         ctx.closePath();
         if (l.fillColor === "fog") {
-          const isMine = l.lastModifiedBy === sessionManager.myPeerId || l.lastModifiedBy === "local";
+          const isMine = isMineEntity(l.lastModifiedBy);
           ctx.fillStyle = isMine ? "rgba(0, 0, 0, 0.45)" : "#000000";
           ctx.fill();
         } else if (l.fillColor === "invisible_ink") {
-          const isMine = l.lastModifiedBy === sessionManager.myPeerId || l.lastModifiedBy === "local";
+          const isMine = isMineEntity(l.lastModifiedBy);
           if (isMine) {
             ctx.fillStyle = "#000000";
             ctx.fill();
@@ -1597,7 +1610,7 @@ export class CanvasEngine {
         }
       }
       if (l.strokeColor === "fog") {
-        const isMine = l.lastModifiedBy === sessionManager.myPeerId || l.lastModifiedBy === "local";
+        const isMine = isMineEntity(l.lastModifiedBy);
         ctx.strokeStyle = isMine ? "rgba(0, 0, 0, 0.45)" : "#000000";
         ctx.globalAlpha = isMine ? 0.45 : 1.0;
         ctx.lineWidth = l.strokeWidth;
@@ -1605,7 +1618,7 @@ export class CanvasEngine {
         ctx.lineJoin = "round";
         ctx.stroke();
       } else if (l.strokeColor === "invisible_ink") {
-        const isMine = l.lastModifiedBy === sessionManager.myPeerId || l.lastModifiedBy === "local";
+        const isMine = isMineEntity(l.lastModifiedBy);
         if (isMine) {
           ctx.strokeStyle = "#000000";
           ctx.globalAlpha = 1.0;

@@ -155,7 +155,7 @@ export class P2PClient {
         conn.on("open", () => {
           this.conn = conn;
           this.setupMessageHandler(conn, profile);
-          conn.send({ type: "HANDSHAKE_REQ", peerId: myId } as SyncMessage);
+          conn.send({ type: "HANDSHAKE_REQ", peerId: myId, username: profile.username } as SyncMessage);
           resolve(myId);
         });
 
@@ -232,6 +232,14 @@ export class P2PClient {
         const msg = raw as SyncMessage;
         switch (msg.type) {
           case "HANDSHAKE_ACK": {
+            if (msg.error) {
+              console.error("[p2pClient] Handshake error from host:", msg.error);
+              alert(`❌ Cannot Join Room\n\n${msg.error}`);
+              if (this.peer) this.peer.destroy();
+              this.conn = null;
+              return;
+            }
+            if (!msg.snapshot) return;
             if (this.checkHostVersionAndReload(msg.appVersion)) {
               return;
             }

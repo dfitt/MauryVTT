@@ -1,4 +1,4 @@
-import { CanvasEngine } from "../canvasEngine.js";
+import { CanvasEngine, isMineEntity } from "../canvasEngine.js";
 import { docStore } from "../../state/documentStore.js";
 import { sessionManager } from "../../network/sessionManager.js";
 import { LineEntity } from "../../types/vtt.js";
@@ -42,9 +42,8 @@ export function bindEraseTool(engine: CanvasEngine): void {
         const cell = doc.gridCells?.[cellKey];
         if (cell && (cell.fillColor || cell.fogHidden)) {
           if (engine.eraseOnlyMine) {
-            const myPeerId = sessionManager.myPeerId || "local";
             const creator = cell.fillColor ? cell.fillCreator : cell.fogCreator;
-            if (creator && creator !== myPeerId && creator !== "local") {
+            if (creator && !isMineEntity(creator)) {
               continue;
             }
           }
@@ -60,14 +59,13 @@ export function bindEraseTool(engine: CanvasEngine): void {
       }
     }
 
-    const myPeerId = sessionManager.myPeerId || "local";
     const processedInThisCall = new Set<string>();
 
     for (const ent of Object.values(doc.entities)) {
       if (deletedInStroke.has(ent.id) || processedInThisCall.has(ent.id)) continue;
 
       if (ent.type === "line") {
-        if (engine.eraseOnlyMine && ent.lastModifiedBy && ent.lastModifiedBy !== myPeerId && ent.lastModifiedBy !== "local") {
+        if (engine.eraseOnlyMine && ent.lastModifiedBy && !isMineEntity(ent.lastModifiedBy)) {
           continue;
         }
         const l = ent as LineEntity;

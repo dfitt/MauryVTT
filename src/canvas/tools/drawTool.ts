@@ -455,7 +455,7 @@ export function bindDrawTool(engine: CanvasEngine): void {
       zIndex: Date.now(),
       createdAt: Date.now(),
       updatedAt: Date.now(),
-      lastModifiedBy: sessionManager.myPeerId || "local",
+      lastModifiedBy: sessionManager.myUsername || sessionManager.myPeerId || "local",
       locked: false,
       lineType: (engine.activeTool === "draw" || engine.lineShape === "doodle" || engine.lineShape === "select") ? "freehand" : (engine.lineShape as LineEntity["lineType"]),
       points: [...engine.draftPoints],

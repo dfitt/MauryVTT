@@ -5,8 +5,10 @@ import { assetStore } from "../state/idbAssetStore.js";
 import {
   SyncMessage,
   DocumentOperation,
-  EphemeralPayload
+  EphemeralPayload,
+  UserProfile
 } from "../types/vtt.js";
+import { sessionManager } from "./sessionManager.js";
 import { APP_VERSION } from "../version.js";
 
 const CHUNK_SIZE = 16384; // 16 KB
@@ -190,6 +192,26 @@ export class P2PHost {
       const msg = data as SyncMessage;
       switch (msg.type) {
         case "HANDSHAKE_REQ": {
+          const reqUsername = msg.username ? msg.username.trim() : "";
+          if (reqUsername) {
+            const activeUsers = sessionManager.getActiveUsers();
+            const isNameTaken = activeUsers.some((u) =>
+              u.username.trim().toLowerCase() === reqUsername.toLowerCase() &&
+              u.peerId !== conn.peer
+            );
+
+            if (isNameTaken) {
+              console.warn(`[p2pHost] Rejecting connection from ${conn.peer}: Username '${reqUsername}' is already currently in use.`);
+              const rejectAck: SyncMessage = {
+                type: "HANDSHAKE_ACK",
+                error: `Username '${reqUsername}' is already currently in use by another active player in this room. Please try a different name.`
+              };
+              conn.send(rejectAck);
+              setTimeout(() => conn.close(), 500);
+              break;
+            }
+          }
+
           const snapshot = docStore.getDocument();
           const ack: SyncMessage = {
             type: "HANDSHAKE_ACK",

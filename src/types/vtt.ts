@@ -194,8 +194,8 @@ export interface ChatMessage {
 // ==========================================
 
 export type SyncMessage =
-  | { type: "HANDSHAKE_REQ"; peerId: string }
-  | { type: "HANDSHAKE_ACK"; snapshot: VTTDocument; appVersion?: string; lastSeenEntries?: [string, number][] }
+  | { type: "HANDSHAKE_REQ"; peerId: string; username?: string }
+  | { type: "HANDSHAKE_ACK"; snapshot?: VTTDocument; appVersion?: string; lastSeenEntries?: [string, number][]; error?: string }
   | { type: "RESYNC_REQ"; peerId: string }
   | { type: "RESYNC_ACK"; snapshot: VTTDocument; appVersion?: string; lastSeenEntries?: [string, number][] }
   | { type: "OP_REQUEST"; clientSeq: string; op: DocumentOperation; senderPeerId?: string }
