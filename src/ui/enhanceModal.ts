@@ -450,6 +450,7 @@ function showEnhanceConfirmationBar(
     <span style="font-size: 13px; color: #cbd5e1;">Review alignment on canvas below:</span>
     <div style="display: flex; gap: 10px;">
       <button id="btn-enhance-accept" style="padding: 6px 16px; border-radius: 9999px; background: #22c55e; border: none; color: #fff; font-weight: 700; cursor: pointer; box-shadow: 0 0 10px rgba(34, 197, 94, 0.4);">Accept & Clear Sketches</button>
+      <button id="btn-enhance-accept-fog" style="padding: 6px 16px; border-radius: 9999px; background: linear-gradient(135deg, #22c55e, #0f172a); border: 1px solid rgba(34, 197, 94, 0.6); color: #fff; font-weight: 700; cursor: pointer; box-shadow: 0 0 10px rgba(15, 23, 42, 0.6);">Accept & Fog 🌫️</button>
       <button id="btn-enhance-retry" style="padding: 6px 16px; border-radius: 9999px; background: #eab308; border: none; color: #fff; font-weight: 700; cursor: pointer; box-shadow: 0 0 10px rgba(234, 179, 8, 0.4);">Retry</button>
       <button id="btn-enhance-abort" style="padding: 6px 16px; border-radius: 9999px; background: #ef4444; border: none; color: #fff; font-weight: 700; cursor: pointer; box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);">Abort</button>
     </div>
@@ -457,11 +458,13 @@ function showEnhanceConfirmationBar(
   document.body.appendChild(bar);
 
   const acceptBtn = bar.querySelector<HTMLButtonElement>("#btn-enhance-accept")!;
+  const acceptFogBtn = bar.querySelector<HTMLButtonElement>("#btn-enhance-accept-fog")!;
   const retryBtn = bar.querySelector<HTMLButtonElement>("#btn-enhance-retry")!;
   const abortBtn = bar.querySelector<HTMLButtonElement>("#btn-enhance-abort")!;
 
   engine.setTool("select");
-  acceptBtn.addEventListener("click", () => {
+
+  const doAccept = (applyFog: boolean) => {
     bar.remove();
     engine.setTool("select");
     const currentEnt = (docStore.getDocument().entities[newMapImage.id] as ImageEntity) || newMapImage;
@@ -526,8 +529,35 @@ function showEnhanceConfirmationBar(
         }
       }
     }
-    showEnhanceToast("✅ AI Map Accepted and reference drawings cleared!", 4000);
-  });
+
+    if (applyFog) {
+      const size = doc.canvasSettings?.gridSizePx || 50;
+      const myPeerId = sessionManager.myPeerId || "local";
+      const startGx = Math.floor(box.x / size) * size;
+      const startGy = Math.floor(box.y / size) * size;
+      const endX = box.x + box.width;
+      const endY = box.y + box.height;
+      for (let cx = startGx; cx < endX; cx += size) {
+        for (let cy = startGy; cy < endY; cy += size) {
+          const cellKey = `${cx},${cy}`;
+          sessionManager.dispatchOperation({
+            opType: "UPDATE_GRID_CELL",
+            cellKey,
+            patch: {
+              fillColor: "fog",
+              fillCreator: myPeerId
+            }
+          });
+        }
+      }
+      showEnhanceToast("✅ AI Map Accepted, drawings cleared, and area covered with fog!", 5000);
+    } else {
+      showEnhanceToast("✅ AI Map Accepted and reference drawings cleared!", 4000);
+    }
+  };
+
+  acceptBtn.addEventListener("click", () => doAccept(false));
+  acceptFogBtn.addEventListener("click", () => doAccept(true));
 
   retryBtn.addEventListener("click", () => {
     bar.remove();
