@@ -50,45 +50,6 @@ function openConditionGenerateDescriptionModal(hasProxy: boolean, proxyPeerId: s
   descInput.style.cssText = "width: 100%; box-sizing: border-box; background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(56, 189, 248, 0.5); border-radius: 8px; padding: 12px; color: #fff; font-size: 0.95em; resize: vertical;";
   descLabel.appendChild(descInput);
 
-  // Inspiration Chips
-  const chipsSection = document.createElement("div");
-  chipsSection.style.cssText = "display: flex; flex-direction: column; gap: 6px;";
-  const chipsLabel = document.createElement("div");
-  chipsLabel.style.cssText = "font-size: 0.75em; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em;";
-  chipsLabel.textContent = "💡 Quick Preset Ideas:";
-  chipsSection.appendChild(chipsLabel);
-
-  const chipsGrid = document.createElement("div");
-  chipsGrid.style.cssText = "display: flex; flex-wrap: wrap; gap: 6px;";
-  const presets = [
-    { label: "🧊 Frozen Solid", text: "Frozen solid in clear ice block with sparkling frost and cold mist" },
-    { label: "⚡ Electrified", text: "Crackling electric aura with blue lightning sparks orbiting around target" },
-    { label: "🌑 Void Shadow", text: "Corrupted by swirling void shadow tendrils and dark purple energy" },
-    { label: "🔥 Burning Hellfire", text: "Engulfed in fiery red flames with rising embers and smoke" },
-    { label: "🌿 Overgrown Vines", text: "Entangled by thorned green vines and blooming nature magic" },
-    { label: "🌸 Fairy Glamour", text: "Charmed with floating pink hearts, glittering fairy dust, and soft glow" }
-  ];
-
-  presets.forEach((p) => {
-    const chip = document.createElement("button");
-    chip.textContent = p.label;
-    chip.style.cssText = "padding: 4px 10px; border-radius: 9999px; background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.3); color: #f8fafc; font-size: 0.8em; cursor: pointer; transition: all 0.15s ease;";
-    chip.addEventListener("mouseenter", () => {
-      chip.style.background = "rgba(56, 189, 248, 0.25)";
-      chip.style.borderColor = "#38bdf8";
-    });
-    chip.addEventListener("mouseleave", () => {
-      chip.style.background = "rgba(56, 189, 248, 0.12)";
-      chip.style.borderColor = "rgba(56, 189, 248, 0.3)";
-    });
-    chip.addEventListener("click", () => {
-      descInput.value = p.text;
-      descInput.focus();
-    });
-    chipsGrid.appendChild(chip);
-  });
-  chipsSection.appendChild(chipsGrid);
-
   const buttons = document.createElement("div");
   buttons.style.cssText = "display: flex; justify-content: flex-end; gap: 12px; margin-top: 8px;";
 
@@ -150,7 +111,6 @@ function openConditionGenerateDescriptionModal(hasProxy: boolean, proxyPeerId: s
   windowEl.appendChild(title);
   windowEl.appendChild(descTxt);
   windowEl.appendChild(descLabel);
-  windowEl.appendChild(chipsSection);
   windowEl.appendChild(buttons);
   modal.appendChild(windowEl);
   document.body.appendChild(modal);

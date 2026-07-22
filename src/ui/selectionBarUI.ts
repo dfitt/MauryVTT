@@ -373,9 +373,10 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
       const customConditions: { id: string; label: string }[] = [];
       for (const bundle of Object.values(customBundles)) {
         if (bundle && Array.isArray(bundle.effects)) {
-          const isBundleCond = bundle.isCondition || (bundle.bundleName && bundle.bundleName.startsWith("Condition:"));
+          const isBundleCond = bundle.isCondition === true || (bundle.bundleName && bundle.bundleName.startsWith("Condition:"));
           for (const eff of bundle.effects) {
-            if ((eff.isCondition || isBundleCond) && eff.id && !BASE_CONDITIONS.some((bc) => bc.id === eff.id)) {
+            const isEffCond = eff.isCondition === true || (isBundleCond && eff.isCondition !== false);
+            if (isEffCond && eff.id && !BASE_CONDITIONS.some((bc) => bc.id === eff.id)) {
               const name = eff.name || eff.id;
               customConditions.push({ id: eff.id, label: `✨ ${name}` });
             }

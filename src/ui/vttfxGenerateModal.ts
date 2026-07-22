@@ -192,9 +192,11 @@ export function openVttfxPreviewModal(vttfxItem: VttfxEffectItem, iconDesc: stri
     if (animationTimer) clearInterval(animationTimer);
     modal.remove();
 
+    vttfxItem.isCondition = false;
     const finalBundle: VttfxBundle = {
       version: "1.0",
       bundleName: `AI VFX: ${vttfxItem.name}`,
+      isCondition: false,
       effects: [vttfxItem]
     };
 
