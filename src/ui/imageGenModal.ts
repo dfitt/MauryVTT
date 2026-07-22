@@ -1,5 +1,6 @@
 import { CanvasEngine } from "../canvas/canvasEngine.js";
 import { sessionManager } from "../network/sessionManager.js";
+import { hostEngine } from "../network/p2pHost.js";
 import { docStore } from "../state/documentStore.js";
 import { assetStore } from "../state/idbAssetStore.js";
 import { TokenEntity, ImageEntity } from "../types/vtt.js";
@@ -583,6 +584,12 @@ export function setupImageGenProxyListeners(engine: CanvasEngine): void {
           await assetStore.saveAsset(assetHash, blob);
           docStore.registerAssetManifest(assetHash, "image/png", blob.size, 1024, 1024);
 
+          // Stream the asset to the requester BEFORE sending the response,
+          // so the asset is available by the time the client starts polling
+          if (sessionManager.role === "host" && payload.requesterPeerId) {
+            await hostEngine.streamAssetToPeer(payload.requesterPeerId, assetHash);
+          }
+
           sessionManager.sendEphemeral({
             type: "IMAGE_GEN_PROXY_RES",
             reqId: payload.reqId,
@@ -645,7 +652,7 @@ export function setupImageGenProxyListeners(engine: CanvasEngine): void {
                 openImageGenPreviewModal(engine, base64, payload.prompt || "");
                 showEnhanceToast("✅ AI Scene Illustration transferred from proxy!", 5000);
               }
-            } else if (attempts > 80) {
+            } else if (attempts > 240) {
               clearInterval(checkTimer);
               showEnhanceToast("⚠️ Illustration image transfer timed out from proxy.", 6000);
             }

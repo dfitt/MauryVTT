@@ -1,5 +1,6 @@
 import { CanvasEngine } from "../canvas/canvasEngine.js";
 import { sessionManager } from "../network/sessionManager.js";
+import { hostEngine } from "../network/p2pHost.js";
 import { docStore } from "../state/documentStore.js";
 import { assetStore } from "../state/idbAssetStore.js";
 import { processTokenImageFile, ProcessedImageResult } from "../canvas/imageResizer.js";
@@ -301,6 +302,12 @@ export function setupTokenProxyListeners(
             processed.heightPx
           );
 
+          // Stream the asset to the requester BEFORE sending the response,
+          // so the asset is available by the time the client starts polling
+          if (sessionManager.role === "host" && payload.requesterPeerId) {
+            await hostEngine.streamAssetToPeer(payload.requesterPeerId, processed.assetHash);
+          }
+
           sessionManager.sendEphemeral({
             type: "TOKEN_PROXY_RES",
             reqId: payload.reqId,
@@ -365,7 +372,7 @@ export function setupTokenProxyListeners(
                 engine.setTool("select");
                 showEnhanceToast("✅ AI Token generated via proxy and added to canvas!", 5000);
               }
-            } else if (attempts > 80) {
+            } else if (attempts > 240) {
               clearInterval(checkTimer);
               showEnhanceToast("⚠️ Token image transfer timed out from proxy.", 6000);
             }

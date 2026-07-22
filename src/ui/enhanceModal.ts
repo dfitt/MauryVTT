@@ -3,6 +3,7 @@ import { ImageEntity, VTTDocument } from "../types/vtt.js";
 import { docStore } from "../state/documentStore.js";
 import { assetStore } from "../state/idbAssetStore.js";
 import { sessionManager } from "../network/sessionManager.js";
+import { hostEngine } from "../network/p2pHost.js";
 import { processImageFile } from "../canvas/imageResizer.js";
 
 export function openGeminiApiKeyModal(onSuccess?: () => void): void {
@@ -819,7 +820,13 @@ async function runGeminiMapEnhancementForProxy(
       processed.widthPx,
       processed.heightPx
     );
-    console.log("[EnhanceProxy] Asset saved to IDB with hash:", processed.assetHash, "Dispatching CREATE_ENTITY...");
+    console.log("[EnhanceProxy] Asset saved to IDB with hash:", processed.assetHash, "Streaming to requester...");
+
+    // Stream the asset to the requester BEFORE sending the response,
+    // so the asset is available by the time the client starts polling
+    if (sessionManager.role === "host" && requesterPeerId) {
+      await hostEngine.streamAssetToPeer(requesterPeerId, processed.assetHash);
+    }
 
     const existingImages = Object.values(doc.entities).filter((e) => e.type === "image");
     let lowestZ = 0;

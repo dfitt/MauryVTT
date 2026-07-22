@@ -364,6 +364,13 @@ export class P2PHost {
     }
   }
 
+  public async streamAssetToPeer(peerId: string, assetHash: string): Promise<void> {
+    const conn = this.connections.get(peerId);
+    if (conn && conn.open) {
+      await this.streamAssetToClient(conn, assetHash);
+    }
+  }
+
   public async streamAssetToClient(conn: DataConnection, assetHash: string): Promise<void> {
     const blob = await assetStore.getAsset(assetHash);
     if (!blob || !conn.open) return;
