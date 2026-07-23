@@ -97,6 +97,14 @@ export function sendDmAssistantWhisper(dmResponse: string, recipientPeerId?: str
   const myId = recipientPeerId || sessionManager.myPeerId || "local";
   const myUsername = recipientUsername || sessionManager.myUsername || "Me";
 
+  const formattedIdeas = dmResponse
+    .trim()
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .join("<br/><br/>");
+
   const whisperMsg: ChatMessage = {
     id: "whisper-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6),
     timestamp: Date.now(),
@@ -104,7 +112,7 @@ export function sendDmAssistantWhisper(dmResponse: string, recipientPeerId?: str
     senderUsername: "🧙 DM Assistant",
     recipientPeerId: myId,
     recipientUsername: myUsername,
-    content: `🧙 <strong>DM Assistant Story Ideas:</strong><br/>${dmResponse.replace(/\n/g, "<br/>")}`,
+    content: `🧙 <strong>DM Assistant Story Ideas:</strong><br/><br/>${formattedIdeas}`,
     type: "whisper"
   };
 
