@@ -205,7 +205,21 @@ async function callGeminiImageGeneration(
     ? `\n3. CRITICAL ASPECT RATIO INSTRUCTION: The returned generated map image MUST strictly match the exact aspect ratio of the input reference image (${boxDimensions.width}x${boxDimensions.height}, aspect ratio ${boxRatio.toFixed(2)}:1). Do NOT alter the proportions, stretch, skew, square-crop, or change the spatial relative dimensions or rectangular boundaries of the rooms, corridors, or overall canvas frame!`
     : "";
 
-  const sketchPrompt = `You are a master virtual tabletop RPG map designer specializing in classic old-school D&D cartography. Look at the provided top-down drawing and room fills as a layout guide and blueprint. Generate a high-resolution, top-down, overhead 2D tabletop RPG battlemap designed in an oldschool D&D, OSR (Old School Renaissance), and Dungeon Crawl Classics (DCC) art style. The map MUST be drawn with crisp black ink on a solid, stark white (#FFFFFF) background with classic crosshatching, hand-drawn ink line walls, stippling, and retro dungeon cartography textures while preserving the exact spatial boundaries, room layouts, pathways, and alignments shown in the sketch guide. Even if the reference sketch has a dark background, your generated map MUST have a solid, stark white (#FFFFFF) background with black ink lines. CRITICAL INSTRUCTIONS:\n1. Do NOT draw or include any square or hexagonal grid lines, floor tile grids, flagstone grids, floor patterns, map legends, text labels, titles, keys, or compass roses on the map itself.\n2. Floors MUST be mostly empty, plain, and stark white (#FFFFFF) except for important objects, furniture, debris, rubble, and decorations. Absolutely NO regular floor patterns, tiles, checkers, parquet, or grid textures are allowed on the floor because they conflict directly with the virtual tabletop software's built-in dynamic grid lines.${aspectInstruction}`;
+  const sketchPrompt = `You are a master virtual tabletop RPG map designer specializing in classic old-school D&D cartography. Look at the provided reference image, which contains top-down sketch drawings and room fills as a layout guide and blueprint, along with fragments of existing map images underneath.
+
+CONNECTIVITY & ALIGNMENT INSTRUCTION:
+The existing map image fragments in the reference image are provided to help align connective illustrations such as hallways, doors, passages, and tunnels so your generated map connects seamlessly to the adjacent existing map sections.
+
+CRITICAL INSTRUCTION - DO NOT REDRAW EXISTING MAP IMAGES:
+1. Do NOT duplicate, redraw, copy, or re-render the existing map image fragments shown in the reference image. Those existing images are already present on the tabletop canvas.
+2. The generated output image MUST contain ONLY the enhanced map corresponding to the user's sketch drawings/fills and connecting pathways (hallways, doors, tunnels).
+3. Any regions occupied purely by the existing map images should be left blank and stark white (#FFFFFF) so your generated section overlays cleanly without clutter.
+
+Generate a high-resolution, top-down, overhead 2D tabletop RPG battlemap designed in an oldschool D&D, OSR (Old School Renaissance), and Dungeon Crawl Classics (DCC) art style. The map MUST be drawn with crisp black ink on a solid, stark white (#FFFFFF) background with classic crosshatching, hand-drawn ink line walls, stippling, and retro dungeon cartography textures while preserving the exact spatial boundaries, room layouts, pathways, and alignments shown in the sketch guide and connecting to adjacent features. Even if the reference sketch has a dark background, your generated map MUST have a solid, stark white (#FFFFFF) background with black ink lines.
+
+CRITICAL INSTRUCTIONS:
+1. Do NOT draw or include any square or hexagonal grid lines, floor tile grids, flagstone grids, floor patterns, map legends, text labels, titles, keys, or compass roses on the map itself.
+2. Floors MUST be mostly empty, plain, and stark white (#FFFFFF) except for important objects, furniture, debris, rubble, and decorations. Absolutely NO regular floor patterns, tiles, checkers, parquet, or grid textures are allowed on the floor because they conflict directly with the virtual tabletop software's built-in dynamic grid lines.${aspectInstruction}`;
 
   const noDrawingsPrompt = `You are a master virtual tabletop RPG map designer specializing in classic old-school D&D cartography. Create a brand new room section in the selection area. The provided reference image contains existing map rooms and features sent ONLY as a spatial reference so your new room can connect to them (e.g. aligning doorways, corridors, or shared walls).
 
@@ -428,11 +442,10 @@ export async function runGeminiMapEnhancement(engine: CanvasEngine, box: { x: nu
     offCtx.scale(scale, scale);
     offCtx.translate(-box.x, -box.y);
 
+    await engine.ensureImagesLoadedForBox(doc, box);
+    engine.drawAreaImages(offCtx, doc, box);
     if (hasDrawings) {
       engine.drawAreaDrawingsAndFills(offCtx, doc, box);
-    } else {
-      await engine.ensureImagesLoadedForBox(doc, box);
-      engine.drawAreaImages(offCtx, doc, box);
     }
     offCtx.restore();
 
@@ -954,11 +967,10 @@ async function runGeminiMapEnhancementForProxy(
     offCtx.scale(scale, scale);
     offCtx.translate(-box.x, -box.y);
 
+    await engine.ensureImagesLoadedForBox(doc, box);
+    engine.drawAreaImages(offCtx, doc, box);
     if (hasDrawings) {
       engine.drawAreaDrawingsAndFills(offCtx, doc, box);
-    } else {
-      await engine.ensureImagesLoadedForBox(doc, box);
-      engine.drawAreaImages(offCtx, doc, box);
     }
     offCtx.restore();
 
