@@ -122,12 +122,54 @@ export function showEnhanceToast(text: string, durationMs = 8000): void {
   }
 }
 
+export function hasDrawingsInBox(doc: VTTDocument, box: { x: number; y: number; width: number; height: number }): boolean {
+  if (!doc) return false;
+
+  for (const ent of Object.values(doc.entities || {})) {
+    if (ent.type === "line") {
+      const line = ent as any;
+      if (line.points && line.points.length > 0) {
+        const inside = line.points.some((p: any) => {
+          const px = Array.isArray(p) ? p[0] : p?.x;
+          const py = Array.isArray(p) ? p[1] : p?.y;
+          return (
+            px !== undefined &&
+            py !== undefined &&
+            px >= box.x - 10 &&
+            px <= box.x + box.width + 10 &&
+            py >= box.y - 10 &&
+            py <= box.y + box.height + 10
+          );
+        });
+        if (inside) return true;
+      }
+    }
+  }
+
+  if (doc.gridCells) {
+    const size = doc.canvasSettings?.gridSizePx || 50;
+    for (const [key, cell] of Object.entries(doc.gridCells)) {
+      if (!cell || !cell.fillColor || cell.fillColor === "fog" || cell.fogHidden) continue;
+      const commaIdx = key.indexOf(",");
+      if (commaIdx === -1) continue;
+      const gx = Number(key.substring(0, commaIdx));
+      const gy = Number(key.substring(commaIdx + 1));
+      if (gx + size >= box.x && gx <= box.x + box.width && gy + size >= box.y && gy <= box.y + box.height) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 async function callGeminiImageGeneration(
   base64Image: string,
   apiKey: string,
   modelName: string,
   overrideDesc?: string,
-  boxDimensions?: { width: number; height: number }
+  boxDimensions?: { width: number; height: number },
+  hasDrawings: boolean = true
 ): Promise<string | null> {
   const modelsToTry = [
     modelName,
@@ -160,10 +202,14 @@ async function callGeminiImageGeneration(
   const imageSizeStr = `${targetW}x${targetH}`;
 
   const aspectInstruction = boxDimensions
-    ? `\n3. CRITICAL ASPECT RATIO INSTRUCTION: The returned generated map image MUST strictly match the exact aspect ratio of the input reference sketch image (${boxDimensions.width}x${boxDimensions.height}, aspect ratio ${boxRatio.toFixed(2)}:1). Do NOT alter the proportions, stretch, skew, square-crop, or change the spatial relative dimensions or rectangular boundaries of the rooms, corridors, or overall canvas frame!`
+    ? `\n3. CRITICAL ASPECT RATIO INSTRUCTION: The returned generated map image MUST strictly match the exact aspect ratio of the input reference image (${boxDimensions.width}x${boxDimensions.height}, aspect ratio ${boxRatio.toFixed(2)}:1). Do NOT alter the proportions, stretch, skew, square-crop, or change the spatial relative dimensions or rectangular boundaries of the rooms, corridors, or overall canvas frame!`
     : "";
 
-  const premadePrompt = `You are a master virtual tabletop RPG map designer specializing in classic old-school D&D cartography. Look at the provided top-down drawing and room fills as a layout guide and blueprint. Generate a high-resolution, top-down, overhead 2D tabletop RPG battlemap designed in an oldschool D&D, OSR (Old School Renaissance), and Dungeon Crawl Classics (DCC) art style. The map MUST be drawn with crisp black ink on a solid, stark white (#FFFFFF) background with classic crosshatching, hand-drawn ink line walls, stippling, and retro dungeon cartography textures while preserving the exact spatial boundaries, room layouts, pathways, and alignments shown in the sketch guide. Even if the reference sketch has a dark background, your generated map MUST have a solid, stark white (#FFFFFF) background with black ink lines. CRITICAL INSTRUCTIONS:\n1. Do NOT draw or include any square or hexagonal grid lines, floor tile grids, flagstone grids, floor patterns, map legends, text labels, titles, keys, or compass roses on the map itself.\n2. Floors MUST be mostly empty, plain, and stark white (#FFFFFF) except for important objects, furniture, debris, rubble, and decorations. Absolutely NO regular floor patterns, tiles, checkers, parquet, or grid textures are allowed on the floor because they conflict directly with the virtual tabletop software's built-in dynamic grid lines.${aspectInstruction}`;
+  const sketchPrompt = `You are a master virtual tabletop RPG map designer specializing in classic old-school D&D cartography. Look at the provided top-down drawing and room fills as a layout guide and blueprint. Generate a high-resolution, top-down, overhead 2D tabletop RPG battlemap designed in an oldschool D&D, OSR (Old School Renaissance), and Dungeon Crawl Classics (DCC) art style. The map MUST be drawn with crisp black ink on a solid, stark white (#FFFFFF) background with classic crosshatching, hand-drawn ink line walls, stippling, and retro dungeon cartography textures while preserving the exact spatial boundaries, room layouts, pathways, and alignments shown in the sketch guide. Even if the reference sketch has a dark background, your generated map MUST have a solid, stark white (#FFFFFF) background with black ink lines. CRITICAL INSTRUCTIONS:\n1. Do NOT draw or include any square or hexagonal grid lines, floor tile grids, flagstone grids, floor patterns, map legends, text labels, titles, keys, or compass roses on the map itself.\n2. Floors MUST be mostly empty, plain, and stark white (#FFFFFF) except for important objects, furniture, debris, rubble, and decorations. Absolutely NO regular floor patterns, tiles, checkers, parquet, or grid textures are allowed on the floor because they conflict directly with the virtual tabletop software's built-in dynamic grid lines.${aspectInstruction}`;
+
+  const noDrawingsPrompt = `You are a master virtual tabletop RPG map designer specializing in classic old-school D&D cartography. Create a new room roughly in the shape of the provided selection frame/image area. The provided reference image shows existing map rooms and features that your new room MUST seamlessly connect to, aligning with and overlaying any existing doorways, corridors, walls, or map structures shown. Generate a high-resolution, top-down, overhead 2D tabletop RPG battlemap section designed in an oldschool D&D, OSR (Old School Renaissance), and Dungeon Crawl Classics (DCC) art style. The map MUST be drawn with crisp black ink on a solid, stark white (#FFFFFF) background with classic crosshatching, hand-drawn ink line walls, stippling, and retro dungeon cartography textures while seamlessly integrating with the adjacent map elements shown. Even if the reference image has a dark background, your generated map MUST have a solid, stark white (#FFFFFF) background with black ink lines. CRITICAL INSTRUCTIONS:\n1. Do NOT draw or include any square or hexagonal grid lines, floor tile grids, flagstone grids, floor patterns, map legends, text labels, titles, keys, or compass roses on the map itself.\n2. Floors MUST be mostly empty, plain, and stark white (#FFFFFF) except for important objects, furniture, debris, rubble, and decorations. Absolutely NO regular floor patterns, tiles, checkers, parquet, or grid textures are allowed on the floor because they conflict directly with the virtual tabletop software's built-in dynamic grid lines.${aspectInstruction}`;
+
+  const premadePrompt = hasDrawings ? sketchPrompt : noDrawingsPrompt;
   const customDesc = overrideDesc !== undefined ? overrideDesc.trim() : localStorage.getItem("gemini_enhance_custom_prompt")?.trim();
   const promptText = customDesc
     ? `${premadePrompt}\n\nCRITICAL USER OVERRIDE DESCRIPTION (Follow this user description strictly; if any instructions below or above conflict with this custom description, this user description takes overriding precedence):\n"${customDesc}"`
@@ -171,7 +217,7 @@ async function callGeminiImageGeneration(
 
   console.group("[Enhance] Starting Gemini Image Generation Pipeline");
   console.log("Models queue in order:", modelsToTry);
-  console.log("Input sketch size (base64 length):", base64Image.length);
+  console.log("Input image size (base64 length):", base64Image.length, "hasDrawings:", hasDrawings);
   console.log("API Key present:", Boolean(apiKey), "Length:", apiKey ? apiKey.length : 0);
 
   const errorsCollected: string[] = [];
@@ -342,11 +388,17 @@ export async function runGeminiMapEnhancement(engine: CanvasEngine, box: { x: nu
     return;
   }
 
+  const doc = docStore.getDocument();
+  const hasDrawings = hasDrawingsInBox(doc, box);
   const modelName = localStorage.getItem("gemini_enhance_model") || "gemini-3.1-flash-image";
-  showEnhanceToast("✨ Generating AI Overhead Map with Gemini (Nano Banana 2)... Please wait ~10-20s.", 0);
+  showEnhanceToast(
+    hasDrawings
+      ? "✨ Generating AI Overhead Map with Gemini... Please wait ~10-20s."
+      : "✨ Generating AI Room Map with Gemini... Please wait ~10-20s.",
+    0
+  );
 
   try {
-    const doc = docStore.getDocument();
     const maxDim = 1024;
     const scale = Math.min(maxDim / box.width, maxDim / box.height, 2.0);
     const canvasW = Math.max(64, Math.round(box.width * scale));
@@ -365,15 +417,27 @@ export async function runGeminiMapEnhancement(engine: CanvasEngine, box: { x: nu
     offCtx.scale(scale, scale);
     offCtx.translate(-box.x, -box.y);
 
-    engine.drawAreaDrawingsAndFills(offCtx, doc, box);
+    if (hasDrawings) {
+      engine.drawAreaDrawingsAndFills(offCtx, doc, box);
+    } else {
+      await engine.ensureImagesLoadedForBox(doc, box);
+      engine.drawAreaImages(offCtx, doc, box);
+    }
     offCtx.restore();
 
     const dataUrl = offscreen.toDataURL("image/png");
     const base64Image = dataUrl.split(",")[1];
 
-    console.log("[Enhance] Captured offscreen sketch area:", box, "size:", canvasW, canvasH);
+    console.log("[Enhance] Captured offscreen area (hasDrawings=" + hasDrawings + "):", box, "size:", canvasW, canvasH);
 
-    const resultBase64 = await callGeminiImageGeneration(base64Image, apiKey, modelName, overrideDesc, { width: box.width, height: box.height });
+    const resultBase64 = await callGeminiImageGeneration(
+      base64Image,
+      apiKey,
+      modelName,
+      overrideDesc,
+      { width: box.width, height: box.height },
+      hasDrawings
+    );
     if (!resultBase64) {
       throw new Error("No image output returned by Gemini API.");
     }
@@ -465,7 +529,7 @@ function showEnhanceConfirmationBar(
 
   engine.setTool("select");
 
-  const doAccept = (applyFog: boolean) => {
+  const doAccept = async (applyFog: boolean) => {
     bar.remove();
     engine.setTool("select");
     const currentEnt = (docStore.getDocument().entities[newMapImage.id] as ImageEntity) || newMapImage;
@@ -538,17 +602,107 @@ function showEnhanceConfirmationBar(
       const startGy = Math.floor(box.y / size) * size;
       const endX = box.x + box.width;
       const endY = box.y + box.height;
+
+      // Analyze image content to only fog cells with content or neighbors with content
+      const cellHasContentMap = new Map<string, boolean>();
+      let analyzedImage = false;
+
+      if (lockedMapEntity.assetHash) {
+        try {
+          const blob = await assetStore.getAsset(lockedMapEntity.assetHash);
+          if (blob) {
+            const imgUrl = URL.createObjectURL(blob);
+            const img = new Image();
+            await new Promise<void>((resolve, reject) => {
+              img.onload = () => resolve();
+              img.onerror = (e) => reject(e);
+              img.src = imgUrl;
+            });
+            URL.revokeObjectURL(imgUrl);
+
+            const canvas = document.createElement("canvas");
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            const ctx = canvas.getContext("2d");
+            if (ctx && img.naturalWidth > 0 && img.naturalHeight > 0) {
+              ctx.drawImage(img, 0, 0);
+              const imageData = ctx.getImageData(0, 0, img.naturalWidth, img.naturalHeight);
+              const data32 = new Uint32Array(imageData.data.buffer);
+              const imgW = img.naturalWidth;
+              const imgH = img.naturalHeight;
+
+              for (let cx = startGx; cx < endX; cx += size) {
+                for (let cy = startGy; cy < endY; cy += size) {
+                  const worldX1 = Math.max(cx, box.x);
+                  const worldX2 = Math.min(cx + size, box.x + box.width);
+                  const worldY1 = Math.max(cy, box.y);
+                  const worldY2 = Math.min(cy + size, box.y + box.height);
+
+                  const px1 = Math.floor(((worldX1 - box.x) / box.width) * imgW);
+                  const px2 = Math.min(imgW, Math.ceil(((worldX2 - box.x) / box.width) * imgW));
+                  const py1 = Math.floor(((worldY1 - box.y) / box.height) * imgH);
+                  const py2 = Math.min(imgH, Math.ceil(((worldY2 - box.y) / box.height) * imgH));
+
+                  let hasContent = false;
+                  if (px2 > px1 && py2 > py1) {
+                    let firstColor: number | null = null;
+                    for (let y = py1; y < py2; y++) {
+                      const rowOffset = y * imgW;
+                      for (let x = px1; x < px2; x++) {
+                        const color = data32[rowOffset + x];
+                        if (firstColor === null) {
+                          firstColor = color;
+                        } else if (color !== firstColor) {
+                          hasContent = true;
+                          break;
+                        }
+                      }
+                      if (hasContent) break;
+                    }
+                  }
+                  cellHasContentMap.set(`${cx},${cy}`, hasContent);
+                }
+              }
+              analyzedImage = true;
+            }
+          }
+        } catch (err) {
+          console.warn("[Enhance] Could not analyze image content for fog bounds:", err);
+        }
+      }
+
       for (let cx = startGx; cx < endX; cx += size) {
         for (let cy = startGy; cy < endY; cy += size) {
           const cellKey = `${cx},${cy}`;
-          sessionManager.dispatchOperation({
-            opType: "UPDATE_GRID_CELL",
-            cellKey,
-            patch: {
-              fillColor: "fog",
-              fillCreator: myPeerId
+          let shouldFog = true;
+
+          if (analyzedImage) {
+            shouldFog = Boolean(cellHasContentMap.get(cellKey));
+            if (!shouldFog) {
+              // Check 8 neighbors (including diagonals)
+              for (let dx = -size; dx <= size; dx += size) {
+                for (let dy = -size; dy <= size; dy += size) {
+                  if (dx === 0 && dy === 0) continue;
+                  if (cellHasContentMap.get(`${cx + dx},${cy + dy}`)) {
+                    shouldFog = true;
+                    break;
+                  }
+                }
+                if (shouldFog) break;
+              }
             }
-          });
+          }
+
+          if (shouldFog) {
+            sessionManager.dispatchOperation({
+              opType: "UPDATE_GRID_CELL",
+              cellKey,
+              patch: {
+                fillColor: "fog",
+                fillCreator: myPeerId
+              }
+            });
+          }
         }
       }
       showEnhanceToast("✅ AI Map Accepted, drawings cleared, and area covered with fog!", 5000);
@@ -771,6 +925,7 @@ async function runGeminiMapEnhancementForProxy(
   try {
     console.log(`[EnhanceProxy] Executing proxy enhancement job for ${requesterUsername} (${requesterPeerId}). Box:`, box, "Desc:", description);
     const doc = docStore.getDocument();
+    const hasDrawings = hasDrawingsInBox(doc, box);
     const maxDim = 1024;
     const scale = Math.min(maxDim / box.width, maxDim / box.height, 2.0);
     const canvasW = Math.max(64, Math.round(box.width * scale));
@@ -789,14 +944,26 @@ async function runGeminiMapEnhancementForProxy(
     offCtx.scale(scale, scale);
     offCtx.translate(-box.x, -box.y);
 
-    engine.drawAreaDrawingsAndFills(offCtx, doc, box);
+    if (hasDrawings) {
+      engine.drawAreaDrawingsAndFills(offCtx, doc, box);
+    } else {
+      await engine.ensureImagesLoadedForBox(doc, box);
+      engine.drawAreaImages(offCtx, doc, box);
+    }
     offCtx.restore();
 
     const dataUrl = offscreen.toDataURL("image/png");
     const base64Image = dataUrl.split(",")[1];
 
-    console.log(`[EnhanceProxy] Calling Gemini API (model=${modelName})...`);
-    const resultBase64 = await callGeminiImageGeneration(base64Image, apiKey, modelName, description, { width: box.width, height: box.height });
+    console.log(`[EnhanceProxy] Calling Gemini API (model=${modelName}, hasDrawings=${hasDrawings})...`);
+    const resultBase64 = await callGeminiImageGeneration(
+      base64Image,
+      apiKey,
+      modelName,
+      description,
+      { width: box.width, height: box.height },
+      hasDrawings
+    );
     if (!resultBase64) {
       throw new Error("No image output returned by Gemini API during proxy request.");
     }
@@ -828,7 +995,7 @@ async function runGeminiMapEnhancementForProxy(
       await hostEngine.streamAssetToPeer(requesterPeerId, processed.assetHash);
     }
 
-    const existingImages = Object.values(doc.entities).filter((e) => e.type === "image");
+    const existingImages = Object.values(doc.entities).filter((e) => (e as any).type === "image") as ImageEntity[];
     let lowestZ = 0;
     for (const img of existingImages) {
       if (img.zIndex < lowestZ) lowestZ = img.zIndex;

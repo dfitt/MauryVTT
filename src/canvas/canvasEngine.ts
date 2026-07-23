@@ -1466,6 +1466,68 @@ export class CanvasEngine {
     }
   }
 
+  public drawAreaImages(ctx: CanvasRenderingContext2D, doc: VTTDocument, box: { x: number; y: number; width: number; height: number }): void {
+    if (!doc) return;
+    const sortedImages = (Object.values(doc.entities).filter((e) => e.type === "image") as ImageEntity[])
+      .sort((a, b) => a.zIndex - b.zIndex);
+
+    for (const ent of sortedImages) {
+      const halfW = ent.size.width / 2;
+      const halfH = ent.size.height / 2;
+      const imgMinX = ent.position.x - halfW;
+      const imgMaxX = ent.position.x + halfW;
+      const imgMinY = ent.position.y - halfH;
+      const imgMaxY = ent.position.y + halfH;
+
+      if (imgMaxX >= box.x && imgMinX <= box.x + box.width && imgMaxY >= box.y && imgMinY <= box.y + box.height) {
+        this.drawEntity(ctx, ent);
+      }
+    }
+  }
+
+  public async preloadImageAsset(assetHash: string): Promise<HTMLImageElement | null> {
+    if (this.imageElements.has(assetHash)) {
+      const existing = this.imageElements.get(assetHash)!;
+      if (existing.complete && existing.naturalWidth > 0) {
+        return existing;
+      }
+    }
+    const url = await assetStore.getAssetObjectUrl(assetHash);
+    if (!url) return null;
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        this.imageElements.set(assetHash, img);
+        resolve(img);
+      };
+      img.onerror = () => {
+        resolve(null);
+      };
+      img.src = url;
+    });
+  }
+
+  public async ensureImagesLoadedForBox(doc: VTTDocument, box: { x: number; y: number; width: number; height: number }): Promise<void> {
+    if (!doc || !doc.entities) return;
+    const sortedImages = Object.values(doc.entities).filter((e) => e.type === "image") as ImageEntity[];
+    const promises: Promise<HTMLImageElement | null>[] = [];
+    for (const ent of sortedImages) {
+      const halfW = ent.size.width / 2;
+      const halfH = ent.size.height / 2;
+      const imgMinX = ent.position.x - halfW;
+      const imgMaxX = ent.position.x + halfW;
+      const imgMinY = ent.position.y - halfH;
+      const imgMaxY = ent.position.y + halfH;
+
+      if (imgMaxX >= box.x && imgMinX <= box.x + box.width && imgMaxY >= box.y && imgMinY <= box.y + box.height) {
+        if (ent.assetHash) {
+          promises.push(this.preloadImageAsset(ent.assetHash));
+        }
+      }
+    }
+    await Promise.all(promises);
+  }
+
   private drawGridCells(ctx: CanvasRenderingContext2D, doc: VTTDocument): void {
     if (!doc.gridCells) return;
     const size = doc.canvasSettings.gridSizePx || 50;
