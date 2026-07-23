@@ -93,7 +93,12 @@ Provide a brief, bulleted DM Response with creative story ideas, secrets, or tac
   throw new Error("Could not generate DM Assistant response from Gemini API.");
 }
 
-export function sendDmAssistantWhisper(dmResponse: string, recipientPeerId?: string, recipientUsername?: string): void {
+export function sendDmAssistantWhisper(
+  dmResponse: string,
+  recipientPeerId?: string,
+  recipientUsername?: string,
+  customMsgId?: string
+): void {
   const myId = recipientPeerId || sessionManager.myPeerId || "local";
   const myUsername = recipientUsername || sessionManager.myUsername || "Me";
 
@@ -106,7 +111,7 @@ export function sendDmAssistantWhisper(dmResponse: string, recipientPeerId?: str
     .join("<br/><br/>");
 
   const whisperMsg: ChatMessage = {
-    id: "whisper-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6),
+    id: customMsgId || ("whisper-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6)),
     timestamp: Date.now(),
     senderPeerId: "system",
     senderUsername: "🧙 DM Assistant",
@@ -992,6 +997,13 @@ export function setupEnhanceProxyListeners(engine: CanvasEngine): void {
           }, 250);
         }
       }
+    } else if (payload.type === "DM_ASSISTANT_PROXY_RES") {
+      console.log(`[EnhanceProxy] Received DM_ASSISTANT_PROXY_RES for requester=${payload.requesterPeerId}, myId=${myId}`);
+      if (payload.requesterPeerId === myId) {
+        showEnhanceToast("🧙 DM Assistant story ideas received!", 4000);
+        sendDmAssistantWhisper(payload.dmResponse, myId, sessionManager.myUsername || "Me", payload.whisperMsgId);
+        saveDmConvoEntry(payload.dmNote, payload.dmResponse);
+      }
     }
   });
 }
@@ -1112,7 +1124,18 @@ async function runGeminiMapEnhancementForProxy(
         description,
         convoHistory || []
       );
-      sendDmAssistantWhisper(dmResponse, requesterPeerId, requesterUsername);
+      const whisperMsgId = "whisper-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6);
+
+      sessionManager.sendEphemeral({
+        type: "DM_ASSISTANT_PROXY_RES",
+        reqId,
+        requesterPeerId,
+        dmNote,
+        dmResponse,
+        whisperMsgId
+      });
+
+      sendDmAssistantWhisper(dmResponse, requesterPeerId, requesterUsername, whisperMsgId);
 
       const dmHintsBlock = `\n\nDM ASSISTANT STORY & MAP HINTS:\nDM Note: "${dmNote}"\nDM Response Hints: "${dmResponse}"`;
       finalDescription = description + dmHintsBlock;

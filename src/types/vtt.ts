@@ -326,6 +326,14 @@ export type EphemeralPayload =
       error?: string;
     }
   | {
+      type: "DM_ASSISTANT_PROXY_RES";
+      reqId: string;
+      requesterPeerId: string;
+      dmNote: string;
+      dmResponse: string;
+      whisperMsgId?: string;
+    }
+  | {
       type: "VTTFX_PROXY_REQ";
       reqId: string;
       requesterPeerId: string;
