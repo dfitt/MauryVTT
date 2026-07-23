@@ -186,12 +186,13 @@ export function openImportVttfxModal(bundle: VttfxBundle, defaultBundleName?: st
       bundle: finalBundle
     } as any);
 
+    const username = sessionManager.myUsername || "Me";
     const newMsg: ChatMessage = {
       id: "sys-" + Date.now(),
       timestamp: Date.now(),
       senderPeerId: sessionManager.myPeerId || "local",
-      senderUsername: sessionManager.myUsername || "System",
-      content: `✨ Imported VFX bundle <strong>${finalBundle.bundleName}</strong> (${selectedEffects.length} effects) into session!`,
+      senderUsername: username,
+      content: `✨ Custom Roll VFX Animation <strong>${finalBundle.bundleName}</strong> imported by ${username} and added to animation library!`,
       type: "system"
     };
     sessionManager.dispatchOperation({ opType: "APPEND_CHAT_MESSAGE", message: newMsg });

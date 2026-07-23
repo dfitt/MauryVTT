@@ -118,6 +118,9 @@ export class DocumentStore {
     const currentUsers = this.doc ? { ...this.doc.users } : {};
     this.doc = JSON.parse(JSON.stringify(snapshot));
     this.doc.users = { ...this.doc.users, ...currentUsers };
+    if (this.doc.chatHistory) {
+      this.doc.chatHistory = this.doc.chatHistory.filter((msg) => msg.type !== "system");
+    }
     if (!this.doc.gridCells) {
       this.doc.gridCells = {};
     }
@@ -463,6 +466,15 @@ export class DocumentStore {
       case "APPEND_CHAT_MESSAGE": {
         if (!this.doc.chatHistory.some((m) => m.id === op.message.id)) {
           this.doc.chatHistory.push(op.message);
+          if (op.message.type === "system") {
+            const msgId = op.message.id;
+            setTimeout(() => {
+              if (this.doc.chatHistory.some((m) => m.id === msgId)) {
+                this.doc.chatHistory = this.doc.chatHistory.filter((m) => m.id !== msgId);
+                this.notify();
+              }
+            }, 60000);
+          }
         }
         break;
       }

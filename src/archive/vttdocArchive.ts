@@ -64,7 +64,7 @@ export async function exportVTTDocArchive(): Promise<string> {
     }
   }
 
-  // 2. Build clean document snapshot containing ONLY active asset hashes in assetManifest
+  // 2. Build clean document snapshot containing ONLY active asset hashes in assetManifest and excluding system notifications
   const cleanDoc: VTTDocument = JSON.parse(JSON.stringify(doc));
   cleanDoc.assetManifest = {};
   for (const hash of activeHashes) {
@@ -72,6 +72,7 @@ export async function exportVTTDocArchive(): Promise<string> {
       cleanDoc.assetManifest[hash] = doc.assetManifest[hash];
     }
   }
+  cleanDoc.chatHistory = (cleanDoc.chatHistory || []).filter((msg) => msg.type !== "system");
 
   // 3. Write JSON manifest
   zip.file("document.json", JSON.stringify(cleanDoc, null, 2));

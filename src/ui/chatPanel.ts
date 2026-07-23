@@ -1476,7 +1476,11 @@ export function setupChatPanel(engine?: CanvasEngine): void {
 
     const myId = sessionManager.myPeerId || "local";
     const myName = (sessionManager.myUsername || "Me").toLowerCase();
+    const now = Date.now();
     const visibleHistory = doc.chatHistory.filter((msg) => {
+      if (msg.type === "system" && now - msg.timestamp >= 60000) {
+        return false;
+      }
       if (msg.type === "whisper" || msg.recipientPeerId || msg.recipientUsername) {
         const isSender = (msg.senderPeerId === myId) || (msg.senderUsername?.toLowerCase() === myName);
         const isRecipient = (msg.recipientPeerId && msg.recipientPeerId === myId) || (msg.recipientUsername && msg.recipientUsername.toLowerCase() === myName);
