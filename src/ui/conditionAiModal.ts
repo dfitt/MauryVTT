@@ -35,7 +35,7 @@ function openConditionGenerateDescriptionModal(hasProxy: boolean, proxyPeerId: s
 
   const title = document.createElement("div");
   title.style.cssText = "font-size: 1.3em; font-weight: 800; color: #38bdf8; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(56, 189, 248, 0.3); padding-bottom: 10px;";
-  title.innerHTML = `<span>🏷️ Generate AI Token Condition</span>${hasProxy ? `<span style="font-size: 0.65em; color: #38bdf8; background: rgba(56, 189, 248, 0.15); padding: 2px 8px; border-radius: 9999px;">Via Proxy Host (${getPeerUsername(proxyPeerId)})</span>` : ''}`;
+  title.innerHTML = `<span>🏷️ ai Condition Animation</span>${hasProxy ? `<span style="font-size: 0.65em; color: #38bdf8; background: rgba(56, 189, 248, 0.15); padding: 2px 8px; border-radius: 9999px;">Via Proxy Host (${getPeerUsername(proxyPeerId)})</span>` : ''}`;
 
   const descTxt = document.createElement("div");
   descTxt.style.cssText = "font-size: 0.9em; color: #cbd5e1; line-height: 1.4;";

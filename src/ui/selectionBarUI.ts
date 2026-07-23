@@ -685,7 +685,7 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
       // Top Action: AI Condition Generator Button
       const aiGenBtn = document.createElement("button");
       aiGenBtn.style.cssText = "grid-column: span 2; padding: 6px 10px; border-radius: 8px; background: linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(192, 132, 252, 0.25)); border: 1px solid #38bdf8; color: #f8fafc; font-weight: 700; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 4px; transition: all 0.15s ease;";
-      aiGenBtn.innerHTML = `<span>✨ Generate AI Condition (with Animation)</span>`;
+      aiGenBtn.innerHTML = `<span>✨ ai Condition Animation</span>`;
       aiGenBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         isCondPopoverOpen = false;

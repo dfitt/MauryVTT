@@ -73,7 +73,7 @@ export function setupToolbarUI(engine: CanvasEngine): void {
     enhance: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle;"><path d="M12 2L14.4 8.4L21 10.8L14.4 13.2L12 19.6L9.6 13.2L3 10.8L9.6 8.4L12 2Z" fill="url(#enhance-grad)" stroke="#c084fc" stroke-width="1.5"/><path d="M19 16L20.2 19.2L23 20.4L20.2 21.6L19 24.8L17.8 21.6L15 20.4L17.8 19.2L19 16Z" fill="#e879f9"/><defs><linearGradient id="enhance-grad" x1="3" y1="2" x2="21" y2="20" gradientUnits="userSpaceOnUse"><stop stop-color="#c084fc"/><stop offset="1" stop-color="#38bdf8"/></linearGradient></defs></svg>`,
     token: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle;"><circle cx="12" cy="12" r="9" stroke="#38bdf8" stroke-width="1.8" fill="rgba(56,189,248,0.15)"/><path d="M12 6L13.5 10.5L18 12L13.5 13.5L12 18L10.5 13.5L6 12L10.5 10.5L12 6Z" fill="url(#token-ai-grad)" stroke="#c084fc" stroke-width="1.2"/><defs><linearGradient id="token-ai-grad" x1="6" y1="6" x2="18" y2="18" gradientUnits="userSpaceOnUse"><stop stop-color="#c084fc"/><stop offset="1" stop-color="#38bdf8"/></linearGradient></defs></svg>`,
     vttfx: `💫`,
-    imageGen: `🎨`
+    imageGen: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle;"><rect x="3" y="3" width="18" height="18" rx="2.5" stroke="#38bdf8" stroke-width="1.8" fill="rgba(30,41,59,0.6)"/><rect x="5.5" y="5.5" width="13" height="13" rx="1.5" stroke="#c084fc" stroke-width="1.2"/><path d="M7 16.5L10.5 11.5L13.5 15.5L15.5 12.5L18.5 16.5H7Z" fill="url(#img-ai-grad)"/><circle cx="9" cy="9" r="1.4" fill="#fef08a"/><defs><linearGradient id="img-ai-grad" x1="7" y1="11.5" x2="18.5" y2="16.5" gradientUnits="userSpaceOnUse"><stop stop-color="#c084fc"/><stop offset="1" stop-color="#38bdf8"/></linearGradient></defs></svg>`
   };
 
   const updateMainLineIcon = () => {
@@ -141,7 +141,7 @@ export function setupToolbarUI(engine: CanvasEngine): void {
     {
       id: "ai",
       icon: AI_ICONS.enhance,
-      title: "AI Tools (Map Enhance, AI Token, AI VTTFX)"
+      title: "AI Tools (ai Map ENHANCE, ai Token, ai Roll Animation, ai Condition Animation, ai Image)"
     }
   ];
 
@@ -441,11 +441,11 @@ export function setupToolbarUI(engine: CanvasEngine): void {
       grid.style.cssText = "display: flex; flex-direction: column; gap: 6px;";
       
       const aiOptions: { id: "enhance" | "token" | "vttfx" | "imageGen" | "condition"; label: string; desc: string; icon: string }[] = [
-        { id: "enhance", label: "AI Map Enhance", desc: "/enhance - Draw selection box on canvas", icon: AI_ICONS.enhance },
-        { id: "token", label: "AI Token Generator", desc: "Generate token art from description", icon: AI_ICONS.token },
-        { id: "vttfx", label: "AI VTTFX Generator", desc: "Generate animated spell & status VFX", icon: AI_ICONS.vttfx },
-        { id: "condition", label: "AI Condition Generator", desc: "Generate custom token status condition & animation", icon: "🏷️" },
-        { id: "imageGen", label: "AI Scene / Illustration", desc: "Generate Dark Fantasy scene art referencing tokens", icon: AI_ICONS.imageGen }
+        { id: "enhance", label: "ai Map ENHANCE", desc: "/enhance - Draw selection box on canvas", icon: AI_ICONS.enhance },
+        { id: "token", label: "ai Token", desc: "Generate token art from description", icon: AI_ICONS.token },
+        { id: "vttfx", label: "ai Roll Animation", desc: "Generate animated spell & status VFX", icon: AI_ICONS.vttfx },
+        { id: "condition", label: "ai Condition Animation", desc: "Generate custom token status condition & animation", icon: "🏷️" },
+        { id: "imageGen", label: "ai Image", desc: "Generate Dark Fantasy pixel art referencing tokens", icon: AI_ICONS.imageGen }
       ];
 
       aiOptions.forEach((o) => {

@@ -46,7 +46,7 @@ export function openAiTokenDescriptionModal(
     <div style="background: rgba(15, 23, 42, 0.96); border: 1px solid rgba(56, 189, 248, 0.6); border-radius: 14px; padding: 24px; max-width: 480px; width: 92%; box-shadow: 0 16px 48px rgba(0,0,0,0.85); color: #f8fafc; font-family: Outfit, sans-serif; display: flex; flex-direction: column; gap: 16px;">
       <div style="display: flex; align-items: center; gap: 10px;">
         <span style="font-size: 24px;">🤖</span>
-        <h3 style="margin: 0; font-size: 18px; font-weight: 700; color: #38bdf8;">AI Token Generator</h3>
+        <h3 style="margin: 0; font-size: 18px; font-weight: 700; color: #38bdf8;">ai Token</h3>
       </div>
       <p style="margin: 0; font-size: 13px; color: #cbd5e1; line-height: 1.5;">
         Describe the character, creature, or monster you want to generate as a top-down VTT token.

@@ -96,9 +96,9 @@ export async function openImageGenDescriptionModal(
   modal.innerHTML = `
     <div style="background: rgba(15, 23, 42, 0.96); border: 1px solid rgba(56, 189, 248, 0.6); border-radius: 14px; padding: 24px; max-width: 520px; width: 92%; box-shadow: 0 16px 48px rgba(0,0,0,0.85); color: #f8fafc; font-family: Outfit, sans-serif; display: flex; flex-direction: column; gap: 16px;">
       <div style="display: flex; align-items: center; gap: 10px;">
-        <span style="font-size: 24px;">🎨</span>
+        <span style="font-size: 24px;">🖼️</span>
         <div>
-          <h3 style="margin: 0; font-size: 18px; font-weight: 700; color: #38bdf8;">AI Scene / Illustration Generator</h3>
+          <h3 style="margin: 0; font-size: 18px; font-weight: 700; color: #38bdf8;">ai Image</h3>
           <span style="font-size: 11px; color: #94a3b8;">Create vivid art referencing character tokens right from your tabletop</span>
         </div>
       </div>
@@ -114,7 +114,7 @@ export async function openImageGenDescriptionModal(
         <label style="font-size: 12px; font-weight: 700; color: #38bdf8;">Scene Description & Action</label>
         <textarea id="gemini-imagegen-desc-textarea" rows="4" placeholder="e.g. Jack shoots a green death ray at Robin. Robin is disintegrated." style="padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.4); background: rgba(30, 41, 59, 0.8); color: #ffffff; font-size: 13px; outline: none; resize: vertical; font-family: inherit;"></textarea>
         <span style="font-size: 11px; color: #64748b; font-style: italic;">
-          ✨ <b>Default Style:</b> Dark Fantasy Illustration (You can override this right in your prompt, e.g., "in a vibrant watercolor style" or "realistic oil painting").
+          ✨ <b>Default Style:</b> Dark Fantasy Pixel Art (You can override this right in your prompt, e.g., "in a vibrant watercolor style" or "realistic oil painting").
         </span>
       </div>
 
@@ -461,6 +461,8 @@ export function openImageGenPreviewModal(engine: CanvasEngine, base64Image: stri
       showEnhanceToast(`❌ Error adding illustration: ${err.message || err}`, 8000);
     }
   });
+
+  document.body.appendChild(modal);
 }
 
 export async function callGeminiSceneImageGeneration(
@@ -482,7 +484,7 @@ export async function callGeminiSceneImageGeneration(
   const parts: any[] = [
     {
       text: `You are an expert digital fantasy artist generating a high quality scene illustration for our virtual tabletop roleplaying game.
-Default Art Style: Dark Fantasy Illustration (unless explicitly overridden by instructions in the user prompt below).
+Default Art Style: Dark Fantasy Pixel Art (unless explicitly overridden by instructions in the user prompt below).
 
 ${tokenRefs.length > 0 ? `We have provided ${tokenRefs.length} character reference image(s) below. Each image is explicitly labeled with the character's name. When the user's scene prompt mentions any of these character names, you MUST accurately depict their appearance, distinctive features, color palette, and attire from their reference image:` : ""}`
     }
@@ -504,7 +506,7 @@ ${tokenRefs.length > 0 ? `We have provided ${tokenRefs.length} character referen
   }
 
   parts.push({
-    text: `\nNow, generate a single new, complete high-quality Dark Fantasy Illustration according to the following user scene description:\n"${promptText}"\n\nGenerate and return ONLY the new image output.`
+    text: `\nNow, generate a single new, complete high-quality Dark Fantasy Pixel Art according to the following user scene description:\n"${promptText}"\n\nGenerate and return ONLY the new image output.`
   });
 
   for (const model of modelsToTry) {
@@ -513,7 +515,7 @@ ${tokenRefs.length > 0 ? `We have provided ${tokenRefs.length} character referen
       if (model.includes("imagen")) {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${encodeURIComponent(apiKey)}`;
         const requestPayload = {
-          instances: [{ prompt: `${promptText} (Style: Dark Fantasy Illustration)` }],
+          instances: [{ prompt: `${promptText} (Style: Dark Fantasy Pixel Art)` }],
           parameters: { sampleCount: 1, aspectRatio: "1:1", sampleImageSize: "1024x1024" }
         };
         const resp = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(requestPayload) });

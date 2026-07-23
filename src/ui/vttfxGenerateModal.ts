@@ -34,7 +34,7 @@ function openVttfxGenerateDescriptionModal(hasProxy: boolean, proxyPeerId: strin
 
   const title = document.createElement("div");
   title.style.cssText = "font-size: 1.3em; font-weight: 800; color: #c084fc; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid rgba(192, 132, 252, 0.3); padding-bottom: 10px;";
-  title.innerHTML = `✨ Generate AI VTTFX ${hasProxy ? `<span style="font-size: 0.7em; color: #38bdf8; background: rgba(56, 189, 248, 0.15); padding: 2px 8px; border-radius: 9999px;">Via Proxy Host (${getPeerUsername(proxyPeerId)})</span>` : ''}`;
+  title.innerHTML = `✨ ai Roll Animation ${hasProxy ? `<span style="font-size: 0.7em; color: #38bdf8; background: rgba(56, 189, 248, 0.15); padding: 2px 8px; border-radius: 9999px;">Via Proxy Host (${getPeerUsername(proxyPeerId)})</span>` : ''}`;
 
   const descTxt = document.createElement("div");
   descTxt.style.cssText = "font-size: 0.9em; color: #cbd5e1; line-height: 1.4;";

@@ -25,7 +25,7 @@ export function openGeminiApiKeyModal(onSuccess?: () => void): void {
     <div style="background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(192, 132, 252, 0.5); border-radius: 12px; padding: 24px; max-width: 480px; width: 90%; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.8); color: #f8fafc; font-family: sans-serif; display: flex; flex-direction: column; gap: 16px;">
       <div style="display: flex; align-items: center; gap: 10px;">
         <span style="font-size: 24px;">✨</span>
-        <h3 style="margin: 0; font-size: 18px; font-weight: 700; color: #c084fc;">AI Map Enhancement (/enhance)</h3>
+        <h3 style="margin: 0; font-size: 18px; font-weight: 700; color: #c084fc;">ai Map ENHANCE (/enhance)</h3>
       </div>
       <p style="margin: 0; font-size: 13px; color: #cbd5e1; line-height: 1.5;">
         To generate enhanced tabletop battlemaps from your sketches and fills, please verify your configuration below.
