@@ -360,6 +360,7 @@ export function setupVttfxProxyListeners(): void {
 
 export async function callGeminiVttfxGeneration(apiKey: string, iconDesc: string, animDesc: string): Promise<VttfxEffectItem> {
   const modelsToTry = [
+    "gemini-3.6-flash",
     "gemini-3.5-flash",
     "gemini-3.0-flash",
     "gemini-2.5-flash",
@@ -455,6 +456,7 @@ Return ONLY valid JSON without any markdown formatting or commentary.`;
 
 export async function callGeminiConditionGeneration(apiKey: string, iconDesc: string, animDesc: string): Promise<ConditionData> {
   const modelsToTry = [
+    "gemini-3.6-flash",
     "gemini-3.5-flash",
     "gemini-3.0-flash",
     "gemini-2.5-flash",

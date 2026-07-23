@@ -41,9 +41,10 @@ export async function callGeminiDmAssistantTextGen(
   convoHistory: DmConvoEntry[]
 ): Promise<string> {
   const modelsToTry = [
+    "gemini-3.6-flash",
     modelName,
-    "gemini-2.5-flash",
     "gemini-3.5-flash",
+    "gemini-2.5-flash",
     "gemini-3.1-flash-image",
     "gemini-2.0-flash-exp"
   ].filter((v, i, a) => Boolean(v) && a.indexOf(v) === i);
