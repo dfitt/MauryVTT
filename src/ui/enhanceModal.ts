@@ -971,7 +971,7 @@ export function setupEnhanceProxyListeners(engine: CanvasEngine): void {
           });
           return;
         }
-        await runGeminiMapEnhancementForProxy(engine, payload.box, payload.description, payload.requesterPeerId, payload.requesterUsername, payload.reqId);
+        await runGeminiMapEnhancementForProxy(engine, payload.box, payload.description, payload.requesterPeerId, payload.requesterUsername, payload.reqId, payload.dmAssistantEnabled, payload.dmNote, payload.convoHistory);
         console.groupEnd();
       }
     } else if (payload.type === "ENHANCE_PROXY_RES") {
