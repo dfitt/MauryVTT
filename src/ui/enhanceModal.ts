@@ -813,16 +813,34 @@ function showEnhanceConfirmationBar(
 
                   let hasContent = false;
                   if (px2 > px1 && py2 > py1) {
-                    let firstColor: number | null = null;
+                    let firstR = -1, firstG = -1, firstB = -1;
                     for (let y = py1; y < py2; y++) {
-                      const rowOffset = y * imgW;
+                      const rowOffset = (y * imgW + px1) * 4;
                       for (let x = px1; x < px2; x++) {
-                        const color = data32[rowOffset + x];
-                        if (firstColor === null) {
-                          firstColor = color;
-                        } else if (color !== firstColor) {
+                        const idx = (y * imgW + x) * 4;
+                        const r = imageData.data[idx];
+                        const g = imageData.data[idx + 1];
+                        const b = imageData.data[idx + 2];
+                        const a = imageData.data[idx + 3];
+
+                        if (a < 20) continue; // transparent background pixel
+
+                        // Check if pixel is a non-background map element (black ink walls, crosshatching, furniture, objects)
+                        if (r < 235 || g < 235 || b < 235) {
                           hasContent = true;
                           break;
+                        }
+
+                        if (firstR === -1) {
+                          firstR = r;
+                          firstG = g;
+                          firstB = b;
+                        } else {
+                          const dist = Math.abs(r - firstR) + Math.abs(g - firstG) + Math.abs(b - firstB);
+                          if (dist > 25) { // significant color variation beyond JPEG compression artifacts
+                            hasContent = true;
+                            break;
+                          }
                         }
                       }
                       if (hasContent) break;
