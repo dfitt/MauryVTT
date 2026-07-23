@@ -62,7 +62,12 @@ Room Description: "${roomDesc}"
 Current DM Note: "${dmNote}"
 
 TASK:
-Provide a brief, bulleted DM Response with creative story ideas, secrets, or tactical twists for this room based on the DM Note and descriptions above.`;
+Provide 1 to 3 bulleted DM Response ideas for this room.
+IMPORTANT FORMATTING INSTRUCTION:
+Each bullet MUST start with a short, punchy 2-4 word bold title in double asterisks, followed by a colon and brief description.
+Example format:
+- **Hidden Goblins:** This room looks empty and safe, but goblins cling to the dark ceiling rafters waiting to ambush.
+- **Trapped Statue:** The jewel in the statue's eye triggers a poisoned dart wall when touched.`;
 
   for (const model of modelsToTry) {
     try {
@@ -102,12 +107,33 @@ export function sendDmAssistantWhisper(
   const myId = recipientPeerId || sessionManager.myPeerId || "local";
   const myUsername = recipientUsername || sessionManager.myUsername || "Me";
 
-  const formattedIdeas = dmResponse
+  const rawLines = dmResponse
     .trim()
     .replace(/\r\n/g, "\n")
     .split("\n")
     .map((line) => line.trim())
-    .filter((line) => line.length > 0)
+    .filter((line) => line.length > 0);
+
+  const formattedIdeas = rawLines
+    .map((line) => {
+      // 1. Strip leading bullet markers (-, *, •, numbers)
+      let cleanLine = line.replace(/^([\*\-\•]|\d+\.)\s*/, "");
+
+      // 2. Convert markdown bold **Title** to <strong>Title</strong>
+      cleanLine = cleanLine.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+
+      // 3. Fallback: if line does not already contain <strong>, but has a colon "Title: Description", bold the Title
+      if (!cleanLine.includes("<strong>") && cleanLine.includes(":")) {
+        const colonIdx = cleanLine.indexOf(":");
+        const title = cleanLine.substring(0, colonIdx).trim();
+        const rest = cleanLine.substring(colonIdx + 1).trim();
+        if (title.length > 0 && title.length < 50) {
+          cleanLine = `<strong>${title}:</strong> ${rest}`;
+        }
+      }
+
+      return `• ${cleanLine}`;
+    })
     .join("<br/><br/>");
 
   const whisperMsg: ChatMessage = {
