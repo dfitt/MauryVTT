@@ -326,13 +326,19 @@ async function callGeminiImageGeneration(
     ? `\n3. CRITICAL ASPECT RATIO INSTRUCTION: The returned generated map image MUST strictly match the exact aspect ratio of the input reference image (${boxDimensions.width}x${boxDimensions.height}, aspect ratio ${boxRatio.toFixed(2)}:1). Do NOT alter the proportions, stretch, skew, square-crop, or change the spatial relative dimensions or rectangular boundaries of the rooms, corridors, or overall canvas frame!`
     : "";
 
-  const sketchPrompt = `You are a master virtual tabletop RPG map designer specializing in classic old-school D&D cartography. Look at the provided reference image, which contains top-down sketch drawings and room fills as a layout guide and blueprint, along with fragments of existing map images underneath.
+  const sketchPrompt = `You are a master virtual tabletop RPG map designer specializing in classic old-school D&D cartography. Look at the provided reference image, which contains TWO types of visual content layered together:
+  (A) USER SKETCH DRAWINGS: rough hand-drawn lines, shapes, and colored room fills — these are the layout blueprint for the NEW map features you must generate.
+  (B) EXISTING MAP IMAGE FRAGMENTS: pre-rendered, detailed map illustrations already present on the tabletop canvas — these are sent ONLY as spatial alignment references so you can connect new features (doors, hallways, tunnels, corridors) to the correct positions on existing walls.
 
-CONNECTIVITY, OVERLAY & MODIFICATION INSTRUCTIONS:
-1. The existing map image fragments in the reference image are provided as spatial alignment references for connecting features (such as hallways, doors, passages, and tunnels).
-2. YOU CAN AND SHOULD DRAW ON TOP OF EXISTING ILLUSTRATIONS WHEN NECESSARY: For example, if a sketch or description indicates a new breach, doorway, tunnel, archway, or hole through an already-illustrated wall, draw that modification/opening in that location (it will render multiplicatively over the existing wall on the canvas).
-3. DO NOT DUPLICATE ALREADY-ILLUSTRATED PARTS: Do NOT redraw, replicate, copy, or re-render the unmodified, already-illustrated parts of the existing map images sent to you. Those existing elements are already rendered on the tabletop canvas. Only generate the new/enhanced map features, user sketch elements, and specific modifications (e.g. wall openings or new connecting rooms).
-4. Any regions occupied purely by unmodified existing map images MUST be left blank and stark white (#FFFFFF) so your generated output section overlays cleanly without clutter or duplicating art.
+CRITICAL INSTRUCTION - DO NOT INCLUDE EXISTING MAP IMAGES IN YOUR OUTPUT:
+1. The generated output image MUST contain ONLY the NEW map features based on the user's sketch drawings (A).
+2. Do NOT redraw, replicate, copy, re-render, trace, or include ANY part of the existing map image fragments (B). Those images are already rendered on the tabletop canvas and your output will overlay them.
+3. Any regions of the output image that correspond to existing map image fragments MUST be left completely blank and stark white (#FFFFFF). If an existing illustration occupies the left third of the reference image, the left third of your output MUST be stark white.
+4. The existing map images are ONLY there so you know WHERE to place connecting features like doorways, openings, or corridor entrances at the correct wall positions.
+
+OVERLAY & MODIFICATION INSTRUCTIONS:
+1. YOU CAN AND SHOULD DRAW SMALL CONNECTION MODIFICATIONS on top of where existing walls are: For example, if a sketch indicates a new doorway, breach, tunnel entrance, or hole through an existing wall, draw ONLY that specific opening/modification at that location (it will render multiplicatively over the existing wall). Do NOT redraw the surrounding wall — only the new opening.
+2. Apart from small connection modifications, all regions occupied by existing map images MUST remain stark white (#FFFFFF) in your output.
 
 Generate a high-resolution, top-down, overhead 2D tabletop RPG battlemap designed in an oldschool D&D, OSR (Old School Renaissance), and Dungeon Crawl Classics (DCC) art style. The map MUST be drawn with crisp black ink on a solid, stark white (#FFFFFF) background with classic crosshatching, hand-drawn ink line walls, stippling, and retro dungeon cartography textures while preserving the exact spatial boundaries, room layouts, pathways, and alignments shown in the sketch guide and connecting to or modifying adjacent features. Even if the reference sketch has a dark background, your generated map MUST have a solid, stark white (#FFFFFF) background with black ink lines.
 
