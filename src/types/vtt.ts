@@ -309,6 +309,9 @@ export type EphemeralPayload =
       proxyPeerId: string;
       box: { x: number; y: number; width: number; height: number };
       description: string;
+      dmAssistantEnabled?: boolean;
+      dmNote?: string;
+      convoHistory?: Array<{ dmNote: string; dmResponse: string }>;
     }
   | {
       type: "ENHANCE_PROXY_RES";

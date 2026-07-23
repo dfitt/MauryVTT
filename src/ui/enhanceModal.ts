@@ -1,10 +1,118 @@
 import { CanvasEngine } from "../canvas/canvasEngine.js";
-import { ImageEntity, VTTDocument } from "../types/vtt.js";
+import { ImageEntity, VTTDocument, ChatMessage } from "../types/vtt.js";
 import { docStore } from "../state/documentStore.js";
 import { assetStore } from "../state/idbAssetStore.js";
 import { sessionManager } from "../network/sessionManager.js";
 import { hostEngine } from "../network/p2pHost.js";
 import { processImageFile } from "../canvas/imageResizer.js";
+
+export interface DmConvoEntry {
+  dmNote: string;
+  dmResponse: string;
+  timestamp: number;
+}
+
+export function getDmConvoHistory(): DmConvoEntry[] {
+  try {
+    const raw = localStorage.getItem("gemini_dm_convo_history");
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveDmConvoEntry(dmNote: string, dmResponse: string): void {
+  const history = getDmConvoHistory();
+  history.push({ dmNote, dmResponse, timestamp: Date.now() });
+  if (history.length > 15) history.shift();
+  try {
+    localStorage.setItem("gemini_dm_convo_history", JSON.stringify(history));
+  } catch {
+    // ignore
+  }
+}
+
+export async function callGeminiDmAssistantTextGen(
+  apiKey: string,
+  modelName: string,
+  dmNote: string,
+  worldDesc: string,
+  roomDesc: string,
+  convoHistory: DmConvoEntry[]
+): Promise<string> {
+  const modelsToTry = [
+    modelName,
+    "gemini-2.5-flash",
+    "gemini-3.5-flash",
+    "gemini-3.1-flash-image",
+    "gemini-2.0-flash-exp"
+  ].filter((v, i, a) => Boolean(v) && a.indexOf(v) === i);
+
+  let formattedConvo = "";
+  if (convoHistory && convoHistory.length > 0) {
+    formattedConvo = "All Previous Conversation History (DM Notes & Responses):\n" +
+      convoHistory.map((entry, idx) => `[Generation ${idx + 1}]\nDM Note: "${entry.dmNote}"\nDM Response: "${entry.dmResponse}"`).join("\n\n") + "\n\n";
+  }
+
+  const promptText = `You are an expert tabletop RPG Dungeon Master Assistant. Your task is to brainstorm 1 to 3 creative, surprising, and fun story ideas or encounter hooks for the DM to present to the players in this room. Keep the response succinct so the DM can digest it in 5 seconds.
+
+${formattedConvo}CURRENT SCENE CONTEXT:
+World Description: "${worldDesc}"
+Room Description: "${roomDesc}"
+Current DM Note: "${dmNote}"
+
+TASK:
+Provide a brief, bulleted DM Response with creative story ideas, secrets, or tactical twists for this room based on the DM Note and descriptions above.`;
+
+  for (const model of modelsToTry) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+      const payload = {
+        contents: [
+          {
+            parts: [{ text: promptText }]
+          }
+        ]
+      };
+      const resp = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (!resp.ok) continue;
+      const data = await resp.json();
+      const candidate = data.candidates?.[0];
+      const text = candidate?.content?.parts?.[0]?.text;
+      if (text) {
+        return text.trim();
+      }
+    } catch (e) {
+      console.warn(`[DMAssistant] Error calling ${model}:`, e);
+    }
+  }
+  throw new Error("Could not generate DM Assistant response from Gemini API.");
+}
+
+export function sendDmAssistantWhisper(dmResponse: string, recipientPeerId?: string, recipientUsername?: string): void {
+  const myId = recipientPeerId || sessionManager.myPeerId || "local";
+  const myUsername = recipientUsername || sessionManager.myUsername || "Me";
+
+  const whisperMsg: ChatMessage = {
+    id: "whisper-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6),
+    timestamp: Date.now(),
+    senderPeerId: "system",
+    senderUsername: "🧙 DM Assistant",
+    recipientPeerId: myId,
+    recipientUsername: myUsername,
+    content: `🧙 <strong>DM Assistant Story Ideas:</strong><br/>${dmResponse.replace(/\n/g, "<br/>")}`,
+    type: "whisper"
+  };
+
+  sessionManager.dispatchOperation({
+    opType: "APPEND_CHAT_MESSAGE",
+    message: whisperMsg
+  });
+}
 
 export function openGeminiApiKeyModal(onSuccess?: () => void): void {
   let modalEl = document.getElementById("vtt-gemini-apikey-modal");
@@ -398,7 +506,13 @@ CRITICAL INSTRUCTIONS:
   throw new Error(`Generation failed. Details: ${detailedErrorSummary}`);
 }
 
-export async function runGeminiMapEnhancement(engine: CanvasEngine, box: { x: number; y: number; width: number; height: number }, overrideDesc?: string): Promise<void> {
+export async function runGeminiMapEnhancement(
+  engine: CanvasEngine,
+  box: { x: number; y: number; width: number; height: number },
+  overrideDesc?: string,
+  dmAssistantEnabled?: boolean,
+  dmNote?: string
+): Promise<void> {
   const apiKey = localStorage.getItem("gemini_api_key");
   const lastFailed = localStorage.getItem("gemini_enhance_last_failed") === "true";
   if (!apiKey || lastFailed) {
@@ -411,9 +525,29 @@ export async function runGeminiMapEnhancement(engine: CanvasEngine, box: { x: nu
     return;
   }
 
+  const modelName = localStorage.getItem("gemini_enhance_model") || "gemini-3.1-flash-image";
+  let finalOverrideDesc = overrideDesc;
+
+  if (dmAssistantEnabled && dmNote && apiKey) {
+    try {
+      showEnhanceToast("🧙 DM Assistant brainstorming story ideas... (~3-5s)", 0);
+      const convoHistory = getDmConvoHistory();
+      const worldDesc = localStorage.getItem("gemini_enhance_world_desc") || "";
+      const dmResponse = await callGeminiDmAssistantTextGen(apiKey, modelName, dmNote, worldDesc, overrideDesc || "", convoHistory);
+
+      saveDmConvoEntry(dmNote, dmResponse);
+      sendDmAssistantWhisper(dmResponse);
+
+      const dmHintsBlock = `\n\nDM ASSISTANT STORY & MAP HINTS (Use these story ideas as visual hints for decorations, secret features, or layout details on the map):\nDM Note: "${dmNote}"\nDM Response Hints: "${dmResponse}"`;
+      finalOverrideDesc = (overrideDesc || "") + dmHintsBlock;
+    } catch (e: any) {
+      console.warn("[Enhance] DM Assistant error:", e);
+      showEnhanceToast("⚠️ DM Assistant error, proceeding with map generation...", 4000);
+    }
+  }
+
   const doc = docStore.getDocument();
   const hasDrawings = hasDrawingsInBox(doc, box);
-  const modelName = localStorage.getItem("gemini_enhance_model") || "gemini-3.1-flash-image";
   showEnhanceToast(
     hasDrawings
       ? "✨ Generating AI Overhead Map with Gemini... Please wait ~10-20s."
@@ -456,7 +590,7 @@ export async function runGeminiMapEnhancement(engine: CanvasEngine, box: { x: nu
       base64Image,
       apiKey,
       modelName,
-      overrideDesc,
+      finalOverrideDesc,
       { width: box.width, height: box.height },
       hasDrawings
     );
@@ -511,7 +645,7 @@ export async function runGeminiMapEnhancement(engine: CanvasEngine, box: { x: nu
     engine.setTool("select");
     localStorage.removeItem("gemini_enhance_last_failed");
     showEnhanceToast("✨ AI Map Enhancement complete! Review alignment below and Accept, Retry, or Abort.", 6000);
-    showEnhanceConfirmationBar(engine, box, newMapImage, undefined, overrideDesc);
+    showEnhanceConfirmationBar(engine, box, newMapImage, undefined, finalOverrideDesc);
   } catch (err: any) {
     console.error("[Enhance] Error during Gemini Map Enhancement:", err);
     localStorage.setItem("gemini_enhance_last_failed", "true");
@@ -909,7 +1043,15 @@ export async function checkOrFindProxyPeer(): Promise<string | null> {
   });
 }
 
-export function sendProxyEnhanceRequest(engine: CanvasEngine, box: { x: number; y: number; width: number; height: number }, description: string, proxyPeerId: string): void {
+export function sendProxyEnhanceRequest(
+  engine: CanvasEngine,
+  box: { x: number; y: number; width: number; height: number },
+  description: string,
+  proxyPeerId: string,
+  dmAssistantEnabled?: boolean,
+  dmNote?: string,
+  convoHistory?: DmConvoEntry[]
+): void {
   const myId = sessionManager.myPeerId || "local";
   const myUsername = sessionManager.myUsername || "Me";
   const reqId = "req-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6);
@@ -923,7 +1065,10 @@ export function sendProxyEnhanceRequest(engine: CanvasEngine, box: { x: number; 
     requesterUsername: myUsername,
     proxyPeerId,
     box,
-    description
+    description,
+    dmAssistantEnabled,
+    dmNote,
+    convoHistory
   });
 }
 
@@ -933,7 +1078,10 @@ async function runGeminiMapEnhancementForProxy(
   description: string,
   requesterPeerId: string,
   requesterUsername: string,
-  reqId: string
+  reqId: string,
+  dmAssistantEnabled?: boolean,
+  dmNote?: string,
+  convoHistory?: DmConvoEntry[]
 ): Promise<void> {
   const apiKey = localStorage.getItem("gemini_api_key");
   if (!apiKey) {
@@ -943,8 +1091,30 @@ async function runGeminiMapEnhancementForProxy(
   const modelName = localStorage.getItem("gemini_enhance_model") || "gemini-3.1-flash-image";
   const myId = sessionManager.myPeerId || "local";
 
+  let finalDescription = description;
+
+  if (dmAssistantEnabled && dmNote) {
+    try {
+      const worldDesc = localStorage.getItem("gemini_enhance_world_desc") || "";
+      const dmResponse = await callGeminiDmAssistantTextGen(
+        apiKey,
+        modelName,
+        dmNote,
+        worldDesc,
+        description,
+        convoHistory || []
+      );
+      sendDmAssistantWhisper(dmResponse, requesterPeerId, requesterUsername);
+
+      const dmHintsBlock = `\n\nDM ASSISTANT STORY & MAP HINTS:\nDM Note: "${dmNote}"\nDM Response Hints: "${dmResponse}"`;
+      finalDescription = description + dmHintsBlock;
+    } catch (e: any) {
+      console.warn("[EnhanceProxy] DM Assistant proxy error:", e);
+    }
+  }
+
   try {
-    console.log(`[EnhanceProxy] Executing proxy enhancement job for ${requesterUsername} (${requesterPeerId}). Box:`, box, "Desc:", description);
+    console.log(`[EnhanceProxy] Executing proxy enhancement job for ${requesterUsername} (${requesterPeerId}). Box:`, box, "Desc:", finalDescription);
     const doc = docStore.getDocument();
     const hasDrawings = hasDrawingsInBox(doc, box);
     const maxDim = 1024;
@@ -980,7 +1150,7 @@ async function runGeminiMapEnhancementForProxy(
       base64Image,
       apiKey,
       modelName,
-      description,
+      finalDescription,
       { width: box.width, height: box.height },
       hasDrawings
     );
@@ -1088,6 +1258,9 @@ export function openGeminiDescriptionModal(
     ? (localStorage.getItem("gemini_enhance_world_desc") || "")
     : (localStorage.getItem("gemini_enhance_custom_prompt") || "");
 
+  const savedDmAssistantEnabled = localStorage.getItem("gemini_dm_assistant_enabled") === "true";
+  const savedDmNotes = localStorage.getItem("gemini_dm_last_note") || "";
+
   modalEl.innerHTML = `
     <div style="background: rgba(15, 23, 42, 0.96); border: 1px solid rgba(192, 132, 252, 0.6); border-radius: 14px; padding: 24px; max-width: 500px; width: 92%; box-shadow: 0 16px 48px rgba(0,0,0,0.85); color: #f8fafc; font-family: Outfit, sans-serif; display: flex; flex-direction: column; gap: 16px;">
       <div style="display: flex; align-items: center; gap: 10px;">
@@ -1106,6 +1279,17 @@ export function openGeminiDescriptionModal(
         <label style="font-size: 12px; font-weight: 700; color: #e879f9;">Room Descriptions <span style="font-weight: 400; color: #94a3b8;">(Specific room/area details; resets each time)</span></label>
         <textarea id="gemini-room-desc-textarea" rows="3" placeholder="e.g. A grand chapel altar with broken pew benches and scattered rubble around the edges, floor plain..." style="padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(232, 121, 249, 0.4); background: rgba(30, 41, 59, 0.8); color: #ffffff; font-size: 13px; outline: none; resize: vertical;"></textarea>
       </div>
+
+      <div style="display: flex; align-items: center; gap: 8px; margin-top: 2px;">
+        <input type="checkbox" id="gemini-dm-assistant-checkbox" ${savedDmAssistantEnabled ? "checked" : ""} style="cursor: pointer; accent-color: #c084fc; width: 16px; height: 16px;">
+        <label for="gemini-dm-assistant-checkbox" style="font-size: 13px; font-weight: 700; color: #c084fc; cursor: pointer;">🧙 DM Assistant (Generate story ideas & hints)</label>
+      </div>
+
+      <div id="gemini-dm-notes-container" style="display: ${savedDmAssistantEnabled ? "flex" : "none"}; flex-direction: column; gap: 6px;">
+        <label style="font-size: 12px; font-weight: 700; color: #a855f7;">DM Notes <span style="font-weight: 400; color: #94a3b8;">(Running AI conversation & private DM notes)</span></label>
+        <textarea id="gemini-dm-notes-textarea" rows="3" placeholder="e.g. Party is searching for a secret smuggler vault under the altar..." style="padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(168, 85, 247, 0.4); background: rgba(30, 41, 59, 0.8); color: #ffffff; font-size: 13px; outline: none; resize: vertical;">${savedDmNotes}</textarea>
+      </div>
+
       <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px;">
         <button id="btn-cancel-desc" class="btn-glass" style="padding: 8px 16px; border-radius: 8px; cursor: pointer; color: #cbd5e1;">Cancel</button>
         <button id="btn-submit-desc" class="btn-glass" style="padding: 8px 20px; border-radius: 8px; cursor: pointer; background: rgba(192, 132, 252, 0.35); border: 1px solid #c084fc; color: #ffffff; font-weight: 700; box-shadow: 0 0 14px rgba(192, 132, 252, 0.4);">✨ Generate Map</button>
@@ -1115,8 +1299,18 @@ export function openGeminiDescriptionModal(
 
   const worldTextareaEl = modalEl.querySelector<HTMLTextAreaElement>("#gemini-world-desc-textarea")!;
   const roomTextareaEl = modalEl.querySelector<HTMLTextAreaElement>("#gemini-room-desc-textarea")!;
+  const dmAssistantCheckboxEl = modalEl.querySelector<HTMLInputElement>("#gemini-dm-assistant-checkbox")!;
+  const dmNotesContainerEl = modalEl.querySelector<HTMLElement>("#gemini-dm-notes-container")!;
+  const dmNotesTextareaEl = modalEl.querySelector<HTMLTextAreaElement>("#gemini-dm-notes-textarea")!;
+
   const cancelBtn = modalEl.querySelector<HTMLButtonElement>("#btn-cancel-desc")!;
   const submitBtn = modalEl.querySelector<HTMLButtonElement>("#btn-submit-desc")!;
+
+  dmAssistantCheckboxEl.addEventListener("change", () => {
+    const isChecked = dmAssistantCheckboxEl.checked;
+    localStorage.setItem("gemini_dm_assistant_enabled", isChecked ? "true" : "false");
+    dmNotesContainerEl.style.display = isChecked ? "flex" : "none";
+  });
 
   cancelBtn.addEventListener("click", () => {
     modalEl?.remove();
@@ -1125,7 +1319,16 @@ export function openGeminiDescriptionModal(
   submitBtn.addEventListener("click", () => {
     const worldDesc = worldTextareaEl.value.trim();
     const roomDesc = roomTextareaEl.value.trim();
+    const dmAssistantEnabled = dmAssistantCheckboxEl.checked;
+    const dmNote = dmNotesTextareaEl.value.trim();
+
     localStorage.setItem("gemini_enhance_world_desc", worldDesc);
+    if (dmAssistantEnabled) {
+      localStorage.setItem("gemini_dm_assistant_enabled", "true");
+      localStorage.setItem("gemini_dm_last_note", dmNote);
+    } else {
+      localStorage.setItem("gemini_dm_assistant_enabled", "false");
+    }
 
     const combinedParts = [];
     if (worldDesc) combinedParts.push(`World Description: "${worldDesc}"`);
@@ -1138,9 +1341,10 @@ export function openGeminiDescriptionModal(
     modalEl?.remove();
 
     if (isProxy && proxyPeerId) {
-      sendProxyEnhanceRequest(engine, box, combinedDesc, proxyPeerId);
+      const convoHistory = getDmConvoHistory();
+      sendProxyEnhanceRequest(engine, box, combinedDesc, proxyPeerId, dmAssistantEnabled, dmNote, convoHistory);
     } else {
-      runGeminiMapEnhancement(engine, box, combinedDesc);
+      runGeminiMapEnhancement(engine, box, combinedDesc, dmAssistantEnabled, dmNote);
     }
   });
 
