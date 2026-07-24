@@ -209,10 +209,10 @@ export function openCharacterSheetModal(engine?: CanvasEngine): void {
             <div style="background: rgba(15, 23, 42, 0.6); padding: 12px; border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.25); display: flex; flex-direction: column; gap: 8px;">
               <div style="display: flex; align-items: center; justify-content: space-between;">
                 <label style="font-size: 11px; font-weight: 800; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.5px;">🎯 Saved Named Rolls</label>
-                <span id="char-sheet-rolls-count" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; padding: 2px 8px; border-radius: 999px; font-size: 10px; font-weight: 700;">0 / 12</span>
+                <span id="char-sheet-rolls-count" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; padding: 2px 8px; border-radius: 999px; font-size: 10px; font-weight: 700;">0 / 8</span>
               </div>
               <div id="char-sheet-rolls-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px;">
-                <div style="font-size: 11px; color: #64748b; font-style: italic; grid-column: 1 / -1; padding: 4px 0;">No saved Named Rolls yet. Use the Chat+Dice window (/r 1d20+5 #Attack) to create up to 12 saved rolls!</div>
+                <div style="font-size: 11px; color: #64748b; font-style: italic; grid-column: 1 / -1; padding: 4px 0;">No saved Named Rolls yet. Use the Chat+Dice window (/r 1d20+5 #Attack) to create up to 8 saved rolls!</div>
               </div>
             </div>
           ` : ""}
@@ -238,14 +238,7 @@ export function openCharacterSheetModal(engine?: CanvasEngine): void {
     };
 
     modalEl.innerHTML = `
-      <div class="sheet-header" style="padding: 12px 18px; background: rgba(30, 41, 59, 0.85); border-bottom: 1px solid rgba(56, 189, 248, 0.25); display: flex; align-items: center; justify-content: space-between; cursor: ${isMobile ? "default" : "move"}; user-select: none; flex-shrink: 0;">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <span style="font-size: 1.35em;">📜</span>
-          <div>
-            <strong style="font-size: 1.15em; color: #38bdf8; font-weight: 800; letter-spacing: 0.3px;">Character Sheet</strong>
-            <div style="font-size: 11px; color: #94a3b8; font-weight: 500;">User account: <span id="char-sheet-username-display" style="color: #e2e8f0; font-weight: 700;">${username}</span></div>
-          </div>
-        </div>
+      <div class="sheet-header" style="padding: 10px 14px 2px 14px; display: flex; align-items: center; justify-content: flex-end; cursor: ${isMobile ? "default" : "move"}; user-select: none; flex-shrink: 0;">
         <div style="display: flex; align-items: center; gap: 8px;">
           <button id="add-char-btn" class="btn-glass" title="Add Character (Max 4)" style="padding: 6px 12px; border-radius: 8px; border: 1px solid ${addDisabled ? 'rgba(255,255,255,0.1)' : '#38bdf8'}; background: ${addDisabled ? 'rgba(255,255,255,0.05)' : 'rgba(56, 189, 248, 0.2)'}; color: ${addDisabled ? '#64748b' : '#38bdf8'}; font-size: 13px; font-weight: 800; cursor: ${addDisabled ? 'not-allowed' : 'pointer'}; opacity: ${addDisabled ? 0.5 : 1}; display: flex; align-items: center; gap: 4px;">
             <span>➕ Add Character</span>
@@ -538,11 +531,11 @@ export function openCharacterSheetModal(engine?: CanvasEngine): void {
     const countEl = modalEl?.querySelector<HTMLElement>("#char-sheet-rolls-count");
     if (!container || !countEl) return;
 
-    const list = doc.quickRolls?.[uname] || [];
-    countEl.textContent = `${list.length} / 12`;
+    const list = (doc.quickRolls?.[uname] || []).slice(0, 8);
+    countEl.textContent = `${list.length} / 8`;
 
     if (list.length === 0) {
-      container.innerHTML = `<div style="font-size: 11px; color: #64748b; font-style: italic; grid-column: 1 / -1; padding: 4px 0;">No saved Named Rolls yet. Use the Chat+Dice window (/r 1d20+5 #Attack) to create up to 12 saved rolls!</div>`;
+      container.innerHTML = `<div style="font-size: 11px; color: #64748b; font-style: italic; grid-column: 1 / -1; padding: 4px 0;">No saved Named Rolls yet. Use the Chat+Dice window (/r 1d20+5 #Attack) to create up to 8 saved rolls!</div>`;
       return;
     }
 
