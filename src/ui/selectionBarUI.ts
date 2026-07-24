@@ -2,7 +2,7 @@ import { CanvasEngine } from "../canvas/canvasEngine.js";
 import { docStore } from "../state/documentStore.js";
 import { sessionManager } from "../network/sessionManager.js";
 import { TokenEntity } from "../types/vtt.js";
-import { formatTimeAgo } from "./characterSheetModal.js";
+import { formatTimeAgo, getNormalizedCharacters } from "./characterSheetModal.js";
 import { openConditionGenerateModal } from "./conditionAiModal.js";
 
 export const BASE_CONDITIONS: { id: string; label: string }[] = [
@@ -419,51 +419,151 @@ export function setupSelectionBarUI(engine: CanvasEngine): void {
       hpBox.appendChild(hpHistoryPopup);
       bar.appendChild(hpBox);
 
-      // Mine Button (full button collision area!)
-      const mineBtn = document.createElement("button");
-      mineBtn.className = `btn-glass btn-sm ${isMine ? "btn-active" : ""}`;
-      mineBtn.style.cssText = "display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; margin: 0 4px; border-radius: 8px; padding: 6px 14px; min-height: 32px;";
-      mineBtn.setAttribute("data-tooltip", "Claim as your primary token (Each user can have one primary token)");
+      // Mine Button / Selector
+      const userSheet = doc.characterSheets?.[myUsername];
+      const userChars = getNormalizedCharacters(userSheet);
 
-      const mineCheckbox = document.createElement("input");
-      activeMineCheckbox = mineCheckbox;
-      mineCheckbox.type = "checkbox";
-      mineCheckbox.checked = isMine;
-      mineCheckbox.style.cssText = "pointer-events: none; width: 15px; height: 15px; accent-color: #38bdf8;";
+      if (userChars.length > 1) {
+        const mineSelect = document.createElement("select");
+        mineSelect.className = "btn-glass btn-sm";
+        mineSelect.style.cssText = "background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(56, 189, 248, 0.45); color: #38bdf8; padding: 6px 10px; border-radius: 8px; font-size: 12px; font-weight: 800; outline: none; margin: 0 4px; cursor: pointer; min-height: 32px;";
+        mineSelect.setAttribute("data-tooltip", "Claim this token for one of your character sheet entries");
 
-      mineBtn.appendChild(mineCheckbox);
-      const mineSpan = document.createElement("span");
-      activeMineSpan = mineSpan;
-      mineSpan.textContent = isMine ? "Mine ✓" : "Mine";
-      mineBtn.appendChild(mineSpan);
+        const isClaimedByMe = token.primaryOwnerUsername === myUsername;
+        const currentClaimedCharId = isClaimedByMe ? (token.characterId || userChars[0].id) : "";
 
-      mineBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        mineCheckbox.checked = !mineCheckbox.checked;
-        if (mineCheckbox.checked) {
-          const newOwnerPeerIds = Array.from(new Set([...(token.ownerPeerIds || []), myPeerId]));
-          sessionManager.dispatchOperation({
-            opType: "UPDATE_ENTITY",
-            id: token.id,
-            patch: {
+        const optUnclaimed = document.createElement("option");
+        optUnclaimed.value = "";
+        optUnclaimed.textContent = "Mine: Unclaimed";
+        optUnclaimed.style.background = "#0f172a";
+        optUnclaimed.style.color = "#94a3b8";
+        mineSelect.appendChild(optUnclaimed);
+
+        userChars.forEach((char, idx) => {
+          const opt = document.createElement("option");
+          opt.value = char.id;
+          opt.textContent = `Mine: ${char.characterName || `Character ${idx + 1}`}`;
+          opt.style.background = "#0f172a";
+          opt.style.color = "#38bdf8";
+          if (currentClaimedCharId === char.id) {
+            opt.selected = true;
+          }
+          mineSelect.appendChild(opt);
+        });
+
+        mineSelect.addEventListener("change", (e) => {
+          e.stopPropagation();
+          const selectedCharId = mineSelect.value;
+          if (selectedCharId) {
+            const charObj = userChars.find((c) => c.id === selectedCharId);
+            const newOwnerPeerIds = Array.from(new Set([...(token.ownerPeerIds || []), myPeerId]));
+            const patch: any = {
               primaryOwnerUsername: myUsername,
+              characterId: selectedCharId,
               ownerPeerIds: newOwnerPeerIds
-            } as any
-          });
-        } else {
-          const filteredPeers = (token.ownerPeerIds || []).filter((id) => id !== myPeerId);
-          sessionManager.dispatchOperation({
-            opType: "UPDATE_ENTITY",
-            id: token.id,
-            patch: {
-              primaryOwnerUsername: undefined,
-              ownerPeerIds: filteredPeers
-            } as any
-          });
-        }
-      });
+            };
+            if (charObj) {
+              if (charObj.characterName && charObj.characterName.trim().length > 0) {
+                patch.label = charObj.characterName.trim();
+              }
+              if (charObj.hp !== undefined && String(charObj.hp).trim() !== "") {
+                patch.hp = String(charObj.hp).trim();
+              }
+              if (charObj.maxHp !== undefined && String(charObj.maxHp).trim() !== "") {
+                patch.maxHp = String(charObj.maxHp).trim();
+              }
+            }
+            sessionManager.dispatchOperation({
+              opType: "UPDATE_ENTITY",
+              id: token.id,
+              patch
+            });
 
-      bar.appendChild(mineBtn);
+            // Update sheet character entry with tokenId
+            const updatedChars = userChars.map((c) => c.id === selectedCharId ? { ...c, tokenId: token.id } : (c.tokenId === token.id ? { ...c, tokenId: undefined } : c));
+            sessionManager.dispatchOperation({
+              opType: "UPDATE_CHARACTER_SHEET",
+              username: myUsername,
+              sheet: {
+                ...(userSheet || { username: myUsername }),
+                characters: updatedChars
+              }
+            });
+          } else {
+            // Unclaim
+            const filteredPeers = (token.ownerPeerIds || []).filter((id) => id !== myPeerId);
+            sessionManager.dispatchOperation({
+              opType: "UPDATE_ENTITY",
+              id: token.id,
+              patch: {
+                primaryOwnerUsername: undefined,
+                characterId: undefined,
+                ownerPeerIds: filteredPeers
+              } as any
+            });
+
+            const updatedChars = userChars.map((c) => c.tokenId === token.id ? { ...c, tokenId: undefined } : c);
+            sessionManager.dispatchOperation({
+              opType: "UPDATE_CHARACTER_SHEET",
+              username: myUsername,
+              sheet: {
+                ...(userSheet || { username: myUsername }),
+                characters: updatedChars
+              }
+            });
+          }
+        });
+
+        bar.appendChild(mineSelect);
+      } else {
+        // Single Character Mine Button
+        const mineBtn = document.createElement("button");
+        mineBtn.className = `btn-glass btn-sm ${isMine ? "btn-active" : ""}`;
+        mineBtn.style.cssText = "display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; margin: 0 4px; border-radius: 8px; padding: 6px 14px; min-height: 32px;";
+        mineBtn.setAttribute("data-tooltip", "Claim as your primary token (Each user can have one primary token)");
+
+        const mineCheckbox = document.createElement("input");
+        activeMineCheckbox = mineCheckbox;
+        mineCheckbox.type = "checkbox";
+        mineCheckbox.checked = isMine;
+        mineCheckbox.style.cssText = "pointer-events: none; width: 15px; height: 15px; accent-color: #38bdf8;";
+
+        mineBtn.appendChild(mineCheckbox);
+        const mineSpan = document.createElement("span");
+        activeMineSpan = mineSpan;
+        mineSpan.textContent = isMine ? "Mine ✓" : "Mine";
+        mineBtn.appendChild(mineSpan);
+
+        mineBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          mineCheckbox.checked = !mineCheckbox.checked;
+          if (mineCheckbox.checked) {
+            const newOwnerPeerIds = Array.from(new Set([...(token.ownerPeerIds || []), myPeerId]));
+            sessionManager.dispatchOperation({
+              opType: "UPDATE_ENTITY",
+              id: token.id,
+              patch: {
+                primaryOwnerUsername: myUsername,
+                characterId: userChars[0]?.id || "char-1",
+                ownerPeerIds: newOwnerPeerIds
+              } as any
+            });
+          } else {
+            const filteredPeers = (token.ownerPeerIds || []).filter((id) => id !== myPeerId);
+            sessionManager.dispatchOperation({
+              opType: "UPDATE_ENTITY",
+              id: token.id,
+              patch: {
+                primaryOwnerUsername: undefined,
+                characterId: undefined,
+                ownerPeerIds: filteredPeers
+              } as any
+            });
+          }
+        });
+
+        bar.appendChild(mineBtn);
+      }
 
       // Secret Checkbox Button
       const secretBtn = document.createElement("button");

@@ -12,6 +12,18 @@ export interface QuickRoll {
   isDamage?: boolean;
 }
 
+export interface CharacterEntry {
+  id: string;
+  characterName?: string;
+  description?: string;
+  inventory?: string;
+  notes?: string;
+  hp?: string | number;
+  maxHp?: string | number;
+  hpHistory?: (string | number | { val: string | number; timestamp?: number })[];
+  tokenId?: string;
+}
+
 export interface CharacterSheetData {
   username: string;
   characterName?: string;
@@ -21,6 +33,7 @@ export interface CharacterSheetData {
   hp?: string | number;
   maxHp?: string | number;
   hpHistory?: (string | number | { val: string | number; timestamp?: number })[];
+  characters?: CharacterEntry[];
 }
 
 export interface ConditionAnimation {
@@ -126,6 +139,7 @@ export interface TokenEntity extends BaseEntity {
   elevation: number;
   ownerPeerIds: string[];
   primaryOwnerUsername?: string;
+  characterId?: string;
   statusEffects: string[];
   aura?: {
     radiusPx: number;
