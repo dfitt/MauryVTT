@@ -27,8 +27,19 @@ export function formatTimeAgo(timestamp?: number): string {
   return diffYear <= 1 ? "last year" : `${diffYear} years ago`;
 }
 
-export function getAbilityModifier(score?: number): string {
+export function getAbilityModifier(score?: number, isDcc: boolean = false): string {
   if (score === undefined || isNaN(score)) return "(+0)";
+  if (isDcc) {
+    let mod = 0;
+    if (score <= 3) mod = -3;
+    else if (score <= 5) mod = -2;
+    else if (score <= 8) mod = -1;
+    else if (score <= 12) mod = 0;
+    else if (score <= 15) mod = 1;
+    else if (score <= 17) mod = 2;
+    else mod = 3;
+    return mod >= 0 ? `(+${mod})` : `(${mod})`;
+  }
   const mod = Math.floor((score - 10) / 2);
   return mod >= 0 ? `(+${mod})` : `(${mod})`;
 }
@@ -184,15 +195,18 @@ export function openCharacterSheetModal(engine?: CanvasEngine): void {
             </div>
           </div>
 
-          <!-- Compact Stats Display Box (STR, INT, WIS, DEX, CON, CHA) -->
+          <!-- Compact Stats Display Box (STR, AGI, STA, INT, PER, LUK in DCC Mode / STR, INT, WIS, DEX, CON, CHA in D20 Mode) -->
           <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 6px 10px; display: flex; flex-direction: column; gap: 4px;">
             <div style="font-size: 9.5px; font-weight: 800; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.5px;">
-              📊 Stats & Modifiers
+              📊 Stats & Modifiers ${currentDoc.gameMode === "dcc" ? "(DCC)" : ""}
             </div>
             <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px;">
-              ${(['str', 'int', 'wis', 'dex', 'con', 'cha'] as const).map((statKey) => {
+              ${(currentDoc.gameMode === "dcc"
+                ? (['str', 'agi', 'sta', 'int', 'per', 'luk'] as const)
+                : (['str', 'int', 'wis', 'dex', 'con', 'cha'] as const)
+              ).map((statKey) => {
                 const val = char.stats?.[statKey] ?? 10;
-                const modStr = getAbilityModifier(val);
+                const modStr = getAbilityModifier(val, currentDoc.gameMode === "dcc");
                 return `
                   <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
                     <label style="font-size: 9px; font-weight: 800; color: #cbd5e1; text-transform: uppercase;">${statKey}</label>
@@ -299,13 +313,19 @@ export function openCharacterSheetModal(engine?: CanvasEngine): void {
         const sheetData = currentDoc.characterSheets?.[username] || { username };
         const currentChars = getNormalizedCharacters(sheetData);
 
+        const isDccMode = currentDoc.gameMode === "dcc";
+
         // Roll 3d6 for each stat
-        const str = roll3d6();
-        const int = roll3d6();
-        const wis = roll3d6();
-        const dex = roll3d6();
-        const con = roll3d6();
-        const cha = roll3d6();
+        const s1 = roll3d6();
+        const s2 = roll3d6();
+        const s3 = roll3d6();
+        const s4 = roll3d6();
+        const s5 = roll3d6();
+        const s6 = roll3d6();
+
+        const statsObj: CharacterStats = isDccMode
+          ? { str: s1, agi: s2, sta: s3, int: s4, per: s5, luk: s6 }
+          : { str: s1, int: s2, wis: s3, dex: s4, con: s5, cha: s6 };
 
         const charName = `Character ${currentChars.length + 1}`;
         const newChar: CharacterEntry = {
@@ -316,7 +336,7 @@ export function openCharacterSheetModal(engine?: CanvasEngine): void {
           description: "",
           inventory: "",
           notes: "",
-          stats: { str, int, wis, dex, con, cha }
+          stats: statsObj
         };
 
         const updatedChars = [...currentChars, newChar];
@@ -327,21 +347,20 @@ export function openCharacterSheetModal(engine?: CanvasEngine): void {
         });
 
         // Broadcast 3d6 rolls to chat
-        const modStr = getAbilityModifier(str);
-        const modInt = getAbilityModifier(int);
-        const modWis = getAbilityModifier(wis);
-        const modDex = getAbilityModifier(dex);
-        const modCon = getAbilityModifier(con);
-        const modCha = getAbilityModifier(cha);
+        const msgContent = isDccMode
+          ? `🎲 <strong>${username}</strong> created new character <strong>${charName}</strong> (Rolled 3d6 Stats):<br/>` +
+            `<strong>STR:</strong> ${s1} ${getAbilityModifier(s1, true)} | <strong>AGI:</strong> ${s2} ${getAbilityModifier(s2, true)} | <strong>STA:</strong> ${s3} ${getAbilityModifier(s3, true)} | ` +
+            `<strong>INT:</strong> ${s4} ${getAbilityModifier(s4, true)} | <strong>PER:</strong> ${s5} ${getAbilityModifier(s5, true)} | <strong>LUK:</strong> ${s6} ${getAbilityModifier(s6, true)}`
+          : `🎲 <strong>${username}</strong> created new character <strong>${charName}</strong> (Rolled 3d6 Stats):<br/>` +
+            `<strong>STR:</strong> ${s1} ${getAbilityModifier(s1, false)} | <strong>INT:</strong> ${s2} ${getAbilityModifier(s2, false)} | <strong>WIS:</strong> ${s3} ${getAbilityModifier(s3, false)} | ` +
+            `<strong>DEX:</strong> ${s4} ${getAbilityModifier(s4, false)} | <strong>CON:</strong> ${s5} ${getAbilityModifier(s5, false)} | <strong>CHA:</strong> ${s6} ${getAbilityModifier(s6, false)}`;
 
         const rollMsg: ChatMessage = {
           id: "msg-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6),
           timestamp: Date.now(),
           senderPeerId: sessionManager.myPeerId || "local",
           senderUsername: username,
-          content: `🎲 <strong>${username}</strong> created new character <strong>${charName}</strong> (Rolled 3d6 Stats):<br/>` +
-            `<strong>STR:</strong> ${str} ${modStr} | <strong>INT:</strong> ${int} ${modInt} | <strong>WIS:</strong> ${wis} ${modWis} | ` +
-            `<strong>DEX:</strong> ${dex} ${modDex} | <strong>CON:</strong> ${con} ${modCon} | <strong>CHA:</strong> ${cha} ${modCha}`,
+          content: msgContent,
           type: "text"
         };
 
@@ -374,6 +393,7 @@ export function openCharacterSheetModal(engine?: CanvasEngine): void {
       if (notesInp) notesInp.value = char.notes || "";
 
       // Attach stat input listeners
+      const isDccActive = docStore.getDocument().gameMode === "dcc";
       const statInputs = cardEl.querySelectorAll<HTMLInputElement>(".char-stat-input");
       statInputs.forEach((sInp) => {
         const statKey = sInp.getAttribute("data-stat") as keyof CharacterStats;
@@ -384,7 +404,7 @@ export function openCharacterSheetModal(engine?: CanvasEngine): void {
           const val = parseInt(sInp.value, 10);
           const modSpan = cardEl.querySelector<HTMLElement>(`.stat-mod-label[data-stat="${statKey}"]`);
           if (modSpan) {
-            modSpan.textContent = getAbilityModifier(isNaN(val) ? 10 : val);
+            modSpan.textContent = getAbilityModifier(isNaN(val) ? 10 : val, isDccActive);
           }
           saveCardFields(false);
         };

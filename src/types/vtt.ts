@@ -19,6 +19,10 @@ export interface CharacterStats {
   dex?: number;
   con?: number;
   cha?: number;
+  agi?: number;
+  sta?: number;
+  per?: number;
+  luk?: number;
 }
 
 export interface CharacterEntry {
