@@ -234,67 +234,105 @@ export class DocumentStore {
     if (!this.doc.characterSheets) this.doc.characterSheets = {};
     if (!this.doc.primaryTokens) this.doc.primaryTokens = {};
 
-    const tokenId = this.doc.primaryTokens[username] || Object.values(this.doc.entities).find((e) => e.type === "token" && (e as any).primaryOwnerUsername === username)?.id;
     const sheet = this.doc.characterSheets[username] || { username };
+    let characters = sheet.characters ? [...sheet.characters] : [];
+    if (characters.length === 0) {
+      characters = [{
+        id: "char-1",
+        characterName: sheet.characterName || "",
+        description: sheet.description || "",
+        inventory: sheet.inventory || "",
+        notes: sheet.notes || "",
+        hp: sheet.hp !== undefined ? String(sheet.hp) : "",
+        maxHp: sheet.maxHp !== undefined ? String(sheet.maxHp) : "",
+        hpHistory: sheet.hpHistory || []
+      }];
+    }
 
-    if (source === "sheet") {
-      const nameToSync = newName !== undefined ? newName : sheet.characterName;
-      if (tokenId && this.doc.entities[tokenId]) {
-        const tok = this.doc.entities[tokenId] as any;
-        if (nameToSync !== undefined && tok.label !== nameToSync) {
-          tok.label = nameToSync;
-          tok.updatedAt = Date.now();
-        }
-        if (sheet.description !== undefined && tok.description !== sheet.description) {
-          tok.description = sheet.description;
-          tok.updatedAt = Date.now();
-        }
-        if (sheet.hp !== undefined && tok.hp !== sheet.hp) {
-          tok.hp = sheet.hp;
-          tok.updatedAt = Date.now();
-        }
-        if (sheet.maxHp !== undefined && tok.maxHp !== sheet.maxHp) {
-          tok.maxHp = sheet.maxHp;
-          tok.updatedAt = Date.now();
-        }
-        if (sheet.hp !== undefined || sheet.maxHp !== undefined) {
-          this.applyAutoHpConditions(tok);
-        }
-        if (sheet.hpHistory && JSON.stringify(tok.hpHistory) !== JSON.stringify(sheet.hpHistory)) {
-          tok.hpHistory = [...sheet.hpHistory];
-          tok.updatedAt = Date.now();
+    let sheetUpdated = false;
+
+    for (const ent of Object.values(this.doc.entities)) {
+      if (ent.type === "token") {
+        const tok = ent as TokenEntity;
+        if (tok.primaryOwnerUsername === username) {
+          let charIndex = characters.findIndex((c) => (tok.characterId && c.id === tok.characterId) || (c.tokenId && c.tokenId === tok.id));
+          if (charIndex === -1) charIndex = 0;
+
+          const char = characters[charIndex];
+          if (!char) continue;
+
+          if (source === "sheet") {
+            const nameToSync = newName !== undefined ? newName : char.characterName;
+            if (nameToSync !== undefined && tok.label !== nameToSync) {
+              tok.label = nameToSync;
+              tok.updatedAt = Date.now();
+            }
+            if (char.description !== undefined && tok.description !== char.description) {
+              tok.description = char.description;
+              tok.updatedAt = Date.now();
+            }
+            if (char.hp !== undefined && String(tok.hp || "") !== String(char.hp || "")) {
+              tok.hp = char.hp;
+              tok.updatedAt = Date.now();
+            }
+            if (char.maxHp !== undefined && String(tok.maxHp || "") !== String(char.maxHp || "")) {
+              tok.maxHp = char.maxHp;
+              tok.updatedAt = Date.now();
+            }
+            if (char.hp !== undefined || char.maxHp !== undefined) {
+              this.applyAutoHpConditions(tok);
+            }
+            if (char.hpHistory && JSON.stringify(tok.hpHistory) !== JSON.stringify(char.hpHistory)) {
+              tok.hpHistory = [...char.hpHistory];
+              tok.updatedAt = Date.now();
+            }
+          } else if (source === "token") {
+            const nameToSync = newName !== undefined ? newName : tok.label;
+            const updatedChar = { ...char };
+            let charChanged = false;
+
+            if (nameToSync !== undefined && updatedChar.characterName !== nameToSync) {
+              updatedChar.characterName = nameToSync;
+              charChanged = true;
+            }
+            if (tok.description !== undefined && updatedChar.description !== tok.description) {
+              updatedChar.description = tok.description;
+              charChanged = true;
+            }
+            if (tok.hp !== undefined && String(updatedChar.hp || "") !== String(tok.hp || "")) {
+              updatedChar.hp = tok.hp;
+              charChanged = true;
+            }
+            if (tok.maxHp !== undefined && String(updatedChar.maxHp || "") !== String(tok.maxHp || "")) {
+              updatedChar.maxHp = tok.maxHp;
+              charChanged = true;
+            }
+            if (tok.hpHistory && JSON.stringify(updatedChar.hpHistory) !== JSON.stringify(tok.hpHistory)) {
+              updatedChar.hpHistory = [...tok.hpHistory];
+              charChanged = true;
+            }
+
+            if (charChanged) {
+              characters[charIndex] = updatedChar;
+              sheetUpdated = true;
+            }
+          }
         }
       }
-    } else if (source === "token") {
-      const nameToSync = newName !== undefined ? newName : (tokenId && this.doc.entities[tokenId] ? (this.doc.entities[tokenId] as any).label : undefined);
-      if (tokenId && this.doc.entities[tokenId]) {
-        const tok = this.doc.entities[tokenId] as any;
-        let sheetUpdated = false;
-        const updatedSheet = { ...sheet, username };
-        if (nameToSync !== undefined && sheet.characterName !== nameToSync) {
-          updatedSheet.characterName = nameToSync;
-          sheetUpdated = true;
-        }
-        if (tok.description !== undefined && sheet.description !== tok.description) {
-          updatedSheet.description = tok.description;
-          sheetUpdated = true;
-        }
-        if (tok.hp !== undefined && sheet.hp !== tok.hp) {
-          updatedSheet.hp = tok.hp;
-          sheetUpdated = true;
-        }
-        if (tok.maxHp !== undefined && sheet.maxHp !== tok.maxHp) {
-          updatedSheet.maxHp = tok.maxHp;
-          sheetUpdated = true;
-        }
-        if (tok.hpHistory && JSON.stringify(sheet.hpHistory) !== JSON.stringify(tok.hpHistory)) {
-          updatedSheet.hpHistory = [...tok.hpHistory];
-          sheetUpdated = true;
-        }
-        if (sheetUpdated) {
-          this.doc.characterSheets[username] = updatedSheet;
-        }
-      }
+    }
+
+    if (sheetUpdated || source === "token") {
+      this.doc.characterSheets[username] = {
+        ...sheet,
+        username,
+        characterName: characters[0]?.characterName || "",
+        description: characters[0]?.description || "",
+        inventory: characters[0]?.inventory || "",
+        notes: characters[0]?.notes || "",
+        hp: characters[0]?.hp !== undefined ? characters[0].hp : "",
+        maxHp: characters[0]?.maxHp !== undefined ? characters[0].maxHp : "",
+        characters
+      };
     }
   }
 

@@ -2,7 +2,7 @@ import { docStore } from "../state/documentStore.js";
 import { sessionManager } from "../network/sessionManager.js";
 import { assetStore } from "../state/idbAssetStore.js";
 import { CanvasEngine } from "../canvas/canvasEngine.js";
-import { VTTDocument, CharacterSheetData, CharacterEntry, TokenEntity } from "../types/vtt.js";
+import { VTTDocument, CharacterSheetData, CharacterEntry, CharacterStats, TokenEntity, ChatMessage } from "../types/vtt.js";
 import { triggerQuickRollToChat } from "./chatPanel.js";
 import { ALL_ROLL_ICONS } from "./rollIcons.js";
 
@@ -27,11 +27,34 @@ export function formatTimeAgo(timestamp?: number): string {
   return diffYear <= 1 ? "last year" : `${diffYear} years ago`;
 }
 
+export function getAbilityModifier(score?: number): string {
+  if (score === undefined || isNaN(score)) return "(+0)";
+  const mod = Math.floor((score - 10) / 2);
+  return mod >= 0 ? `(+${mod})` : `(${mod})`;
+}
+
+export function roll3d6(): number {
+  return (
+    (Math.floor(Math.random() * 6) + 1) +
+    (Math.floor(Math.random() * 6) + 1) +
+    (Math.floor(Math.random() * 6) + 1)
+  );
+}
+
 export function getNormalizedCharacters(sheet?: CharacterSheetData): CharacterEntry[] {
   if (!sheet) {
-    return [{ id: "char-1", characterName: "", hp: "", maxHp: "", description: "", inventory: "", notes: "" }];
+    return [{
+      id: "char-1",
+      characterName: "",
+      hp: "",
+      maxHp: "",
+      description: "",
+      inventory: "",
+      notes: "",
+      stats: { str: 10, int: 10, wis: 10, dex: 10, con: 10, cha: 10 }
+    }];
   }
-  if (sheet.characters && sheet.characters.length > 0) {
+  if (sheet.characters !== undefined) {
     return sheet.characters;
   }
   return [{
@@ -42,7 +65,8 @@ export function getNormalizedCharacters(sheet?: CharacterSheetData): CharacterEn
     notes: sheet.notes || "",
     hp: sheet.hp !== undefined ? String(sheet.hp) : "",
     maxHp: sheet.maxHp !== undefined ? String(sheet.maxHp) : "",
-    hpHistory: sheet.hpHistory || []
+    hpHistory: sheet.hpHistory || [],
+    stats: { str: 10, int: 10, wis: 10, dex: 10, con: 10, cha: 10 }
   }];
 }
 
@@ -114,6 +138,105 @@ export function openCharacterSheetModal(engine?: CanvasEngine): void {
 
     const addDisabled = characters.length >= 4;
 
+    const renderBodyContent = () => {
+      if (characters.length === 0) {
+        return `
+          <div style="grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; text-align: center; gap: 14px;">
+            <span style="font-size: 3.5em; opacity: 0.6;">📜</span>
+            <strong style="font-size: 1.25em; color: #cbd5e1;">No Characters on Sheet</strong>
+            <span style="font-size: 13px; color: #94a3b8; max-width: 340px; line-height: 1.4;">Click the <strong style="color: #38bdf8;">➕ Add Character</strong> button at the top right to create a new character!</span>
+          </div>
+        `;
+      }
+
+      return characters.map((char, k) => `
+        <div class="character-card" data-char-id="${char.id}" style="background: rgba(30, 41, 59, 0.5); padding: 16px; border-radius: 12px; border: 1px solid rgba(56, 189, 248, 0.25); display: flex; flex-direction: column; gap: 14px; position: relative; box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.25);">
+          
+          <!-- Delete Button (X) -->
+          <button class="delete-char-card-btn" data-char-id="${char.id}" title="Delete Character" style="position: absolute; top: 12px; right: 12px; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.5); color: #f87171; border-radius: 6px; width: 28px; height: 28px; cursor: pointer; font-weight: 800; font-size: 14px; display: flex; align-items: center; justify-content: center; transition: all 0.15s ease; z-index: 5;">✕</button>
+
+          <!-- Card Header Subtitle -->
+          <div style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: -6px;">
+            Character #${k + 1}
+          </div>
+
+          <!-- Top Row: Portrait, Name & Compact HP -->
+          <div style="display: flex; gap: 12px; align-items: center;">
+            <!-- Portrait Box -->
+            <div class="char-portrait-box" data-char-id="${char.id}" style="width: 64px; height: 64px; flex-shrink: 0; position: relative; display: flex; align-items: center; justify-content: center;">
+              <div style="width: 64px; height: 64px; border-radius: 50%; background: rgba(56, 189, 248, 0.12); border: 2px dashed rgba(56, 189, 248, 0.4); display: flex; align-items: center; justify-content: center; font-size: 1.6em; color: #38bdf8; box-shadow: inset 0 2px 8px rgba(0,0,0,0.3);" title="Claim a token on the map to display portrait here">👤</div>
+            </div>
+            
+            <!-- Name Input -->
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+              <label style="font-size: 10px; font-weight: 800; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.5px;">Character Name</label>
+              <input class="char-name-input" data-char-id="${char.id}" type="text" value="${char.characterName || ""}" placeholder="e.g. Valen Shadowhunter..." style="width: 100%; padding: 6px 10px; background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(56, 189, 248, 0.45); border-radius: 6px; color: #fff; font-size: 1.05em; font-weight: 700; outline: none; box-sizing: border-box;" />
+            </div>
+
+            <!-- Compact HP / MAX HP Input -->
+            <div style="width: 124px; display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; position: relative;">
+              <label style="font-size: 9.5px; font-weight: 800; color: #f43f5e; text-transform: uppercase; letter-spacing: 0.5px;">❤️ HP / MAX</label>
+              <div style="display: flex; align-items: center; gap: 3px;">
+                <input class="char-hp-input" data-char-id="${char.id}" type="text" value="${char.hp !== undefined ? char.hp : ""}" placeholder="HP" style="width: 50%; padding: 4px 2px; background: rgba(244, 63, 94, 0.12); border: 1.5px solid rgba(244, 63, 94, 0.55); border-radius: 6px; color: #fda4af; font-size: 1em; font-weight: 900; text-align: center; outline: none; box-sizing: border-box;" />
+                <span style="color: #f43f5e; font-weight: 900; font-size: 1em;">/</span>
+                <input class="char-max-hp-input" data-char-id="${char.id}" type="text" value="${char.maxHp !== undefined ? char.maxHp : ""}" placeholder="Max" style="width: 50%; padding: 4px 2px; background: rgba(244, 63, 94, 0.12); border: 1.5px solid rgba(244, 63, 94, 0.55); border-radius: 6px; color: #fda4af; font-size: 1em; font-weight: 900; text-align: center; outline: none; box-sizing: border-box;" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Compact Stats Display Box (STR, INT, WIS, DEX, CON, CHA) -->
+          <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 6px 10px; display: flex; flex-direction: column; gap: 4px;">
+            <div style="font-size: 9.5px; font-weight: 800; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.5px;">
+              📊 Stats & Modifiers
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px;">
+              ${(['str', 'int', 'wis', 'dex', 'con', 'cha'] as const).map((statKey) => {
+                const val = char.stats?.[statKey] ?? 10;
+                const modStr = getAbilityModifier(val);
+                return `
+                  <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+                    <label style="font-size: 9px; font-weight: 800; color: #cbd5e1; text-transform: uppercase;">${statKey}</label>
+                    <input class="char-stat-input" data-char-id="${char.id}" data-stat="${statKey}" type="number" value="${val}" style="width: 100%; max-width: 40px; padding: 2px 2px; background: rgba(30, 41, 59, 0.85); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 4px; color: #fff; font-size: 11px; font-weight: 700; text-align: center; outline: none; box-sizing: border-box;" />
+                    <span class="stat-mod-label" data-char-id="${char.id}" data-stat="${statKey}" style="font-size: 10px; color: #38bdf8; font-weight: 800;">${modStr}</span>
+                  </div>
+                `;
+              }).join("")}
+            </div>
+          </div>
+
+          <!-- Saved Named Rolls (ONLY SHOWN IF SINGLE CHARACTER) -->
+          ${characters.length === 1 ? `
+            <div style="background: rgba(15, 23, 42, 0.6); padding: 12px; border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.25); display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; align-items: center; justify-content: space-between;">
+                <label style="font-size: 11px; font-weight: 800; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.5px;">🎯 Saved Named Rolls</label>
+                <span id="char-sheet-rolls-count" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; padding: 2px 8px; border-radius: 999px; font-size: 10px; font-weight: 700;">0 / 12</span>
+              </div>
+              <div id="char-sheet-rolls-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px;">
+                <div style="font-size: 11px; color: #64748b; font-style: italic; grid-column: 1 / -1; padding: 4px 0;">No saved Named Rolls yet. Use the Chat+Dice window (/r 1d20+5 #Attack) to create up to 12 saved rolls!</div>
+              </div>
+            </div>
+          ` : ""}
+
+          <!-- 3 Textboxes: Description, Inventory, Notes -->
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div>
+              <label style="font-size: 10.5px; font-weight: 800; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.5px;">📝 Description</label>
+              <textarea class="char-desc-input" data-char-id="${char.id}" placeholder="Appearance, ancestry, traits..." rows="2" style="width: 100%; padding: 6px 8px; background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 6px; color: #f8fafc; font-family: inherit; font-size: 12px; resize: vertical; box-sizing: border-box; outline: none;"></textarea>
+            </div>
+            <div>
+              <label style="font-size: 10.5px; font-weight: 800; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.5px;">🎒 Inventory</label>
+              <textarea class="char-inv-input" data-char-id="${char.id}" placeholder="Weapons, equipment, gold..." rows="2" style="width: 100%; padding: 6px 8px; background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 6px; color: #f8fafc; font-family: inherit; font-size: 12px; resize: vertical; box-sizing: border-box; outline: none;"></textarea>
+            </div>
+            <div>
+              <label style="font-size: 10.5px; font-weight: 800; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.5px;">📜 Notes</label>
+              <textarea class="char-notes-input" data-char-id="${char.id}" placeholder="Abilities, quests, secrets..." rows="2" style="width: 100%; padding: 6px 8px; background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 6px; color: #f8fafc; font-family: inherit; font-size: 12px; resize: vertical; box-sizing: border-box; outline: none;"></textarea>
+            </div>
+          </div>
+
+        </div>
+      `).join("");
+    };
+
     modalEl.innerHTML = `
       <div class="sheet-header" style="padding: 12px 18px; background: rgba(30, 41, 59, 0.85); border-bottom: 1px solid rgba(56, 189, 248, 0.25); display: flex; align-items: center; justify-content: space-between; cursor: ${isMobile ? "default" : "move"}; user-select: none; flex-shrink: 0;">
         <div style="display: flex; align-items: center; gap: 10px;">
@@ -132,73 +255,8 @@ export function openCharacterSheetModal(engine?: CanvasEngine): void {
         </div>
       </div>
 
-      <div class="sheet-body" style="padding: 18px; overflow-y: auto; flex: 1; display: grid; grid-template-columns: ${characters.length === 1 ? '1fr' : 'repeat(2, 1fr)'}; gap: 16px;">
-        ${characters.map((char, k) => `
-          <div class="character-card" data-char-id="${char.id}" style="background: rgba(30, 41, 59, 0.5); padding: 16px; border-radius: 12px; border: 1px solid rgba(56, 189, 248, 0.25); display: flex; flex-direction: column; gap: 14px; position: relative; box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.25);">
-            
-            <!-- Delete Button (X) -->
-            <button class="delete-char-card-btn" data-char-id="${char.id}" title="Delete Character" style="position: absolute; top: 12px; right: 12px; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.5); color: #f87171; border-radius: 6px; width: 28px; height: 28px; cursor: pointer; font-weight: 800; font-size: 14px; display: flex; align-items: center; justify-content: center; transition: all 0.15s ease; z-index: 5;">✕</button>
-
-            <!-- Card Header Subtitle -->
-            <div style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: -6px;">
-              Character #${k + 1}
-            </div>
-
-            <!-- Top Row: Portrait, Name & HP -->
-            <div style="display: flex; gap: 14px; align-items: center;">
-              <!-- Portrait Box -->
-              <div class="char-portrait-box" data-char-id="${char.id}" style="width: 72px; height: 72px; flex-shrink: 0; position: relative; display: flex; align-items: center; justify-content: center;">
-                <div style="width: 72px; height: 72px; border-radius: 50%; background: rgba(56, 189, 248, 0.12); border: 2px dashed rgba(56, 189, 248, 0.4); display: flex; align-items: center; justify-content: center; font-size: 1.8em; color: #38bdf8; box-shadow: inset 0 2px 8px rgba(0,0,0,0.3);" title="Claim a token on the map to display portrait here">👤</div>
-              </div>
-              
-              <!-- Name & HP Box -->
-              <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
-                <div>
-                  <label style="font-size: 10px; font-weight: 800; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.5px;">Character Name</label>
-                  <input class="char-name-input" data-char-id="${char.id}" type="text" value="${char.characterName || ""}" placeholder="e.g. Valen Shadowhunter..." style="width: 100%; padding: 8px 10px; background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(56, 189, 248, 0.45); border-radius: 6px; color: #fff; font-size: 1.1em; font-weight: 700; outline: none; box-sizing: border-box;" />
-                </div>
-                <div>
-                  <label style="font-size: 10px; font-weight: 800; color: #f43f5e; text-transform: uppercase; letter-spacing: 0.5px;">❤️ HP / MAX HP</label>
-                  <div style="display: flex; align-items: center; gap: 4px; position: relative;">
-                    <input class="char-hp-input" data-char-id="${char.id}" type="text" value="${char.hp !== undefined ? char.hp : ""}" placeholder="HP..." style="width: 50%; padding: 6px 4px; background: rgba(244, 63, 94, 0.12); border: 1.5px solid rgba(244, 63, 94, 0.55); border-radius: 6px; color: #fda4af; font-size: 1.1em; font-weight: 900; text-align: center; outline: none; box-sizing: border-box;" />
-                    <span style="color: #f43f5e; font-weight: 900; font-size: 1.1em;">/</span>
-                    <input class="char-max-hp-input" data-char-id="${char.id}" type="text" value="${char.maxHp !== undefined ? char.maxHp : ""}" placeholder="Max..." style="width: 50%; padding: 6px 4px; background: rgba(244, 63, 94, 0.12); border: 1.5px solid rgba(244, 63, 94, 0.55); border-radius: 6px; color: #fda4af; font-size: 1.1em; font-weight: 900; text-align: center; outline: none; box-sizing: border-box;" />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Saved Named Rolls (ONLY SHOWN IF SINGLE CHARACTER) -->
-            ${characters.length === 1 ? `
-              <div style="background: rgba(15, 23, 42, 0.6); padding: 12px; border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.25); display: flex; flex-direction: column; gap: 8px;">
-                <div style="display: flex; align-items: center; justify-content: space-between;">
-                  <label style="font-size: 11px; font-weight: 800; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.5px;">🎯 Saved Named Rolls</label>
-                  <span id="char-sheet-rolls-count" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; padding: 2px 8px; border-radius: 999px; font-size: 10px; font-weight: 700;">0 / 12</span>
-                </div>
-                <div id="char-sheet-rolls-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px;">
-                  <div style="font-size: 11px; color: #64748b; font-style: italic; grid-column: 1 / -1; padding: 4px 0;">No saved Named Rolls yet. Use the Chat+Dice window (/r 1d20+5 #Attack) to create up to 12 saved rolls!</div>
-                </div>
-              </div>
-            ` : ""}
-
-            <!-- 3 Textboxes: Description, Inventory, Notes -->
-            <div style="display: flex; flex-direction: column; gap: 10px;">
-              <div>
-                <label style="font-size: 11px; font-weight: 800; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.5px;">📝 Description</label>
-                <textarea class="char-desc-input" data-char-id="${char.id}" placeholder="Appearance, ancestry, traits..." rows="2" style="width: 100%; padding: 8px 10px; background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 6px; color: #f8fafc; font-family: inherit; font-size: 12.5px; resize: vertical; box-sizing: border-box; outline: none;"></textarea>
-              </div>
-              <div>
-                <label style="font-size: 11px; font-weight: 800; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.5px;">🎒 Inventory</label>
-                <textarea class="char-inv-input" data-char-id="${char.id}" placeholder="Weapons, equipment, gold..." rows="2" style="width: 100%; padding: 8px 10px; background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 6px; color: #f8fafc; font-family: inherit; font-size: 12.5px; resize: vertical; box-sizing: border-box; outline: none;"></textarea>
-              </div>
-              <div>
-                <label style="font-size: 11px; font-weight: 800; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.5px;">📜 Notes</label>
-                <textarea class="char-notes-input" data-char-id="${char.id}" placeholder="Abilities, quests, secrets..." rows="2" style="width: 100%; padding: 8px 10px; background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 6px; color: #f8fafc; font-family: inherit; font-size: 12.5px; resize: vertical; box-sizing: border-box; outline: none;"></textarea>
-              </div>
-            </div>
-
-          </div>
-        `).join("")}
+      <div class="sheet-body" style="padding: 18px; overflow-y: auto; flex: 1; display: grid; grid-template-columns: ${characters.length <= 1 ? '1fr' : 'repeat(2, 1fr)'}; gap: 16px;">
+        ${renderBodyContent()}
       </div>
     `;
 
@@ -217,7 +275,6 @@ export function openCharacterSheetModal(engine?: CanvasEngine): void {
         }
       }
     }
-    // Fallback for single character legacy claim
     if (characters.length === 1) {
       let tokenId = doc.primaryTokens?.[uname];
       if (tokenId && doc.entities[tokenId]?.type === "token") {
@@ -248,21 +305,58 @@ export function openCharacterSheetModal(engine?: CanvasEngine): void {
         const currentDoc = docStore.getDocument();
         const sheetData = currentDoc.characterSheets?.[username] || { username };
         const currentChars = getNormalizedCharacters(sheetData);
+
+        // Roll 3d6 for each stat
+        const str = roll3d6();
+        const int = roll3d6();
+        const wis = roll3d6();
+        const dex = roll3d6();
+        const con = roll3d6();
+        const cha = roll3d6();
+
+        const charName = `Character ${currentChars.length + 1}`;
         const newChar: CharacterEntry = {
           id: "char-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6),
-          characterName: `Character ${currentChars.length + 1}`,
+          characterName: charName,
           hp: "",
           maxHp: "",
           description: "",
           inventory: "",
-          notes: ""
+          notes: "",
+          stats: { str, int, wis, dex, con, cha }
         };
+
         const updatedChars = [...currentChars, newChar];
         sessionManager.dispatchOperation({
           opType: "UPDATE_CHARACTER_SHEET",
           username,
           sheet: { ...sheetData, username, characters: updatedChars }
         });
+
+        // Broadcast 3d6 rolls to chat
+        const modStr = getAbilityModifier(str);
+        const modInt = getAbilityModifier(int);
+        const modWis = getAbilityModifier(wis);
+        const modDex = getAbilityModifier(dex);
+        const modCon = getAbilityModifier(con);
+        const modCha = getAbilityModifier(cha);
+
+        const rollMsg: ChatMessage = {
+          id: "msg-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6),
+          timestamp: Date.now(),
+          senderPeerId: sessionManager.myPeerId || "local",
+          senderUsername: username,
+          content: `🎲 <strong>${username}</strong> created new character <strong>${charName}</strong> (Rolled 3d6 Stats):<br/>` +
+            `<strong>STR:</strong> ${str} ${modStr} | <strong>INT:</strong> ${int} ${modInt} | <strong>WIS:</strong> ${wis} ${modWis} | ` +
+            `<strong>DEX:</strong> ${dex} ${modDex} | <strong>CON:</strong> ${con} ${modCon} | <strong>CHA:</strong> ${cha} ${modCha}`,
+          type: "text"
+        };
+
+        sessionManager.dispatchOperation({
+          opType: "APPEND_CHAT_MESSAGE",
+          message: rollMsg
+        });
+
         renderModalContent();
       };
     }
@@ -286,6 +380,25 @@ export function openCharacterSheetModal(engine?: CanvasEngine): void {
       if (invInp) invInp.value = char.inventory || "";
       if (notesInp) notesInp.value = char.notes || "";
 
+      // Attach stat input listeners
+      const statInputs = cardEl.querySelectorAll<HTMLInputElement>(".char-stat-input");
+      statInputs.forEach((sInp) => {
+        const statKey = sInp.getAttribute("data-stat") as keyof CharacterStats;
+        if (statKey && char.stats) {
+          sInp.value = String(char.stats[statKey] ?? 10);
+        }
+        sInp.oninput = () => {
+          const val = parseInt(sInp.value, 10);
+          const modSpan = cardEl.querySelector<HTMLElement>(`.stat-mod-label[data-stat="${statKey}"]`);
+          if (modSpan) {
+            modSpan.textContent = getAbilityModifier(isNaN(val) ? 10 : val);
+          }
+          saveCardFields(false);
+        };
+        sInp.onchange = () => saveCardFields(true);
+        sInp.onblur = () => saveCardFields(true);
+      });
+
       const saveCardFields = (flushNow = false) => {
         if (debounceTimer) clearTimeout(debounceTimer);
         const doSave = () => {
@@ -295,6 +408,15 @@ export function openCharacterSheetModal(engine?: CanvasEngine): void {
 
           const updatedChars = currentChars.map((c) => {
             if (c.id === char.id) {
+              const statsObj: CharacterStats = { ...c.stats };
+              statInputs.forEach((sInp) => {
+                const statKey = sInp.getAttribute("data-stat") as keyof CharacterStats;
+                const val = parseInt(sInp.value, 10);
+                if (statKey) {
+                  statsObj[statKey] = isNaN(val) ? 10 : val;
+                }
+              });
+
               return {
                 ...c,
                 characterName: nameInp ? nameInp.value.trim() : c.characterName,
@@ -302,7 +424,8 @@ export function openCharacterSheetModal(engine?: CanvasEngine): void {
                 maxHp: maxHpInp ? maxHpInp.value.trim() : c.maxHp,
                 description: descInp ? descInp.value : c.description,
                 inventory: invInp ? invInp.value : c.inventory,
-                notes: notesInp ? notesInp.value : c.notes
+                notes: notesInp ? notesInp.value : c.notes,
+                stats: statsObj
               };
             }
             return c;
@@ -314,7 +437,6 @@ export function openCharacterSheetModal(engine?: CanvasEngine): void {
             sheet: {
               ...sheetData,
               username,
-              // Maintain top-level fields for character 1 backward compatibility
               characterName: updatedChars[0]?.characterName,
               description: updatedChars[0]?.description,
               inventory: updatedChars[0]?.inventory,
@@ -398,14 +520,13 @@ export function openCharacterSheetModal(engine?: CanvasEngine): void {
               if (existingUrl) URL.revokeObjectURL(existingUrl);
               const url = URL.createObjectURL(blob);
               activePortraitUrls.set(char.id, url);
-              pBox.innerHTML = `<img src="${url}" style="width: 72px; height: 72px; border-radius: 50%; object-fit: cover; border: 2.5px solid #38bdf8; box-shadow: 0 4px 16px rgba(56, 189, 248, 0.45); background: #0f172a;" title="Click to zoom to token (${claimedToken.label || username}) on map" />`;
+              pBox.innerHTML = `<img src="${url}" style="width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 2.5px solid #38bdf8; box-shadow: 0 4px 16px rgba(56, 189, 248, 0.45); background: #0f172a;" title="Click to zoom to token (${claimedToken.label || username}) on map" />`;
             }
           });
         }
       }
     });
 
-    // Render Saved Named Rolls if 1 character
     if (characters.length === 1) {
       const currentDoc = docStore.getDocument();
       renderSheetRolls(currentDoc, username);
@@ -477,7 +598,6 @@ export function openCharacterSheetModal(engine?: CanvasEngine): void {
     const sheetData = doc.characterSheets?.[uname] || { username: uname };
     const currentChars = getNormalizedCharacters(sheetData);
 
-    // Sync input fields for active cards if not focused
     currentChars.forEach((char) => {
       const cardEl = modalEl!.querySelector<HTMLElement>(`.character-card[data-char-id="${char.id}"]`);
       if (!cardEl) return;
@@ -489,14 +609,24 @@ export function openCharacterSheetModal(engine?: CanvasEngine): void {
       const invInp = cardEl.querySelector<HTMLTextAreaElement>(".char-inv-input");
       const notesInp = cardEl.querySelector<HTMLTextAreaElement>(".char-notes-input");
 
+      const claimedTok = findClaimedTokenForChar(doc, uname, char);
+      let displayHp = char.hp !== undefined ? String(char.hp || "") : "";
+      if (claimedTok && claimedTok.hp !== undefined && String(claimedTok.hp) !== "") {
+        displayHp = String(claimedTok.hp);
+      }
+      let displayMax = char.maxHp !== undefined ? String(char.maxHp || "") : "";
+      if (claimedTok && claimedTok.maxHp !== undefined && String(claimedTok.maxHp) !== "") {
+        displayMax = String(claimedTok.maxHp);
+      }
+
       if (nameInp && document.activeElement !== nameInp && nameInp.value !== (char.characterName || "")) {
         nameInp.value = char.characterName || "";
       }
-      if (hpInp && document.activeElement !== hpInp && hpInp.value !== (char.hp !== undefined ? String(char.hp) : "")) {
-        hpInp.value = char.hp !== undefined ? String(char.hp) : "";
+      if (hpInp && document.activeElement !== hpInp && hpInp.value !== displayHp) {
+        hpInp.value = displayHp;
       }
-      if (maxHpInp && document.activeElement !== maxHpInp && maxHpInp.value !== (char.maxHp !== undefined ? String(char.maxHp) : "")) {
-        maxHpInp.value = char.maxHp !== undefined ? String(char.maxHp) : "";
+      if (maxHpInp && document.activeElement !== maxHpInp && maxHpInp.value !== displayMax) {
+        maxHpInp.value = displayMax;
       }
       if (descInp && document.activeElement !== descInp && descInp.value !== (char.description || "")) {
         descInp.value = char.description || "";
@@ -585,9 +715,6 @@ function showDeleteCharacterConfirmationModal(
     }
 
     currentChars = currentChars.filter((c) => c.id !== char.id);
-    if (currentChars.length === 0) {
-      currentChars = [{ id: "char-1", characterName: "", hp: "", maxHp: "", description: "", inventory: "", notes: "" }];
-    }
 
     sessionManager.dispatchOperation({
       opType: "UPDATE_CHARACTER_SHEET",

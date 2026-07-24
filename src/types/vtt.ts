@@ -12,6 +12,15 @@ export interface QuickRoll {
   isDamage?: boolean;
 }
 
+export interface CharacterStats {
+  str?: number;
+  int?: number;
+  wis?: number;
+  dex?: number;
+  con?: number;
+  cha?: number;
+}
+
 export interface CharacterEntry {
   id: string;
   characterName?: string;
@@ -22,6 +31,7 @@ export interface CharacterEntry {
   maxHp?: string | number;
   hpHistory?: (string | number | { val: string | number; timestamp?: number })[];
   tokenId?: string;
+  stats?: CharacterStats;
 }
 
 export interface CharacterSheetData {
