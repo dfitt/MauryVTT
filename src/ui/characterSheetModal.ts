@@ -196,7 +196,7 @@ export function openCharacterSheetModal(engine?: CanvasEngine): void {
                 return `
                   <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
                     <label style="font-size: 9px; font-weight: 800; color: #cbd5e1; text-transform: uppercase;">${statKey}</label>
-                    <input class="char-stat-input" data-char-id="${char.id}" data-stat="${statKey}" type="number" value="${val}" style="width: 100%; max-width: 40px; padding: 2px 2px; background: rgba(30, 41, 59, 0.85); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 4px; color: #fff; font-size: 11px; font-weight: 700; text-align: center; outline: none; box-sizing: border-box;" />
+                    <input class="char-stat-input" data-char-id="${char.id}" data-stat="${statKey}" type="text" inputmode="numeric" value="${val}" style="width: 100%; max-width: 40px; padding: 2px 2px; background: rgba(30, 41, 59, 0.85); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 4px; color: #fff; font-size: 11px; font-weight: 700; text-align: center; outline: none; box-sizing: border-box;" />
                     <span class="stat-mod-label" data-char-id="${char.id}" data-stat="${statKey}" style="font-size: 10px; color: #38bdf8; font-weight: 800;">${modStr}</span>
                   </div>
                 `;
