@@ -53,7 +53,8 @@ export class DocumentStore {
       conditionUsage: {},
       vttfxUsage: {},
       primaryTokens: {},
-      characterSheets: {}
+      characterSheets: {},
+      gameMode: "d20"
     };
   }
 
@@ -561,6 +562,10 @@ export class DocumentStore {
       }
       case "CLEAR_CHAT_HISTORY": {
         this.doc.chatHistory = [];
+        break;
+      }
+      case "UPDATE_GAME_MODE": {
+        this.doc.gameMode = op.mode;
         break;
       }
       case "BATCH": {

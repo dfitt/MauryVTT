@@ -1,5 +1,6 @@
 import { CanvasEngine } from "../canvas/canvasEngine.js";
 import { docStore } from "../state/documentStore.js";
+import { sessionManager } from "../network/sessionManager.js";
 import { openGeminiApiKeyModal } from "./enhanceModal.js";
 import { canSelectLockedImage } from "../canvas/lockedSelectionHelper.js";
 
@@ -156,7 +157,23 @@ export function openSettingsModal(engine: CanvasEngine): void {
         </div>
       </div>
 
-      <!-- Section 3: AI Configuration Shortcut -->
+      <!-- Section 3: Game Mode (Host Only) -->
+      ${(sessionManager.role !== "client") ? `
+        <div style="display: flex; flex-direction: column; gap: 10px; background: rgba(30, 41, 59, 0.6); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 12px; padding: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; flex-direction: column;">
+              <span style="font-size: 13px; font-weight: 700; color: #38bdf8;">🎮 Game Mode (Host Only)</span>
+              <span style="font-size: 11.5px; color: #cbd5e1;">Controls active ruleset & dice options for all connected players in real time.</span>
+            </div>
+            <select id="setting-game-mode-select" style="background: rgba(15, 23, 42, 0.9); border: 1px solid #38bdf8; color: #38bdf8; padding: 6px 12px; border-radius: 8px; font-size: 13px; font-weight: 800; outline: none; cursor: pointer;">
+              <option value="d20" ${(doc.gameMode || "d20") === "d20" ? "selected" : ""}>🎯 D20, Roll High</option>
+              <option value="dcc" ${doc.gameMode === "dcc" ? "selected" : ""}>🎲 DCC</option>
+            </select>
+          </div>
+        </div>
+      ` : ""}
+
+      <!-- Section 4: AI Configuration Shortcut -->
       <div style="display: flex; flex-direction: column; gap: 10px; background: rgba(30, 41, 59, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 16px;">
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <div style="display: flex; flex-direction: column;">
@@ -195,6 +212,17 @@ export function openSettingsModal(engine: CanvasEngine): void {
   const aiBtn = modalEl.querySelector<HTMLButtonElement>("#btn-settings-open-ai")!;
   const closeBtn = modalEl.querySelector<HTMLButtonElement>("#btn-close-settings")!;
   const closeTopBtn = modalEl.querySelector<HTMLButtonElement>("#btn-close-settings-top")!;
+
+  const gameModeSelect = modalEl.querySelector<HTMLSelectElement>("#setting-game-mode-select");
+  if (gameModeSelect) {
+    gameModeSelect.addEventListener("change", () => {
+      const newMode = gameModeSelect.value as "d20" | "dcc";
+      sessionManager.dispatchOperation({
+        opType: "UPDATE_GAME_MODE",
+        mode: newMode
+      });
+    });
+  }
 
   // Background color handlers
   bgPicker.addEventListener("input", () => {

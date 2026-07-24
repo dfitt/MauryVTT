@@ -290,6 +290,15 @@ export function setupChatPanel(engine?: CanvasEngine): void {
         <button class="dice-icon-btn mod-btn mod-btn-plus" data-dice="+1" data-tooltip="Add +1">+1</button>
         <button class="dice-icon-btn mod-btn mod-btn-minus" data-dice="-1" data-tooltip="Subtract 1">-1</button>
       </div>
+      <div class="zocchi-dice-row" id="zocchi-dice-row" style="display: none; flex-wrap: wrap; gap: 4px; margin-top: 4px; border-top: 1px dashed rgba(192, 132, 252, 0.4); padding-top: 4px;">
+        <button class="dice-icon-btn zocchi-btn" data-dice="d3" data-tooltip="Add d3" style="border-color: rgba(192, 132, 252, 0.5); color: #c084fc;">d3</button>
+        <button class="dice-icon-btn zocchi-btn" data-dice="d5" data-tooltip="Add d5" style="border-color: rgba(192, 132, 252, 0.5); color: #c084fc;">d5</button>
+        <button class="dice-icon-btn zocchi-btn" data-dice="d7" data-tooltip="Add d7" style="border-color: rgba(192, 132, 252, 0.5); color: #c084fc;">d7</button>
+        <button class="dice-icon-btn zocchi-btn" data-dice="d14" data-tooltip="Add d14" style="border-color: rgba(192, 132, 252, 0.5); color: #c084fc;">d14</button>
+        <button class="dice-icon-btn zocchi-btn" data-dice="d16" data-tooltip="Add d16" style="border-color: rgba(192, 132, 252, 0.5); color: #c084fc;">d16</button>
+        <button class="dice-icon-btn zocchi-btn" data-dice="d24" data-tooltip="Add d24" style="border-color: rgba(192, 132, 252, 0.5); color: #c084fc;">d24</button>
+        <button class="dice-icon-btn zocchi-btn" data-dice="d30" data-tooltip="Add d30" style="border-color: rgba(192, 132, 252, 0.5); color: #c084fc;">d30</button>
+      </div>
       <div class="quickrolls-container" id="quickrolls-container" style="display: none; flex-wrap: wrap; gap: 6px; margin-top: 6px; padding: 4px 0;"></div>
       <div class="dice-builder-details" id="dice-builder-details" style="display: none;">
         <div class="dice-builder-expression">
@@ -439,12 +448,19 @@ export function setupChatPanel(engine?: CanvasEngine): void {
   (window as any).toggleVttChat = toggleChat;
 
   const builderState: Record<string, number> = {
+    d30: 0,
+    d24: 0,
     d20: 0,
+    d16: 0,
+    d14: 0,
     d12: 0,
     d10: 0,
     d8: 0,
+    d7: 0,
     d6: 0,
+    d5: 0,
     d4: 0,
+    d3: 0,
     mod: 0
   };
 
@@ -693,9 +709,9 @@ export function setupChatPanel(engine?: CanvasEngine): void {
 
   function formatBuilderExpression(): string {
     const terms: string[] = [];
-    const diceTypes = ["d20", "d12", "d10", "d8", "d6", "d4"];
+    const diceTypes = ["d30", "d24", "d20", "d16", "d14", "d12", "d10", "d8", "d7", "d6", "d5", "d4", "d3"];
     for (const d of diceTypes) {
-      const count = builderState[d];
+      const count = builderState[d] || 0;
       if (count > 0) {
         terms.push(`${count}${d}`);
       }
@@ -825,6 +841,13 @@ export function setupChatPanel(engine?: CanvasEngine): void {
   }
 
   function updateBuilderUI(): void {
+    const doc = docStore.getDocument();
+    const isDcc = doc.gameMode === "dcc";
+    const zocchiRow = panel.querySelector<HTMLElement>("#zocchi-dice-row");
+    if (zocchiRow) {
+      zocchiRow.style.display = isDcc ? "flex" : "none";
+    }
+
     const expr = formatBuilderExpression();
     if (!expr) {
       detailsEl.style.display = "none";
@@ -1443,6 +1466,7 @@ export function setupChatPanel(engine?: CanvasEngine): void {
 
   // Subscribe to reactive document updates
   docStore.subscribe((doc) => {
+    updateBuilderUI();
     if (isFirstChatRender) {
       doc.chatHistory.forEach((msg) => {
         if (msg.type === "roll") animatedRollMsgIds.add(msg.id);

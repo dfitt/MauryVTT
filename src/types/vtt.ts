@@ -87,6 +87,7 @@ export interface VTTDocument {
   vttfxUsage?: Record<string, number>; // Keyed by effect id/icon -> timestamp of last usage
   primaryTokens?: Record<string, string>; // Keyed by username -> tokenId
   characterSheets?: Record<string, CharacterSheetData>; // Keyed by username
+  gameMode?: "d20" | "dcc";
 }
 
 
@@ -243,6 +244,7 @@ export type DocumentOperation =
   | { opType: "REGISTER_CONDITION"; condition: ConditionData }
   | { opType: "RECORD_CONDITION_USAGE"; conditionId: string; timestamp?: number }
   | { opType: "RECORD_VTTFX_USAGE"; effectId: string; timestamp?: number }
+  | { opType: "UPDATE_GAME_MODE"; mode: "d20" | "dcc" }
   | { opType: "BATCH"; ops: DocumentOperation[] };
 
 // ==========================================
